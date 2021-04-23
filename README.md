@@ -1,4 +1,4 @@
-# Exploring the Split-Step Method
+# Exploring the Split-Step Method (WIP)
 
 Various simulations of quantum mechanics phenomena using the
 split-operator method.
