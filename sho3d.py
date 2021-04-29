@@ -59,36 +59,3 @@ def animation():
 
 animation()
 mlab.show()
-
-
-# from mayavi import mlab
-# plot_data = mlab.contour3d(np.abs(psi))
-
-# @mlab.animate
-# def animation():
-#     while (1):
-#         for _ in range(3):
-#             data['psi'] = U(data['psi'])
-#         plot_data.mlab_source.scalars = np.abs(data['psi'])
-#         yield
-
-# animation()
-# mlab.show()
-
-# import matplotlib.pyplot as plt
-# import matplotlib.animation as animation
-# fig = plt.figure()
-# axes = fig.subplots(1, 3)
-# im_x = axes[0].imshow(np.sum(np.abs(psi), axis=0))
-# im_y = axes[1].imshow(np.sum(np.abs(psi), axis=1))
-# im_z = axes[2].imshow(np.sum(np.abs(psi), axis=2))
-
-# def animation_func(*_):
-#     data['psi'] = U(data['psi'])
-#     im_x.set_data(np.sum(np.abs(data['psi']), axis=0))
-#     im_y.set_data(np.sum(np.abs(data['psi']), axis=1))
-#     im_z.set_data(np.sum(np.abs(data['psi']), axis=2))
-#     return im_x, im_y, im_z
-
-# ani = animation.FuncAnimation(fig, animation_func, blit=True, interval=1.0)
-# plt.show()

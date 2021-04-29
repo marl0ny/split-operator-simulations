@@ -60,26 +60,3 @@ def animation():
 
 animation()
 mlab.show()
-
-
-# import matplotlib.pyplot as plt
-# import matplotlib.animation as animation
-# fig = plt.figure()
-# axes = fig.subplots(1, 3)
-# extent = (S[0], S[-1], S[0], S[-1])
-# im_x = axes[0].imshow(np.sum(np.abs(psi), axis=0), extent=extent)
-# im_y = axes[1].imshow(np.sum(np.abs(psi), axis=1), extent=extent)
-# im_z = axes[2].imshow(np.sum(np.abs(psi), axis=2), extent=extent)
-# axes[0].set_title('')
-# axes[1].set_title('')
-# axes[2].set_title('')
-
-# def animation_func(*_):
-#     data['psi'] = U(data['psi'])
-#     im_x.set_data(np.sum(np.abs(data['psi']), axis=0))
-#     im_y.set_data(np.sum(np.abs(data['psi']), axis=1))
-#     im_z.set_data(np.sum(np.abs(data['psi']), axis=2))
-#     return im_x, im_y, im_z
-
-# ani = animation.FuncAnimation(fig, animation_func, blit=True, interval=1.0)
-# plt.show()

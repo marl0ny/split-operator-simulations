@@ -1,0 +1,70 @@
+"""
+Numerically solving the Dirac equation in 1D.
+
+Haven't done any checks yet for correctness.
+"""
+from splitstep import DiracSplitStepMethod
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+
+# Constants (Metric Units)
+N = 512  # Number of points to use
+L = 2.0 # Extent of simulation
+X = L*np.linspace(-0.5, 0.5 - 1.0/N, N)
+DX = X[1] - X[0]  # Spatial step size
+DT = 0.0005  # timestep
+
+# The wavefunction
+SIGMA = 0.02
+wavefunc = np.exp(-((X/L-0.15)/SIGMA)**2/2.0) # *np.exp(2.0j*2.0*np.pi*X/L)
+wavefunc = wavefunc/np.sqrt(np.sum(wavefunc*np.conj(wavefunc)))
+
+# The potential
+V = np.zeros([N])
+# V = 200*(X/L)**2 # Simple Harmonic Oscillator
+# V = 50.0*np.array([1.0 if i > 48*N//100 and i < 52*N//100 
+#               else 0.0 for i in range(N)])
+
+U = DiracSplitStepMethod(V, (L, ), DT)
+U.m = 10.0
+
+fig = plt.figure()
+ax = fig.add_subplot(1, 1, 1)
+wavefunc_data = {'x': [wavefunc/4.0*np.exp(np.pi/4.0), 1.0j*wavefunc/4.0, 
+                       wavefunc/4.0*np.exp(np.pi/3.0), -1.0j*wavefunc/4.0,]}
+re_plots, im_plots = [], []
+for i in range(4):
+    re_plot, = ax.plot(X, np.real(wavefunc_data['x'][i]), 
+                       label=r'Re($\psi_%d(x)$)' % (i+1))
+    re_plots.append(re_plot)
+    im_plot, = ax.plot(X, np.imag(wavefunc_data['x'][i]),
+                       label=r'Im($\psi_%d(x)$)' % (i+1))
+    im_plots.append(im_plot)
+
+abs_val = lambda psi: np.sqrt(np.real(
+                              sum([psi[i]*np.conj(psi[i]) for i in range(4)]))
+                              )
+abs_plot, = ax.plot(X, abs_val(wavefunc_data['x']), color='black', 
+                    label=r'$|\psi(x)|$')
+ax.set_ylim(-1.1*np.amax(np.abs(wavefunc)), 1.1*np.amax(np.abs(wavefunc)))
+ax.set_xlabel('X')
+ax.set_yticks([])
+ax.set_xlim(X[0], X[-1])
+ax.set_title('Wavefunction Plot')
+
+
+def func_animation(*_):
+    wavefunc_data['x'] = U(wavefunc_data['x'])
+    abs_plot.set_ydata(abs_val(wavefunc_data['x']))
+    for i in range(4):
+        re_plots[i].set_ydata(np.real(wavefunc_data['x'][i]))
+        im_plots[i].set_ydata(np.imag(wavefunc_data['x'][i]))
+    return re_plots + im_plots + [abs_plot]
+
+
+ani = animation.FuncAnimation(fig, func_animation, blit=True, interval=1000/60)
+plt.legend()
+plt.show()
+print(np.sum(np.abs(wavefunc)), np.sum(np.abs(wavefunc_data['x'])))
+

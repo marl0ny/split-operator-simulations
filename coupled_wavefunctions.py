@@ -65,10 +65,10 @@ def animation_func(*_):
     U.set_nonlinear_term(lambda psi:
                          psi*np.exp(-0.25j*nonlinear_term2*DT/const.hbar))
     data['psi2'] = U(psi2)
-    im.set_data(np.angle(data['psi1'] #+ data['psi2']
+    im.set_data(np.angle(data['psi1'] + data['psi2']
                          ))
     im.set_alpha(np.abs(data['psi1'] 
-                 #+ data['psi2']
+                 + data['psi2']
                  )/(1.0*max_val))
     return (im2, im)
 

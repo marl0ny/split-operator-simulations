@@ -19,7 +19,9 @@ DT = 2e-17  # timestep in seconds
 # V = 12*1e-18*((X1/L)**2 + (X2/L)**2)  # Simple Harmonic Oscillator
 # V = 12*1e-18*((X1/L) - (X2/L))**2 + 12*1e-18*((X1/L)**2 + (X2/L)**2)
 import scipy.constants as const
-R = np.abs(X1 - X2) + 1e-60
+R = np.abs(X1 - X2)
+for i in range(N):
+  R[i, i] = R[i, i-1] if i > 0 else R[i, i+1]
 non_interacting_term = 15*1e-18*((X1/L)**2 + (X2/L)**2)
 V = const.e**2/(4.0*np.pi*const.epsilon_0*R) + non_interacting_term
 # V = const.e**2/(4.0*np.pi*const.epsilon_0*R)
@@ -66,8 +68,7 @@ im2 = ax.imshow(potential_im_data,
 ax.set_xlabel('x1 (m)')
 ax.set_ylabel('x2 (m)')
 ax.set_title('Two 1D Particles Wavefunction')
-wavefunc_data = {'psi1(x1)psi2(x2)': wavefunc,
-                 'psi1(x2)psi2(x1)': wavefunc.T}
+wavefunc_data = {'psi1(x1)psi2(x2)': wavefunc}
 line, = ax2.plot(X1[0], np.dot(np.abs(wavefunc)**2, np.ones([N])))
 ax2.plot(X1[0], np.amax(np.dot(np.abs(wavefunc)**2, np.ones([N])))*
                 non_interacting_term[N//2]/
@@ -75,7 +76,7 @@ ax2.plot(X1[0], np.amax(np.dot(np.abs(wavefunc)**2, np.ones([N])))*
 # x1_line, = ax2.plot([0.0, 0.0], [0.0, 1.0], color='gray')
 # x2_line, = ax2.plot([0.0, 0.0], [0.0, 1.0], color='gray')
 ax2.set_xlim(X1[0, 0], X1[0, -1])
-ax2.set_ylim(0.0, 0.05)
+ax2.set_ylim(-0.05/10.0, 0.05*0.5)
 ax2.set_xlabel('X (m)')
 ax2.set_yticks([])
 
@@ -84,14 +85,11 @@ def animation_func(*_):
     Animation function
     """
     wavefunc_data['psi1(x1)psi2(x2)'] = U(wavefunc_data['psi1(x1)psi2(x2)'])
-    wavefunc_data['psi1(x2)psi2(x1)'] = U(wavefunc_data['psi1(x2)psi2(x1)'])
-    psi = (1.0/np.sqrt(2.0))*(wavefunc_data['psi1(x1)psi2(x2)']
-                               - wavefunc_data['psi1(x2)psi2(x1)'])
-
-    # norm_factor = 1.0/np.sum(wavefunc_data['psi1(x1)psi2(x2)']*np.conj(wavefunc_data['psi1(x1)psi2(x2)']))
-    # wavefunc_data['psi1(x1)psi2(x2)'] *= 2.0*norm_factor
-    # wavefunc_data['psi1(x2)psi2(x1)'] *= 2.0*norm_factor
-    # print(np.sum(psi*np.conj(psi)))eee
+    psi1_x1_psi2_x2 = wavefunc_data['psi1(x1)psi2(x2)']
+    psi1_x2_psi2_x1 = psi1_x1_psi2_x2.T
+    psi = (1.0/np.sqrt(2.0))*(psi1_x1_psi2_x2 
+                               - psi1_x2_psi2_x1
+                              )
     prob = np.abs(psi)**2
     prob_1d = np.dot(prob, np.ones([N]))
     # exp_x1 = np.sum(prob*X1)

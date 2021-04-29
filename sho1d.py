@@ -48,4 +48,5 @@ def func_animation(*_):
 ani = animation.FuncAnimation(fig, func_animation, blit=True, interval=1000/60)
 plt.legend()
 plt.show()
+print(np.sum(np.abs(wavefunc)), np.sum(np.abs(wavefunc_data['x'])))
 

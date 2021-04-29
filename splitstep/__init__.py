@@ -1,1 +1,1 @@
-from .splitstep import SplitStepMethod, NonlinearSplitStepMethod
+from .splitstep import SplitStepMethod, NonlinearSplitStepMethod, DiracSplitStepMethod
