@@ -111,12 +111,13 @@ class DiracSplitStepMethod(SplitStepMethod):
 
     def __init__(self, potential: np.ndarray,
                  dimensions: Tuple[float, ...],
-                 timestep: Union[float, np.complex128] = 1.0):
+                 timestep: Union[float, np.complex128] = 1.0,
+                 m=1.0):
         self._exp_p = None
         self._exp_V = None
         self._exp_m = None
+        self._m = m
         SplitStepMethod.__init__(self, potential, dimensions, timestep)
-        self.m = 1.0
 
     def set_timestep(self, timestep: Union[float, np.complex128]) -> None:
         p = np.meshgrid(*[(2.0 + 0.0j)*np.pi*np.fft.fftfreq(d)*d/
@@ -125,7 +126,7 @@ class DiracSplitStepMethod(SplitStepMethod):
         self._dt = timestep
         dt = self._dt
         I = 1.0j
-        m = self.m
+        m = self._m
         exp, sinh, cosh = np.exp, np.sinh, np.cosh
         exp_kinetic = [[0, 0, 0, 0] for i in range(4)]
         if len(p) == 1:
@@ -143,6 +144,8 @@ class DiracSplitStepMethod(SplitStepMethod):
 
         # This matrix is found using sympy by exponentiating the alpha_i p_i
         # term in the Dirac equation.
+        # Code showing how this was derived is found here:
+        # https://gist.github.com/marl0ny/bc29fad343600f856abb39d152f9f448
         exp_kinetic[0][0] =  1.0*cosh(0.5*(-dt**2*p2)**0.5)
         exp_kinetic[0][1] =  0
         exp_kinetic[0][2] =  -1.0*I*dt*pz*(-dt**2*p2)**(-0.5)*sinh(0.5*(-dt**2*p2)**0.5)
@@ -171,42 +174,6 @@ class DiracSplitStepMethod(SplitStepMethod):
                  [0, 0, 1.0*exp(-0.25*I*V*dt), 0], 
                  [0, 0, 0, 1.0*exp(-0.25*I*V*dt)]]
         self._exp_V = exp_V
-        # exp_px = [[1.0*cos(0.5*dt*px), 0, 0, -1.0*I*sin(0.5*dt*px)], 
-        #           [0, 1.0*cos(0.5*dt*px), -1.0*I*sin(0.5*dt*px), 0], 
-        #           [0, -1.0*I*sin(0.5*dt*px), 1.0*cos(0.5*dt*px), 0], 
-        #           [-1.0*I*sin(0.5*dt*px), 0, 0, 1.0*cos(0.5*dt*px)]]
-        # self._exp_p.append(exp_px)
-        # if len(p) >= 2:
-        #     py = p[1]
-        #     exp_py = [[1.0*cos(0.5*dt*py), 0, 0, -1.0*sin(0.5*dt*py)], 
-        #               [0, 1.0*cos(0.5*dt*py), 1.0*sin(0.5*dt*py), 0],
-        #               [0, -1.0*sin(0.5*dt*py), 1.0*cos(0.5*dt*py), 0], 
-        #               [1.0*sin(0.5*dt*py), 0, 0, 1.0*cos(0.5*dt*py)]]
-        #     self._exp_p.append(exp_py)
-        # if len(p) == 3:
-        #     pz = p[2]
-        #     exp_pz = [[1.0*cos(0.5*dt*pz), 0, -1.0*I*sin(0.5*dt*pz), 0], 
-        #               [0, 1.0*cos(0.5*dt*pz), 0, 1.0*I*sin(0.5*dt*pz)], 
-        #               [-1.0*I*sin(0.5*dt*pz), 0, 1.0*cos(0.5*dt*pz), 0], 
-        #               [0, 1.0*I*sin(0.5*dt*pz), 0, 1.0*cos(0.5*dt*pz)]]
-        #     self._exp_p.append(exp_pz)
-        # 2D case
-        # exp_kinetic[0][0] =  1.0*cosh(0.5*dt*(-p2)**0.5)
-        # exp_kinetic[0][1] =  0
-        # exp_kinetic[0][2] =  0
-        # exp_kinetic[0][3] =  0.5*(-p2)**(-0.5)*(I*px + py - (I*px + py)*exp(1.0*dt*(-p2)**0.5))*exp(-0.5*dt*(-p2)**0.5)
-        # exp_kinetic[1][0] =  0
-        # exp_kinetic[1][1] =  1.0*cosh(0.5*dt*(-p2)**0.5)
-        # exp_kinetic[1][2] =  0.5*(-p2)**(-0.5)*(I*px - py + (-I*px + py)*exp(1.0*dt*(-p2)**0.5))*exp(-0.5*dt*(-p2)**0.5)
-        # exp_kinetic[1][3] =  0
-        # exp_kinetic[2][0] =  0
-        # exp_kinetic[2][1] =  1.0*I*(-p2)**0.5*sinh(0.5*dt*(-p2)**0.5)/(px + I*py)
-        # exp_kinetic[2][2] =  1.0*cosh(0.5*dt*(-p2)**0.5)
-        # exp_kinetic[2][3] =  0
-        # exp_kinetic[3][0] =  -1.0*(-p2)**0.5*sinh(0.5*dt*(-p2)**0.5)/(I*px + py)
-        # exp_kinetic[3][1] =  0
-        # exp_kinetic[3][2] =  0
-        # exp_kinetic[3][3] =  1.0*cosh(0.5*dt*(-p2)**0.5)
 
     def __call__(self, psi: List[np.ndarray]):
         psi = list_mat_mul_4(self._exp_V, psi)
