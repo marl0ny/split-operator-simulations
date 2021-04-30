@@ -13,5 +13,5 @@ Overview of methods for soving the nonlinear Schrödinger equation:
  - [Arxiv - Computational methods for the dynamics of the nonlinear Schrödinger/Gross-Pitaevskii equations](https://arxiv.org/abs/1305.1093)
 
 General form of the Dirac equation:
- - Chapter 20 (titled The Dirac Equation) of the book <i>Principles of Quantum Mechanics</i> by Ramamurti Shankar.
+ - Chapter 20 - The Dirac Equation of <i>Principles of Quantum Mechanics</i> by Ramamurti Shankar.
  - [Wikipedia - Dirac Equation](https://en.wikipedia.org/wiki/Dirac_equation)

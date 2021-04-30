@@ -17,14 +17,16 @@ DT = 0.005  # timestep
 
 # The wavefunction
 SIGMA = 0.04
-wavefunc = np.exp(-((X/L - 0.2)/SIGMA)**2/2.0) # *np.exp(2.0j*2.0*np.pi*X/L)
+wavefunc = np.exp(-((X/L - 0.2)/SIGMA)**2/2.0) # *np.exp(2.0j*4.0*np.pi*X/L)
 wavefunc = wavefunc/np.sqrt(np.sum(wavefunc*np.conj(wavefunc)))
 
 # The potential
 # V = np.zeros([N])
 V = 200*(X/L)**2 # Simple Harmonic Oscillator
 # Barrier
-# V = 10.0*np.array([1.0 if i > 48*N//100 and i < 52*N//100 
+# V = 50.0*np.array([1.0 if i > 48*N//100 and i < 52*N//100 
+#                    else 0.0 for i in range(N)])
+# V += 50.0*np.array([1.0 if i > 98*N//100 or i < 2*N//100 
 #                    else 0.0 for i in range(N)])
 
 U = DiracSplitStepMethod(V, (L, ), DT, m=20.0)

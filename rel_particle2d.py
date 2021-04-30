@@ -39,7 +39,7 @@ fig = plt.figure()
 ax = fig.add_subplot(1, 1, 1)
 # print(np.amax(np.angle(psi)))
 data = {'psi': [wavefunc/np.sqrt(2.0), np.zeros([N, N]), 
-                np.zeros([N, N]), np.zeros([N, N])], 'steps': 0}
+                wavefunc/np.sqrt(2.0), np.zeros([N, N])], 'steps': 0}
 abs_val = lambda psi: np.sqrt(np.real(
                               sum([psi[i]*np.conj(psi[i]) for i in range(4)])))
 max_val = np.amax(abs_val(data['psi']))

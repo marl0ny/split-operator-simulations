@@ -112,7 +112,7 @@ class DiracSplitStepMethod(SplitStepMethod):
     def __init__(self, potential: np.ndarray,
                  dimensions: Tuple[float, ...],
                  timestep: Union[float, np.complex128] = 1.0,
-                 m=1.0):
+                 m: float = 1.0):
         self._exp_p = None
         self._exp_V = None
         self._exp_m = None
@@ -120,7 +120,7 @@ class DiracSplitStepMethod(SplitStepMethod):
         SplitStepMethod.__init__(self, potential, dimensions, timestep)
 
     def set_timestep(self, timestep: Union[float, np.complex128]) -> None:
-        p = np.meshgrid(*[(2.0 + 0.0j)*np.pi*np.fft.fftfreq(d)*d/
+        p = np.meshgrid(*[np.complex128(2.0)*np.pi*np.fft.fftfreq(d)*d/
                           self._dim[i] for i, d in 
                           enumerate(self.V.shape)])
         self._dt = timestep
@@ -183,6 +183,8 @@ class DiracSplitStepMethod(SplitStepMethod):
         psi = [np.fft.ifftn(psi_p[i]) for i in range(4)]
         psi = list_mat_mul_4(self._exp_m, psi)
         psi = list_mat_mul_4(self._exp_V, psi)
+        if self._norm:
+            pass
         return psi
 
 
@@ -190,5 +192,5 @@ def list_mat_mul_4(A, x):
     b = [0, 0, 0, 0]
     for i in range(4):
         for j in range(4):
-            b[i] += (A[i][j]*(1.0 + 0.0j))*x[j]
+            b[i] += np.complex128(A[i][j])*x[j]
     return b

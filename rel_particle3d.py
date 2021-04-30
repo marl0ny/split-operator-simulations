@@ -1,12 +1,12 @@
 """
 Animation of a particle scattering in a Coulomb potential in 3D
-using by numerically solving the Dirac equation.
+by numerically solving the Dirac equation.
 """
 from splitstep import DiracSplitStepMethod
 import numpy as np
 
 # Constants
-N = 64  # Number of points to use
+N = 128  # Number of points to use
 L = 2.0 # Extent of simulation
 S = L*np.linspace(-0.5, 0.5, N)
 X, Y, Z = np.meshgrid(S, S, S)
