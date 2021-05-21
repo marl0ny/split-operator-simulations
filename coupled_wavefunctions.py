@@ -4,7 +4,7 @@ This is following an example found in an article found here by Antoine et al.:
 https://arxiv.org/pdf/1305.1093.pdf
 
 """
-from splitstep import NonlinearSplitStepMethod
+from splitstep import CoupledTwoSystemNonlinearSplitStepMethod
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
@@ -30,7 +30,11 @@ wavefunc2 = wavefunc2/np.sqrt(np.sum(wavefunc2*np.conj(wavefunc2)))
 
 # The potential
 V = 6.0*1e-18*((X/L)**2 + (Y/L)**2)  # Simple Harmonic Oscillator
-U = NonlinearSplitStepMethod(V, (L, L), DT)
+U = CoupledTwoSystemNonlinearSplitStepMethod(V, (L, L), DT,
+                                             lambda1 = 0.0,
+                                             lambda2 = 0.0)
+# U.set_timestep(-1.0j*DT)
+# U.normalize_at_each_step(True)
 
 fig = plt.figure()
 ax = fig.add_subplot(1, 1, 1)
@@ -57,16 +61,18 @@ def animation_func(*_):
     Animation function
     """
     psi1, psi2 = data['psi1'], data['psi2']
-    nonlinear_term1 = 1.0e-17*np.abs(psi1)**2 + 3.0e-16*np.abs(psi2)**2
-    nonlinear_term2 = 3.0e-16*np.abs(psi1)**2 + 1.0e-17*np.abs(psi2)**2
-    U.set_nonlinear_term(lambda psi:
-                         psi*np.exp(-0.25j*nonlinear_term1*DT/const.hbar))
-    data['psi1'] = U(psi1)
-    U.set_nonlinear_term(lambda psi:
-                         psi*np.exp(-0.25j*nonlinear_term2*DT/const.hbar))
-    data['psi2'] = U(psi2)
+    nonlinear_term1 = 1.0e-17*np.abs(psi1)**2
+    nonlinear_term2 = 1.0e-17*np.abs(psi2)**2
+    U.set_nonlinear_term(lambda psi: 
+                         psi*np.exp(-0.25j*nonlinear_term1*DT/const.hbar),
+                         lambda psi: 
+                         psi*np.exp(-0.25j*nonlinear_term2*DT/const.hbar)
+                         )
+    data['psi1'], data['psi2'] = U(psi1, psi2)
     im.set_data(np.angle(data['psi1'] + data['psi2']
                          ))
+    max_val = np.amax((np.abs(data['psi1'] 
+                              + data['psi2'])))
     im.set_alpha(np.abs(data['psi1'] 
                  + data['psi2']
                  )/(1.0*max_val))

@@ -14,17 +14,18 @@ DT = 0.005  # timestep
 
 # Simple Harmonic Oscillator Setup
 # V = 200.0*((X/L)**2 + (Y/L)**2) 
-SIGMA = 0.056568
-BX, BY = 0.2, -0.2
+# SIGMA = 0.056568
+# BX, BY = 0.2, -0.2
 # BX, BY = 0.0, 0.0
-wavefunc = np.exp(-((X/L+BX)/SIGMA)**2/2.0
-                    - ((Y/L-BY)/SIGMA)**2/2.0)
-wavefunc = wavefunc/np.sqrt(np.sum(wavefunc*np.conj(wavefunc)))
+# wavefunc = np.exp(-((X/L+BX)/SIGMA)**2/2.0
+#                     - ((Y/L-BY)/SIGMA)**2/2.0)
+# wavefunc = wavefunc/np.sqrt(np.sum(wavefunc*np.conj(wavefunc)))
 
 # Double Slit
 V = np.zeros([N, N])
 y0, yf = 11*N//20 - 2, 11*N//20 + 2
 V[y0: yf, :] = 100.0 # Barrier
+V[0: 4, :] = -100.0
 V[y0: yf, 56*N//128: 60*N//128] = 0.0 # Make the left slit
 V[y0: yf, 68*N//128: 72*N//128] = 0.0 # Make the right slit
 SIGMA = 0.056568
@@ -33,13 +34,22 @@ wavefunc = np.exp(-((X/L-BX)/SIGMA)**2/2.0
                     - ((Y/L-BY)/SIGMA)**2/2.0)*np.exp(-40.0j*np.pi*Y/L)
 wavefunc = wavefunc/np.sqrt(np.sum(wavefunc*np.conj(wavefunc)))
 
-U = DiracSplitStepMethod(V, (L, L), DT, m=20.0)
+# Step Potential
+# V = np.zeros([N, N])
+# V[0: N//2+1, :] = 100.0
+# SIGMA = 0.056568
+# BX, BY = 0.0, 0.25
+# wavefunc = np.exp( # -((X/L-BX)/SIGMA)**2/2.0
+#                     - ((Y/L-BY)/SIGMA)**2/2.0)*np.exp(-40.0j*np.pi*Y/L)
+# wavefunc = wavefunc/np.sqrt(np.sum(wavefunc*np.conj(wavefunc)))
+
+U = DiracSplitStepMethod(V, (L, L), DT, m=80.0)
 
 fig = plt.figure()
 ax = fig.add_subplot(1, 1, 1)
 # print(np.amax(np.angle(psi)))
 data = {'psi': [wavefunc/np.sqrt(2.0), np.zeros([N, N]), 
-                wavefunc/np.sqrt(2.0), np.zeros([N, N])], 'steps': 0}
+                1.0j*wavefunc/np.sqrt(2.0), np.zeros([N, N])], 'steps': 0}
 abs_val = lambda psi: np.sqrt(np.real(
                               sum([psi[i]*np.conj(psi[i]) for i in range(4)])))
 max_val = np.amax(abs_val(data['psi']))
