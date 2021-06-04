@@ -68,7 +68,7 @@ im2 = ax.imshow(potential_im_data,
 ax.set_xlabel('x1 (m)')
 ax.set_ylabel('x2 (m)')
 ax.set_title('Two 1D Particles Wavefunction')
-wavefunc_data = {'psi1(x1)psi2(x2)': wavefunc}
+wavefunc_data = {'psi': (wavefunc - wavefunc.T)/np.sqrt(2.0)}
 line, = ax2.plot(X1[0], np.dot(np.abs(wavefunc)**2, np.ones([N])))
 ax2.plot(X1[0], np.amax(np.dot(np.abs(wavefunc)**2, np.ones([N])))*
                 non_interacting_term[N//2]/
@@ -84,12 +84,8 @@ def animation_func(*_):
     """
     Animation function
     """
-    wavefunc_data['psi1(x1)psi2(x2)'] = U(wavefunc_data['psi1(x1)psi2(x2)'])
-    psi1_x1_psi2_x2 = wavefunc_data['psi1(x1)psi2(x2)']
-    psi1_x2_psi2_x1 = psi1_x1_psi2_x2.T
-    psi = (1.0/np.sqrt(2.0))*(psi1_x1_psi2_x2 
-                               - psi1_x2_psi2_x1
-                              )
+    wavefunc_data['psi'] = U(wavefunc_data['psi'])
+    psi = wavefunc_data['psi']
     prob = np.abs(psi)**2
     prob_1d = np.dot(prob, np.ones([N]))
     # exp_x1 = np.sum(prob*X1)

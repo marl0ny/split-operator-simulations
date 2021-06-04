@@ -19,7 +19,7 @@ X1, X2, Y1, Y2 = np.meshgrid(X, X, X, X)
 # Coordinates are X2, X1, Y1, Y2 -> ijkl
 DT = 5e-17  # timestep in seconds
 
-# Simple Harmonic Oscillator
+# Simple Harmonic Oscillator With Coulomb Interaction
 R = np.sqrt((X2 - X1)**2 + (Y2 - Y1)**2) + 1e-60
 V_INT = const.e**2/(4.0*np.pi*const.epsilon_0*R)
 V = 6*1e-18*((X1/L)**2 + (X2/L)**2 + (Y1/L)**2 + (Y2/L)**2) + V_INT
@@ -47,7 +47,8 @@ im = ax.imshow(np.einsum('ijkl->kj', np.abs(wavefunc)),
 ax.set_xlabel('x1 (m)')
 ax.set_ylabel('x2 (m)')
 ax.set_title('Wavefunction')
-data = {'psi': wavefunc, 'steps': 0}
+data = {'psi': (wavefunc - np.transpose(wavefunc, (1, 0, 3, 2)))/np.sqrt(2.0),
+        'steps': 0}
 t0 = perf_counter()
 
 def animation_func(*_):
@@ -55,9 +56,7 @@ def animation_func(*_):
     Animation function
     """
     data['psi'] = U(data['psi'])
-    psi = (1.0/np.sqrt(2.0))*(data['psi'] 
-                               - np.transpose(data['psi'], (1, 0, 3, 2)))
-    im.set_data(np.einsum('ijkl->jk', np.abs(psi)))
+    im.set_data(np.einsum('ijkl->jk', np.abs(data['psi'])))
     data['steps'] += 1
     return (im, )
 
