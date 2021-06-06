@@ -16,7 +16,8 @@ DT = 0.005  # timestep
 # The Potential
 V = -1000.0/(4.0*np.pi*R)
 
-U = DiracSplitStepMethod(V, (L, L, L), DT)
+U = DiracSplitStepMethod(V, (L, L, L), DT,
+                         units={'c': 1.0})
 # U.normalize_at_each_step(True)
 
 # The wavefunction

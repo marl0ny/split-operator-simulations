@@ -21,6 +21,18 @@ DT = 0.01  # timestep
 #                     - ((Y/L-BY)/SIGMA)**2/2.0)
 # wavefunc = wavefunc/np.sqrt(np.sum(wavefunc*np.conj(wavefunc)))
 
+# Potential walls along y direction at x = 0 and x = L
+# V = np.zeros([N, N])
+# V[0: N, 0:2] = 120.0 # Barrier
+# V[0: N, N-2:N] = 120.0
+# A = [0.0, 
+#      30.0*np.where(X == 0.0, 1e-30, X), 0.0]
+# SIGMA = 0.07
+# BX, BY = 0.0, 0.25
+# wavefunc = np.exp(-((X/L-BX)/SIGMA)**2/2.0
+#                     - ((Y/L-BY)/SIGMA)**2/2.0)*np.exp(-40.0j*np.pi*Y/L)
+# wavefunc = wavefunc/np.sqrt(np.sum(wavefunc*np.conj(wavefunc)))
+
 # Double Slit
 V = np.zeros([N, N])
 y0, yf = 11*N//20 - 5, 11*N//20 + 5
@@ -36,6 +48,19 @@ wavefunc = np.exp(-((X/L-BX)/SIGMA)**2/2.0
                     - ((Y/L-BY)/SIGMA)**2/2.0)*np.exp(-40.0j*np.pi*Y/L)
 wavefunc = wavefunc/np.sqrt(np.sum(wavefunc*np.conj(wavefunc)))
 
+
+def time_varying_vector_potential(t: float) -> 'List[np.ndarray, float]':
+    # f = 1.0/5.0
+    # amp = 150.0
+    # Ax = 0.0
+    f = 1.0
+    amp = 30.0
+    Ax = -amp*np.cos(2.0*np.pi*f*t)*np.where(Y == 0.0, 1e-30, Y)
+    Ay = amp*np.cos(2.0*np.pi*f*t)*np.where(X == 0.0, 1e-30, X)
+    Ax, Ay = Ax + 1e-60, Ay + 1e-60
+    return [Ax, Ay, 0.0]
+
+
 # Step Potential
 # V = np.zeros([N, N])
 # V[0: N//2+1, :] = 100.0
@@ -47,7 +72,8 @@ wavefunc = wavefunc/np.sqrt(np.sum(wavefunc*np.conj(wavefunc)))
 
 m = 80.0
 U = DiracSplitStepMethod(V - m/2.0, (L, L), DT, m=m, 
-                         vector_potential=A
+                         vector_potential=A,
+                         units={'c': 1.0}
                         )
 
 fig = plt.figure()
@@ -78,6 +104,8 @@ def animation_func(*_):
     """
     Animation function
     """
+    U.set_potential(V.T - m/2.0, 
+                    time_varying_vector_potential(data['steps']/120.0))
     for _i in range(1):
         data['psi'] = U(data['psi'])
     im.set_data(np.angle(data['psi'][0]))

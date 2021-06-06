@@ -4,7 +4,7 @@ from typing import List, Union
 
 def get_exp_p(dt: float, 
               p: List[np.ndarray], m: float, 
-              c: float = 1.0, 
+              c: float = 137.036, 
               hbar: float = 1.0) -> List[List[Union[np.ndarray, float]]]:
     exp, sinh = np.exp, np.sinh
     I = 1.0j
@@ -43,7 +43,6 @@ def get_exp_p(dt: float,
 
 def get_exp_vector_potential(dt: float, 
                              A: List[np.ndarray], m: float, 
-                             c: float = 1.0, 
                              hbar: float = 1.0
                             ) -> List[List[Union[np.ndarray, float]]]:
     Ax, Ay, Az = A
