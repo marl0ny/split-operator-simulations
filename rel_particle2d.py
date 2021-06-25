@@ -13,7 +13,7 @@ DX = X[1] - X[0]  # Spatial step size
 DT = 0.01  # timestep
 
 # Simple Harmonic Oscillator Setup
-# V = 200.0*((X/L)**2 + (Y/L)**2) 
+# V = 10.0*((X/L)**2 + (Y/L)**2) 
 # SIGMA = 0.056568
 # BX, BY = 0.2, -0.2
 # BX, BY = 0.0, 0.0
@@ -70,9 +70,9 @@ def time_varying_vector_potential(t: float) -> 'List[np.ndarray, float]':
 #                     - ((Y/L-BY)/SIGMA)**2/2.0)*np.exp(-40.0j*np.pi*Y/L)
 # wavefunc = wavefunc/np.sqrt(np.sum(wavefunc*np.conj(wavefunc)))
 
-m = 80.0
-U = DiracSplitStepMethod(V - m/2.0, (L, L), DT, m=m, 
-                         vector_potential=A,
+m = 0.0
+U = DiracSplitStepMethod(V - m, (L, L), DT, m=m, 
+                         # vector_potential=A,
                          units={'c': 1.0}
                         )
 
@@ -104,8 +104,8 @@ def animation_func(*_):
     """
     Animation function
     """
-    U.set_potential(V.T - m/2.0, 
-                    time_varying_vector_potential(data['steps']/120.0))
+    # U.set_potential(V.T - m/2.0, 
+    #                 time_varying_vector_potential(data['steps']/120.0))
     for _i in range(1):
         data['psi'] = U(data['psi'])
     im.set_data(np.angle(data['psi'][0]))

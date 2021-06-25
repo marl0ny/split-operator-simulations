@@ -88,7 +88,7 @@ def simulation(U: DiracSplitStepMethod, wavefunc: np.ndarray,
         exp_x = x_expectation_value(wavefunc_data['x'])
         exp_x_plot.set_xdata([exp_x, exp_x])
         v = (exp_x - wavefunc_data['<x>'])/(C*DT*steps_per_frame)
-        print(v)
+        # print(v)
         wavefunc_data['<x>'] = exp_x
         abs_plot.set_ydata(abs_val(wavefunc_data['x']))
         for i, k in zip([0, 1], [0, 3]):
