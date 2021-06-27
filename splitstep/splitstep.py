@@ -28,6 +28,7 @@ class SplitStepMethod:
         self.V = potential
         self._dim = dimensions
         self._exp_potential = None
+        self._kinetic = None
         self._exp_kinetic = None
         self._norm = False
         self._dt = 0
@@ -41,6 +42,7 @@ class SplitStepMethod:
         self._exp_potential = np.exp(-0.25j*(self._dt/const.hbar)*self.V)
         p = np.meshgrid(*[2.0*np.pi*const.hbar*np.fft.fftfreq(d)*d/
                           self._dim[i] for i, d in enumerate(self.V.shape)])
+        self._kinetic = sum([p_i**2 for p_i in p])/(2.0*self.m)
         self._exp_kinetic = np.exp(-0.5j*(self._dt/(2.0*self.m*const.hbar))
                                    * sum([p_i**2 for p_i in p]))
 
@@ -61,6 +63,16 @@ class SplitStepMethod:
         if self._norm:
             psi = psi/np.sqrt(np.sum(psi*np.conj(psi)))
         return psi
+
+    def get_expected_energy(self, psi: np.ndarray) -> float:
+        """
+        Get the energy expectation value of the wavefunction
+        """
+        psi_p = np.fft.fftn(psi)
+        psi_p = psi_p/np.sqrt(np.sum(psi_p*np.conj(psi_p)))
+        kinetic = np.real(np.sum(np.conj(psi_p)*self._kinetic*psi_p))
+        potential = np.real(np.sum(self.V*np.conj(psi)*psi))
+        return kinetic + potential
 
     def normalize_at_each_step(self, norm: bool) -> None:
         """

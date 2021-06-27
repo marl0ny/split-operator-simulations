@@ -4,10 +4,10 @@
 #ifndef _FFT_
 #define _FFT_
 
+typedef double real;
 
-static const double tau = 6.2831853071795864;
-static const double invsqrt2 = 0.70710678118654752;
-
+static const real tau = 6.2831853071795864;
+static const real invsqrt2 = 0.70710678118654752;
 
 
 template <typename T>
@@ -32,11 +32,11 @@ static void bitreverse2(T *arr, int n) {
 
 #define _USE_COS_ARR
 #ifdef _USE_COS_ARR
-static double _cos_arr[256];
+static real _cos_arr[256];
 static bool _is_cos_arr_init = false;
 static void _cos_arr_init(int n) {
-    double angle=tau/n;
-    double c, s;
+    real angle=tau/n;
+    real c, s;
     _cos_arr[0] = 1.0;
     _cos_arr[n/8] = invsqrt2;
     _cos_arr[n/4] = 0.0;
@@ -64,9 +64,9 @@ static inline void _fft(bool is_inverse, T* z, int n) {
     #endif
     T even, odd;
     T exp;
-    double cos_val, sin_val;
+    real cos_val, sin_val;
     int block_total;
-    double sign = (is_inverse)? -1.0: 1.0;
+    real sign = (is_inverse)? -1.0: 1.0;
     for (int block_size = 2; block_size <= n; block_size *= 2) {
         block_total = n/block_size;
         for (int j = 0; j < n; j += block_size) {
@@ -86,7 +86,7 @@ static inline void _fft(bool is_inverse, T* z, int n) {
                 exp.real(cos_val*odd.real() - odd.imag()*sin_val);
                 exp.imag(cos_val*odd.imag() + odd.real()*sin_val);
                 /* Butterfly */
-                double n_val = 1.0;
+                real n_val = 1.0;
                 if (is_inverse && block_size == n) n_val = n;
                 z[j + i].real((even.real() + exp.real())/n_val);
                 z[j + i].imag((even.imag() + exp.imag())/n_val);
@@ -192,6 +192,10 @@ void inplace_fft2(T *z, int w) {
 
 template <typename T>
 void inplace_fft2(T *z, int w, int h) {
+    if (w == h) {
+        inplace_fft2(z, w);
+        return;
+    }
     #pragma omp parallel for
     for (int i = 0; i < h; i++) {
         inplace_fft<T>(&z[i*h], w);
@@ -222,6 +226,10 @@ void inplace_ifft2(T *z, int w) {
 
 template <typename T>
 void inplace_ifft2(T *z, int w, int h) {
+    if (w == h) {
+        inplace_ifft2(z, w);
+        return;
+    }
     #pragma omp parallel for
     for (int i = 0; i < h; i++) {
         inplace_ifft<T>(&z[i*h], w);
@@ -275,7 +283,7 @@ void inplace_fftshift2(T *z, int w, int h) {
     delete[] transpose_arr;
 }
 
-void fftfreq(double *arr, int n) {
+void fftfreq(real *arr, int n) {
     if (n % 2 == 0) {
         for (int i = 0; i <= n/2 - 1; i++) {
             arr[i] = i;
@@ -299,17 +307,17 @@ void fftfreq(double *arr, int n) {
 
 
 
-void fftfreq2(double *horizontal, double *vertical,
+void fftfreq2(real *horizontal, real *vertical,
               int w, int h) {
     for (int i = 0; i < h; i++) {
         fftfreq(&horizontal[h*i], w);
     }
-    double *transpose_arr = new double[w*h];
-    transpose<double>(transpose_arr, vertical, w, h);
+    real *transpose_arr = new real[w*h];
+    transpose<real>(transpose_arr, vertical, w, h);
     for (int i = 0; i < w; i++) {
         fftfreq(&transpose_arr[w*i], h);
     }
-    transpose<double>(vertical, transpose_arr, h, w);
+    transpose<real>(vertical, transpose_arr, h, w);
     delete[] transpose_arr;
 }
 

@@ -1,7 +1,7 @@
 #version 330 core
 
 precision highp float;
-varying highp vec2 fragTextCoord;
+varying vec2 fragTextCoord;
 uniform sampler2D tex;
 uniform float blockSize;
 uniform int isVertical;

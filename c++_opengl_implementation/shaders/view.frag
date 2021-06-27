@@ -1,5 +1,6 @@
 #version 330 core
 
+precision highp float;
 varying vec2 fragTextCoord;
 uniform sampler2D wavefunc_tex;
 uniform sampler2D pot_tex;
@@ -42,5 +43,6 @@ void main() {
     float pot_col = texture2D(pot_tex, fragTextCoord)[0];
     float abs_val = wavefunc[0]*wavefunc[0] + 
                     wavefunc[1]*wavefunc[1];
+    // gl_FragColor = vec4(sqrt(abs_val)*wavefunc_col + pot_col/10.0, 1.0);
     gl_FragColor = vec4(sqrt(abs_val)*wavefunc_col + pot_col/100000.0, 1.0);
 }

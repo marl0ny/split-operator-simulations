@@ -1,5 +1,6 @@
 #version 330 core
 
+precision highp float;
 attribute vec3 position;
 varying vec2 fragTextCoord;
 

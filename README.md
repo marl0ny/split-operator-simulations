@@ -1,7 +1,9 @@
 # Exploring the Split-Step Method (WIP)
 
 Various simulations of quantum mechanics phenomena using the
-split-operator method.
+split-operator method. 
+
+A WASM version of the C++/OpenGL implementation can be found [here](https://marl0ny.github.io/split-operator-quantum2d.html).
 
 ## References:
 

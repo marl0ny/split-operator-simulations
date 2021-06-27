@@ -25,6 +25,10 @@ GLuint get_shader(const char *shader_loc, GLuint shader_type);
 
 void compile_shader(GLuint shader_ref, const char *shader_source);
 
+GLuint make_vertex_shader(const char *v_source);
+
+GLuint make_fragment_shader(const char *f_source);
+
 
 class Frame {
     protected:

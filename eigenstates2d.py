@@ -1,5 +1,5 @@
 """
-Animation of a particle in 2D Simple Harmonic Oscillator.
+Getting the lowest energy eigenstates in a 2D potential.
 """
 from time import perf_counter
 from splitstep import SplitStepMethod

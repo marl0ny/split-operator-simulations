@@ -105,15 +105,23 @@ void do_texture_paramertiri_and_mipmap() {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    #ifndef __EMSCRIPTEN__
     glGenerateMipmap(GL_TEXTURE_2D);
+    #endif
 } 
 
 
 GLuint make_texture(uint8_t *image, size_t image_w, size_t image_h) {
     GLuint texture = get_tex();
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8,
-                image_w, image_h, 0, GL_RGBA,
+    #ifdef __EMSCRIPTEN__
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
+                 image_w, image_h, 0, GL_RGBA,
+                 GL_UNSIGNED_BYTE, image);
+    #else
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8,
+                image_w, image_h, 0, GL_RGB,
                 GL_UNSIGNED_BYTE, image);
+    #endif
     do_texture_paramertiri_and_mipmap();
     return texture;
 }
@@ -121,20 +129,25 @@ GLuint make_texture(uint8_t *image, size_t image_w, size_t image_h) {
 struct TextureMaker {
     GLuint s_boundary = GL_REPEAT;
     GLuint t_boundary = GL_REPEAT;
-    GLuint interpolation = GL_LINEAR;
+    GLuint interpolation = GL_NEAREST;
+    #ifndef __EMSCRIPTEN__
     GLuint internal_format = GL_RGBA32F;
+    bool generateMipmap = false;
+    #else
+    GLuint internal_format = GL_RGBA;
+    bool generateMipmap = true;
+    #endif
     GLuint type = GL_FLOAT;
     GLuint format = GL_RGBA;
-    bool generateMipmap = true;
     GLuint create(void *image, int image_w, int image_h) {
         GLuint texture = get_tex();
         glTexImage2D(GL_TEXTURE_2D, 0, internal_format,
                      image_w, image_h, 0, format,
                      type, image);
-        glTextureParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, s_boundary);
-        glTextureParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, t_boundary);
-        glTextureParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, interpolation);
-        glTextureParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, interpolation);
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, s_boundary);
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, t_boundary);
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, interpolation);
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, interpolation);
         if (generateMipmap) {
             glGenerateMipmap(GL_TEXTURE_2D);
         }
@@ -145,9 +158,15 @@ struct TextureMaker {
 
 GLuint make_float_texture(float *image, size_t image_w, size_t image_h) {
     GLuint texture = get_tex();
+    #ifdef __EMSCRIPTEN__
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
+                 image_w, image_h, 0, GL_RGBA,
+                 GL_FLOAT, image);
+    #else
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F,
                  image_w, image_h, 0, GL_RGBA,
                  GL_FLOAT, image);
+    #endif
     return texture;
 }
 
@@ -211,7 +230,7 @@ void Quad::init_objects() {
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, 
                                 GL_TEXTURE_2D, texture, 0);
     }
-    set_vertex_name(vertex_name);
+    // set_vertex_name(vertex_name);
 }
 
 void Quad::bind() {
@@ -251,7 +270,7 @@ void Quad::set_program(GLuint program) {
     quad.frame_number = Quad::total_frames - 1;
     quad.init_texture(width, height, GL_UNSIGNED_BYTE);
     quad.init_objects();
-    quad.set_vertex_name(vertex_name);
+    // quad.set_vertex_name(vertex_name);
     unbind();
     return quad;
 }
@@ -269,7 +288,7 @@ Quad Quad::make_image_frame(uint8_t *image,
     GLuint texture = make_texture(image, width, height);
     glBindTexture(GL_TEXTURE_2D, texture);
     quad.init_objects();
-    quad.set_vertex_name(vertex_name);
+    // quad.set_vertex_name(vertex_name);
     unbind();
     return quad;
 }
@@ -284,7 +303,7 @@ Quad Quad::make_float_frame(int width, int height,
     quad.frame_number = Quad::total_frames - 1;
     quad.init_texture(width, height, GL_FLOAT);
     quad.init_objects();
-    quad.set_vertex_name(vertex_name);
+    // quad.set_vertex_name(vertex_name);
     unbind();
     return quad;
 }

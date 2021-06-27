@@ -1,5 +1,6 @@
 #version 330 core
 
+precision highp float;
 varying vec2 fragTextCoord;
 uniform sampler2D tex;
 
