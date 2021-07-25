@@ -1,16 +1,16 @@
 SHELL = /bin/bash
 
 # Clang
-# COMPILE = /usr/bin/clang++
-# FLAGS = -O2 -Wall -g -std=c++11
-# LIBS = -lm -lGL -lGLEW -lglfw
+COMPILE = /usr/bin/clang++
+FLAGS = -O2 -Wall -g -std=c++11
+LIBS = -lm -lGL -lGLEW -lglfw
 
 # GCC
-COMPILE = /usr/bin/g++ 
-FLAGS = -Og -Wall -g
-OPENMP = -fopenmp
-INCLUDE = ${OPENMP}
-LIBS = -lm -lGL -lGLEW -lglfw -fPIC ${OPENMP}
+# COMPILE = /usr/bin/g++ 
+# FLAGS = -Og -Wall -g
+# OPENMP = -fopenmp
+# INCLUDE = ${OPENMP}
+# LIBS = -lm -lGL -lGLEW -lglfw -fPIC ${OPENMP}
 
 TARGETDIR = .
 TARGET = ${TARGETDIR}/program

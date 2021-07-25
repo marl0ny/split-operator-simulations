@@ -1,6 +1,7 @@
 #include "gl_wrappers.hpp"
 #include <GLFW/glfw3.h>
 #include <cmath>
+#include <vector>
 #include "fft.hpp"
 #include "fft_gl.hpp"
 #include "complex_float_rgba.hpp"
@@ -256,25 +257,22 @@ int main(void) {
                 .dt = DT, .m = MASS};
 
     Quad exp_kinetic_tex = Quad::make_float_frame(w, h);
-    ComplexFloatRGBA *exp_kinetic = (ComplexFloatRGBA *)
-                                     calloc(w*h, sizeof(ComplexFloatRGBA));
-    make_exp_kinetic<ComplexFloatRGBA>(exp_kinetic, specs);
-    exp_kinetic_tex.substitute_array(w, h, GL_FLOAT, exp_kinetic);
+    auto exp_kinetic_vect = std::vector<ComplexFloatRGBA>(w*h);
+    make_exp_kinetic<ComplexFloatRGBA>(&exp_kinetic_vect[0], specs);
+    exp_kinetic_tex.substitute_array(w, h, GL_FLOAT, &exp_kinetic_vect[0]);
     unbind();
 
     Quad potential_tex = Quad::make_float_frame(w, h);
     Quad exp_potential_tex = Quad::make_float_frame(w, h);
-    ComplexFloatRGBA *exp_potential = (ComplexFloatRGBA *)
-                                       calloc(w*h, sizeof(ComplexFloatRGBA));
-    ComplexFloatRGBA *potential = (ComplexFloatRGBA *)
-                                   calloc(w*h, sizeof(ComplexFloatRGBA));
-    make_exp_sho_potential<ComplexFloatRGBA>(exp_potential, potential,
+    auto exp_potential = std::vector<ComplexFloatRGBA>(w*h);
+    auto potential = std::vector<ComplexFloatRGBA>(w*h);
+    make_exp_sho_potential<ComplexFloatRGBA>(&exp_potential[0], &potential[0],
                                              62500, // 20.0, 
                                              specs);
-    // make_exp_double_slit_potential<ComplexFloatRGBA>(exp_potential, potential,
-    //                                                  specs);
-    potential_tex.substitute_array(w, h, GL_FLOAT, potential);
-    exp_potential_tex.substitute_array(w, h, GL_FLOAT, exp_potential);
+    // make_exp_double_slit_potential<ComplexFloatRGBA>(&exp_potential[0], 
+    //                                                  &potential[0], specs);
+    potential_tex.substitute_array(w, h, GL_FLOAT, &potential[0]);
+    exp_potential_tex.substitute_array(w, h, GL_FLOAT, &exp_potential[0]);
     unbind();
 
     Quad init_wavefunc_tex = Quad::make_float_frame(w, h);
@@ -302,19 +300,17 @@ int main(void) {
         unbind();
     };
 
-    ComplexFloatRGBA *arr1 = (ComplexFloatRGBA *)
-                              calloc(w*h, sizeof(ComplexFloatRGBA));
-    ComplexFloatRGBA *arr2 = (ComplexFloatRGBA *)
-                              calloc(w*h, sizeof(ComplexFloatRGBA));
+    auto arr1 = std::vector<ComplexFloatRGBA>(w*h);
+    auto arr2 = std::vector<ComplexFloatRGBA>(w*h);
     auto step = [&](Quad *q1, Quad *q2) -> Quad * {
-        q1->get_texture_array(arr1, 0, 0, w, h, GL_FLOAT);
+        q1->get_texture_array(&arr1[0], 0, 0, w, h, GL_FLOAT);
         unbind();
-        multiply(arr2, arr1, exp_potential, w, h);
-        inplace_fft2(arr2, w, h);
-        multiply(arr1, arr2, exp_kinetic, w, h);
-        inplace_ifft2(arr1, w, h);
-        multiply(arr2, arr1, exp_potential, w, h);
-        q2->substitute_array(w, h, GL_FLOAT, arr2);
+        multiply(&arr2[0], &arr1[0], &exp_potential[0], w, h);
+        inplace_fft2(&arr2[0], w, h);
+        multiply(&arr1[0], &arr2[0], &exp_kinetic_vect[0], w, h);
+        inplace_ifft2(&arr1[0], w, h);
+        multiply(&arr2[0], &arr1[0], &exp_potential[0], w, h);
+        q2->substitute_array(w, h, GL_FLOAT, &arr2[0]);
         unbind();
         return q2;
     };
@@ -388,11 +384,6 @@ int main(void) {
         loop();
     }
     #endif
-    free(exp_kinetic);
-    free(potential);
-    free(exp_potential);
-    free(arr1);
-    free(arr2);
     glfwDestroyWindow(window);
     glfwTerminate();
     return 0;

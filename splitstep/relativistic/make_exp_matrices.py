@@ -4,6 +4,10 @@ Exponentiating the momentum and mass terms found in the
 Dirac equation, as well as the vector potential terms. 
 The form of these momentum terms are found on page 565 of 
 Principles of Quantum Mechanics by Ramamurti Shankar.
+A way to get the exponential of the momentum plus mass
+terms by diagonalizing it are found in Section II.3 of
+Fourier split operator method for the Dirac equation: 
+https://arxiv.org/abs/1012.3911.
 """
 from sympy import Symbol, exp, conjugate, gcd
 from sympy import Matrix, ImmutableDenseMatrix
@@ -23,24 +27,13 @@ ALPHA_Y = np.kron(np.array([[0.0, 1.0], [1.0, 0.0]]), SIGMA_Y)
 ALPHA_Z = np.kron(np.array([[0.0, 1.0], [1.0, 0.0]]), SIGMA_Z)
 BETA = np.kron(np.array([[1.0, 0.0], [0.0, -1.0]]), I)
 
-# Check if the matrices follow the anticommutation rules.
-# for i, m1 in enumerate((ALPHA_X, ALPHA_Y, ALPHA_Z, BETA)):
-#     for j, m2 in enumerate((ALPHA_X, ALPHA_Y, ALPHA_Z, BETA)):
-#         print(i+1, j+1, '\n', np.matmul(m1, m2) + np.matmul(m2, m1))
-
-# Print each of the matrices individually.
-# print(ALPHA_X)
-# print(ALPHA_Y)
-# print(ALPHA_Z)
-# print(BETA)
-
 
 def write_matrix(matrix_expr: ImmutableDenseMatrix, matrix_name: str, 
                  write_start: str, write_end: str) -> None:
     lines1, lines2 = [], []
     pass_start = False
     pass_end = False
-    with open('exp_matrices.py', 'r') as f:
+    with open('dirac_splitstep.py', 'r') as f:
         for line in f:
             if not pass_start:
                 lines1.append(line)
@@ -52,7 +45,7 @@ def write_matrix(matrix_expr: ImmutableDenseMatrix, matrix_name: str,
                     lines2.append(line)
                 elif pass_end:
                     lines2.append(line)
-    with open('exp_matrices.py', 'w') as f:
+    with open('dirac_splitstep.py', 'w') as f:
         for line in lines1:
             f.write(line)
         for i in range(4):
@@ -70,9 +63,14 @@ beta_mc = mc*Matrix(BETA)
 p_dot_alpha = px*Matrix(ALPHA_X) + py*Matrix(ALPHA_Y) + pz*Matrix(ALPHA_Z)
 p2 = px**2 + py**2 + pz**2
 dirac_matrix = p_dot_alpha + beta_mc
-exp_p = exp(-0.5j*(dirac_matrix)*cdt_hbar).simplify().subs(p2, 'p2')
-write_matrix(exp_p, 'exp_p',
-             '# exp p start', '# exp p end')
+vect_matrix, diag_dirac_matrix = dirac_matrix.diagonalize(normalize=True)
+vect_matrix.simplify()
+vect_matrix = vect_matrix.subs(p2, 'p2')
+vect_matrix.simplify()
+print(vect_matrix)
+# Note that Sympy doesn't give the full simplified version,
+# and more simplifications need to be carried out.
+print(diag_dirac_matrix)
 
 Ax, Ay, Az = Symbol('Ax'), Symbol('Ay'), Symbol('Az')
 A2 = Ax**2 + Ay**2 + Az**2

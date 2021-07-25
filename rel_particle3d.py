@@ -34,11 +34,10 @@ psi12 = psi1 + np.conj(psi2)
 psi = psi12/np.sqrt(np.sum(psi12*np.conj(psi12)))
 psi1 = psi1/np.sqrt(np.sum(psi1*np.conj(psi1)))
 psi2 = psi2/np.sqrt(np.sum(psi2*np.conj(psi2)))
-data = {'psi': [psi1, 
-                np.zeros([N, N, N]), np.zeros([N, N, N]),
-                np.zeros([N, N, N])]}
-abs_val = lambda psi: np.sqrt(np.real(
-                              sum([psi[i]*np.conj(psi[i]) for i in range(4)])))
+zeros = np.zeros([N, N, N])
+data = {'psi': np.array([psi1, zeros, zeros, zeros])}
+abs_val = lambda psi: np.sqrt(np.real(np.einsum('i...,i...->...', 
+                                                psi, np.conj(psi))))
 
 from mayavi import mlab
 mlab.figure(1, fgcolor=(1, 1, 1), bgcolor=(0, 0, 0))

@@ -1,9 +1,9 @@
 # Exploring the Split-Step Method (WIP)
 
 Various simulations of quantum mechanics phenomena using the
-split-operator method. 
+split-operator method. These are mostly implemented in Python as well as C++/OpenGL.
 
-A WASM version of the C++/OpenGL implementation can be found [here](https://marl0ny.github.io/split-operator-quantum2d.html).
+A rudimentary web-based version of the C++/OpenGL implementation can be found [here](https://marl0ny.github.io/split-operator-quantum2d.html).
 
 ## References:
 
@@ -15,9 +15,13 @@ Split-operator method:
 Overview of methods for soving the nonlinear Schrödinger equation:
  - [Arxiv - Computational methods for the dynamics of the nonlinear Schrödinger/Gross-Pitaevskii equations](https://arxiv.org/abs/1305.1093)
 
-General form of the Dirac equation:
+Klein-Gordon equation:
+ - [Wikipedia - Klein-Gordon Equation](https://en.wikipedia.org/wiki/Klein%E2%80%93Gordon_equation)
+
+Dirac equation:
  - Chapter 20 - The Dirac Equation of <i>Principles of Quantum Mechanics</i> by Ramamurti Shankar.
  - [Wikipedia - Dirac Equation](https://en.wikipedia.org/wiki/Dirac_equation)
+ - Section II.3 <i>Fourier split operator method for the Dirac equation</i> of [Accelerating the Fourier split operator method via graphics processing units](https://arxiv.org/abs/1012.3911)
 
 Finding the lowest energy eigenstates using the split-step method:
  - Section V.2 <i>Eigenstates</i> of [Accelerating the Fourier split operator method via graphics processing units](https://arxiv.org/abs/1012.3911)
