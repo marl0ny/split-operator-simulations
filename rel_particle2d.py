@@ -37,15 +37,17 @@ C = 137.036 # Speed of light
 V = np.zeros([N, N])
 y0, yf = 11*N//20 - 5, 11*N//20 + 5
 V[y0: yf, :] = 12000.0 # Barrier
-V[0: 4, :] = -120.0
+# V[0: 4, :] = -120.0
 V[y0: yf, 54*N//128: 58*N//128] = 0.0 # Make the left slit
 V[y0: yf, 70*N//128: 74*N//128] = 0.0 # Make the right slit
 A = [-3000.0*np.where(Y == 0.0, 1e-30, Y), 
      3000.0*np.where(X == 0.0, 1e-30, X), 0.0]
 SIGMA = 0.07
 BX, BY = 0.0, 0.25
+KY = -20.0
+KX = 0.0
 wavefunc = np.exp(-((X/L-BX)/SIGMA)**2/2.0
-                    - ((Y/L-BY)/SIGMA)**2/2.0)*np.exp(-40.0j*np.pi*Y/L)
+                    - ((Y/L-BY)/SIGMA)**2/2.0)*np.exp(2.0j*np.pi*(KY*Y + KX*X)/L)
 wavefunc = wavefunc/np.sqrt(np.sum(wavefunc*np.conj(wavefunc)))
 
 
@@ -73,15 +75,25 @@ def time_varying_vector_potential(t: float) -> 'List[np.ndarray, float]':
 m = 1.0
 U = DiracSplitStepMethod(V  - m*C**2
                         , (L, L), DT, m=m, 
-                        vector_potential=A,
+                        # vector_potential=A,
                         )
 
 fig = plt.figure()
 ax = fig.add_subplot(1, 1, 1)
 # print(np.amax(np.angle(psi)))
 zeros = np.zeros([N, N], np.complex128)
-data = {'psi': np.array([wavefunc, zeros, 
-                         zeros, zeros]), 'steps': 0}
+ones = np.ones([N, N], np.complex128)
+mc = m*U.C
+py, px = 2.0*KY*np.pi/L, 2.0*KX*np.pi/L
+p2 = py**2 + px**2
+p = np.sqrt(p2)
+omega = np.sqrt(mc*mc + p2)
+den = np.sqrt((mc + omega)**2 + p2)
+init_spinor = np.array([ones*(mc*px - 1.0j*mc*py + 
+                                  (px - 1.0j*py)*omega)/(p*den),
+                        zeros, zeros, ones*p/den], np.complex128)
+# init_spinor = np.array([wavefunc, zeros, zeros, zeros])
+data = {'psi': init_spinor*wavefunc, 'steps': 0}
 abs_val = lambda psi: np.sqrt(np.real(np.einsum('i...,i...->...', 
                                                 psi, np.conj(psi))))
 max_val = np.amax(abs_val(data['psi']))

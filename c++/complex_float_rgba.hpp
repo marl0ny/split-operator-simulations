@@ -2,6 +2,11 @@
 #define _COMPLEX_FLOAT_RGBA_
 
 
+/*
+* A class for handling complex numbers that
+* can also be used to represent the rgba values
+* of a floating point pixel.
+*/
 struct ComplexFloatRGBA {
     union {
         struct {

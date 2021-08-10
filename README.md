@@ -21,6 +21,7 @@ Klein-Gordon equation:
 Dirac equation:
  - Chapter 20 - The Dirac Equation of <i>Principles of Quantum Mechanics</i> by Ramamurti Shankar.
  - [Wikipedia - Dirac Equation](https://en.wikipedia.org/wiki/Dirac_equation)
+ - [Wikipedia - Dirac spinor](https://en.wikipedia.org/wiki/Dirac_spinor)
  - Section II.3 <i>Fourier split operator method for the Dirac equation</i> of [Accelerating the Fourier split operator method via graphics processing units](https://arxiv.org/abs/1012.3911)
 
 Finding the lowest energy eigenstates using the split-step method:

@@ -3,7 +3,10 @@ SHELL = /bin/bash
 # Clang
 COMPILE = /usr/bin/clang++
 FLAGS = -O2 -Wall -g -std=c++11
-LIBS = -lm -lGL -lGLEW -lglfw
+# Getting OpenMP to work with Clang:
+# https://stackoverflow.com/a/42887226
+INCLUDE = -fopenmp
+LIBS = -lm -lGL -lGLEW -lglfw -fPIC -fopenmp=libiomp5
 
 # GCC
 # COMPILE = /usr/bin/g++ 

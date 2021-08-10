@@ -61,7 +61,7 @@ class DiracSplitStepMethod(SplitStepMethod):
         omega = np.sqrt(mc*mc + p2)
         den1 = p*np.sqrt((mc - omega)**2 + p2)
         den2 = p*np.sqrt((mc + omega)**2 + p2)
-        # Originally, the matrix involving the momentum and mass term was
+        # Originally, the matrix involving the momentum and mass terms was
         # found by exponentiating it in its entirety. Instead, of doing
         # this, this matrix is diagonalized using Sympy, where one
         # gets that this matrix is equal to U E inv(U), 

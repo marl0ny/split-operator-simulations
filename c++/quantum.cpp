@@ -266,11 +266,11 @@ int main(void) {
     Quad exp_potential_tex = Quad::make_float_frame(w, h);
     auto exp_potential = std::vector<ComplexFloatRGBA>(w*h);
     auto potential = std::vector<ComplexFloatRGBA>(w*h);
-    make_exp_sho_potential<ComplexFloatRGBA>(&exp_potential[0], &potential[0],
-                                             62500, // 20.0, 
-                                             specs);
-    // make_exp_double_slit_potential<ComplexFloatRGBA>(&exp_potential[0], 
-    //                                                  &potential[0], specs);
+    // make_exp_sho_potential<ComplexFloatRGBA>(&exp_potential[0], &potential[0],
+    //                                          62500, // 20.0, 
+    //                                          specs);
+    make_exp_double_slit_potential<ComplexFloatRGBA>(&exp_potential[0], 
+                                                     &potential[0], specs);
     potential_tex.substitute_array(w, h, GL_FLOAT, &potential[0]);
     exp_potential_tex.substitute_array(w, h, GL_FLOAT, &exp_potential[0]);
     unbind();
@@ -338,10 +338,10 @@ int main(void) {
     bool use_gpu = false;
     Quad *q_a = &q1;
     Quad *q_b = &q2;
-    // init_wavefunc(q_a, 0.5, 0.25, 0.0, 25.0, 0.05, 0.05);
-    // init_wavefunc(q_b, 0.5, 0.25, 0.0, 25.0, 0.05, 0.05);
-    init_wavefunc(q_a, 0.5, 0.5, 0.0, 15.0, 0.05, 0.05);
-    init_wavefunc(q_b, 0.5, 0.5, 0.0, 15.0, 0.05, 0.05);
+    init_wavefunc(q_a, 0.5, 0.25, 0.0, 25.0, 0.05, 0.05);
+    init_wavefunc(q_b, 0.5, 0.25, 0.0, 25.0, 0.05, 0.05);
+    // init_wavefunc(q_a, 0.5, 0.5, 0.0, 15.0, 0.05, 0.05);
+    // init_wavefunc(q_b, 0.5, 0.5, 0.0, 15.0, 0.05, 0.05);
     #ifndef __EMSCRIPTEN__
     auto
     #endif
