@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<meta charset="utf-8"/>
+<html>
+	<head>
+        <style>
+            h2 {font-family:Arial, Helvetica, sans-serif; }
+            label {font-family:Arial, Helvetica, sans-serif; }
+			text {font-family:Arial, Helvetica, sans-serif; }
+        </style>
+    </head>
+	<body style="background-color: rgb(255, 255, 255);">
+			 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr;">
+				<div style="grid-column: 1; /*background-color: rgb(200, 200, 200);*/">
+					<label for="stepsPerFrame" id="stepsPerFrameLabel">Updates/frame
+					</label>
+					<br>
+					<input type="range" id="stepsPerFrame"
+					name="steps/frame"
+					min="0" max="10.0" value="1.0"/>
+					<br>
+					<label id="fps">fps: </label>
+					<br>
+					<button type="button"
+						aria-pressed="true" id="newWaveFuncButton">New 𝛙</button>
+					<br>
+					<button type="button" 
+						aria-pressed="true" id="sketchButton">Sketch V</button>
+					<button type="button"
+						aria-pressed="true" id="eraseButton">Erase V</button>
+					<br>
+					<label for="sketchWidth" id="sketchWidthLabel">Sketch size</label>
+					<br>
+					<input type="range" id="sketchWidth" name="sketchWidth"
+						min="0" max="100" value="50"/>
+					<br>
+					<input type="checkbox" id="showPotential" checked="true"></input>
+					<label for="showPotential">Show V</label>
+					<br>
+					<input type="checkbox" id="showSurface"></input>
+					<label for="showSurface">Display surface</label>
+					<br>
+					<label for="timeStepReal" id="timeStepRealLabel">Re(Δt)
+					</label>
+					<br>
+					<input type="range" id="timeStepReal"
+							name="timeStepReal"
+							min="-100.0" max="100.0" value="25.0"/>
+					<br>
+					<label for="timeStepImag" id="timeStepImagLabel">Im(Δt)
+					</label>
+					<br>
+					<input type="range" id="timeStepImag"
+							name="timeStepImag"
+							min="-200.0" max="0.0" value="0.0"/>
+					<br>
+				</div>
+				<div style="grid-column-start: 2; grid-column-end: 3">
+					<canvas style="touch-action: none; background-color: rgb(50, 50, 50);"
+						id="sketchCanvas"></canvas>
+				</div>
+				<div style="grid-column: 4; resize: vertical">
+					<label>Simulation domain</label><br>
+					<label id="xRangeLabel"> -128 &leq; x &lt; 128</label><br>
+					<label id="yRangeLabel"> -128 &leq; y &lt; 128</label><br><br>
+					<label for="presetPotential">Preset V(x, y)<br>
+						<select id="presetPotential">
+							<option value=0 selected>Free (periodic)</option>
+							<option value=1>Harmonic</option>
+							<option value=2>Double slit</option>
+							<option value=3>Circular well</option>
+							<option value=4>Spike</option>
+							<option value=5>Attractive Spike</option>
+							<option value=6>Absorbing boundaries (A.B.)</option>
+							<option value=7>Double slit (A.B.)</option>
+							<option value=8>Spike (A.B.)</option>
+							<option value=9>Attractive Spike (A.B.)</option>
+						</select>
+					</label><br>
+					<label for="potentialEntry">Enter V(x, y, t)<br>
+						<input type ="text" id="potentialEntry"
+						value="a*((x/width)^2 + (y/height)^2)"
+						name="potentialEntry" size="23"
+						/>
+					<br>
+					</label>
+					<label id="potentialClippedMessage">
+						Please note that to reduce numerical error,
+						V will be clipped such that<br\>|V(x, y, t)| &lt; 2
+					</label>
+					<div id="potentialUserSliders"></div>
+					<br>
+					<label for="presetNonlinear">Preset nonlinear term<br>
+						<select id="presetNonlinear" style="width: 48;">
+							<option value=0 selected>None</option>
+							<option value=1>100*abs(a*psi)^2</option>
+							<option value=2>a*exp(-abs(psi)^2/0.01^2)</option>
+							<option value=3>Combination of above two</option>
+						</select>
+					</label>
+					<br>
+					<label for="nonlinearEntry">Enter nonlinearity f(𝛙)<br>
+						<input type="text" id="nonlinearEntry"
+							name="nonlinearEntry" size="23" value="">
+					</label>
+					<br>
+					<div id="nonlinearUserSliders"></div>
+					<br>
+					<!--
+					<label for="kineticEnergyEntry">Kinetic energy-momentum relation: KE(px, py)<br>
+						<input type="text" id="kineticEnergyEntry"
+							name="nonlinearEntry" size="23" value="(px^2 + py^2)/(2.0*m)">
+					</label>
+					-->
+					<br>
+					<div id="kineticEnergyUserSliders"></div>
+				</div>
+			</div>
+		<script>const LENGTH=512;</script>
+		<script type="module" src="./main.js"></script>
+	</body>
+</html>
+
