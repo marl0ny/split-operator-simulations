@@ -182,7 +182,7 @@ const USER_DEFINED_KE_FUNCTION_FRAG1 =
 `
 uniform vec2 dimensions2D;
 uniform ivec2 texelDimensions2D;
-uniform float m;
+uniform complex m;
 
 vec2 get2Momentum(vec2 uv) {
     float u = uv[0], v = uv[1];

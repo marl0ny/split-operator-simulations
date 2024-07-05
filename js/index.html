@@ -16,14 +16,14 @@
 					<br>
 					<input type="range" id="stepsPerFrame"
 					name="steps/frame"
-					min="0" max="10.0" value="1.0"/>
+					min="0" max="20.0" value="1.0"/>
 					<br>
 					<label id="fps">fps: </label>
 					<br>
 					<button type="button"
 						aria-pressed="true" id="newWaveFuncButton">New 𝛙</button>
 					<br>
-					<button type="button" 
+					<button type="button"
 						aria-pressed="true" id="sketchButton">Sketch V</button>
 					<button type="button"
 						aria-pressed="true" id="eraseButton">Erase V</button>
@@ -105,18 +105,15 @@
 					<br>
 					<div id="nonlinearUserSliders"></div>
 					<br>
-					<!--
 					<label for="kineticEnergyEntry">Kinetic energy-momentum relation: KE(px, py)<br>
 						<input type="text" id="kineticEnergyEntry"
 							name="nonlinearEntry" size="23" value="(px^2 + py^2)/(2.0*m)">
 					</label>
-					-->
 					<br>
 					<div id="kineticEnergyUserSliders"></div>
 				</div>
 			</div>
-		<script>const LENGTH=512;</script>
+		<script>const LENGTH=128;</script>
 		<script type="module" src="./main.js"></script>
 	</body>
 </html>
-

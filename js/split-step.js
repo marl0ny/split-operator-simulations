@@ -1,14 +1,14 @@
 import { Quad, IScalar, Complex, div } from "./gl-wrappers.js";
 import { fft2D, ifft2D } from "./fft.js";
-import SHADERS from "./shaders.js";
+import { getShader } from "./shaders.js";
 
 let gPrograms = {
     splitStepMomentum: 
         Quad.makeProgramFromSource(
-            SHADERS['./shaders/split-step-momentum.frag']),
+            getShader('./shaders/split-step-kinetic.frag')),
     splitStepSpatial: 
         Quad.makeProgramFromSource(
-            SHADERS['./shaders/split-step-spatial.frag']
+            getShader('./shaders/split-step-spatial.frag')
         )
 };
 
@@ -47,11 +47,12 @@ function splitStepMomentum(psiF, psiI, kineticEnergy, simParams) {
         dimensions2D: params.dimensions,
         dt: params.dt,
         m: params.m, hbar: params.hbar,
-        psiTex: psiI
+        psiTex: psiI,
+        useCustomKETex: false,
     };
     if (kineticEnergy !== null) {
-        uniforms.useCustomKETex = false;
-        uniforms.customKETex = kineticEnergy;
+        uniforms.useCustomKETex = true;
+        uniforms['customKETex'] = kineticEnergy;
     }
     psiF.draw(
         gPrograms.splitStepMomentum,

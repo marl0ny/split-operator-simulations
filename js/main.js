@@ -100,6 +100,7 @@ class Frames {
         this.render 
             = new RenderTarget({...TEX_PARAMS_CANVAS_F32, 
                                 format: gl.RGBA32F});
+        this.kineticEnergy = null;
     }
 }
 
@@ -130,7 +131,8 @@ withConfig({width: WIDTH, height: HEIGHT}, () => {
             sigmaXY: new Vec2(0.04, 0.04)
         }
     );
-    splitStep(gFrames.wavepacket2, gFrames.wavepacket1, null, gFrames.pot,
+    splitStep(gFrames.wavepacket2, gFrames.wavepacket1, 
+              gFrames.kineticEnergy, gFrames.pot,
               gSimParams);
 });
 
@@ -187,7 +189,7 @@ document.getElementById("timeStepReal").addEventListener(
 
 document.getElementById("potentialClippedMessage").innerHTML
     = "Please note: to reduce numerical error<br\>"
-    + " V will be clipped such that<br\>"
+    + " V will be clipped so that<br\>"
     + " |V(x, y, t)| \u2264 2"
 
 function timeStepImagCallback(value) {
@@ -428,6 +430,10 @@ function setPresetNonlinearity(value) {
     }
 }
 
+document.getElementById("kineticEnergyEntry").addEventListener(
+    "input", e => gTextEditKE.newText(e.target.value)
+);
+
 document.getElementById("xRangeLabel").textContent 
 = `-${WIDTH/2} \u2264 x < ${WIDTH/2}`;
 document.getElementById("yRangeLabel").textContent 
@@ -625,8 +631,22 @@ function animate() {
     gTextEditNonlinear.refresh(() => {
         gUseNonlinear = true;
     });
+    gTextEditKE.refresh(() => {
+        withConfig({width: WIDTH, height: HEIGHT}, () => {
+            if (gFrames.kineticEnergy === null)
+                gFrames.kineticEnergy = new Quad(TEX_PARAMS_SIM);
+            gFrames.kineticEnergy.draw(
+                gTextEditKE.program,
+                {...gTextEditKE.uniforms, 
+                m: new Complex(gSimParams.m, 0.0),
+                dimensions2D: new Vec2(WIDTH, HEIGHT),
+                texelDimensions2D: new IVec2(WIDTH, HEIGHT)}
+            );
+        });
+    });
     for (let i = 0; i < gStepsPerFrame; i++) {
         withConfig({width: WIDTH, height: HEIGHT}, () => {
+            let kineticEnergy = gFrames.kineticEnergy;
             let potential = gFrames.pot;
             if (gUseNonlinear) {
                 gFrames.nonlinearTerm.draw(
@@ -647,7 +667,7 @@ function animate() {
             }
             splitStep(
                 gFrames.wavepacket1, gFrames.wavepacket2,
-                null, potential, gSimParams);
+                kineticEnergy, potential, gSimParams);
             [gFrames.wavepacket1, gFrames.wavepacket2] 
                 = [gFrames.wavepacket2, gFrames.wavepacket1];
             gSimParams.t = add(gSimParams.t, gSimParams.dt);
