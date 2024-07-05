@@ -105,6 +105,14 @@
 					<br>
 					<div id="nonlinearUserSliders"></div>
 					<br>
+					<!--<label for="presetKineticEnergy">Preset kinetic term<br>
+						<select id="presetNonlinear" style="width: 48;">
+							<option value=0 selected>None</option>
+							<option value=1>(px^2 + py^2)/(2.0*m)</option>
+							<option value=2>(px^2 + py^2)^0.5</option>
+						</select>
+					</label>
+					<br>-->
 					<label for="kineticEnergyEntry">Kinetic energy-momentum relation: KE(px, py)<br>
 						<input type="text" id="kineticEnergyEntry"
 							name="nonlinearEntry" size="23" value="(px^2 + py^2)/(2.0*m)">
@@ -113,7 +121,7 @@
 					<div id="kineticEnergyUserSliders"></div>
 				</div>
 			</div>
-		<script>const LENGTH=128;</script>
+		<script>const LENGTH=512;</script>
 		<script type="module" src="./main.js"></script>
 	</body>
 </html>
