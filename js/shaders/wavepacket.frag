@@ -34,19 +34,33 @@ uniform float amplitude;
 // Standard deviation of the wave packet, in texture coordinates
 uniform vec2 sigmaXY;
 
+complex wavepacket(vec2 r) {
+    float sx = sigmaXY.x;
+    float sy = sigmaXY.y;
+    float gx = exp(-0.25*pow(r.x/sx, 2.0))/sqrt(sx*sqrt(2.0*PI));
+    float gy = exp(-0.25*pow(r.y/sy, 2.0))/sqrt(sy*sqrt(2.0*PI));
+    float g = gx*gy;
+    float nx = waveNumber.x;
+    float ny = waveNumber.y;
+    complex phase = complex(cos(2.0*PI*(nx*r.x + ny*r.y)),
+                            sin(2.0*PI*(nx*r.x + ny*r.y)));
+    return amplitude*g*phase;
+}
+
 void main() {
     float x = UV.x;
     float y = UV.y;
     float x0 = texOffset.x;
     float y0 = texOffset.y;
-    float sx = sigmaXY.x;
-    float sy = sigmaXY.y;
-    float gx = exp(-0.25*pow((x - x0)/sx, 2.0))/sqrt(sx*sqrt(2.0*PI));
-    float gy = exp(-0.25*pow((y - y0)/sy, 2.0))/sqrt(sy*sqrt(2.0*PI));
-    float g = gx*gy;
-    float nx = waveNumber.x;
-    float ny = waveNumber.y;
-    complex phase = complex(cos(2.0*PI*(nx*x + ny*y)),
-                            sin(2.0*PI*(nx*x + ny*y)));
-    fragColor = amplitude*g*vec4(phase, phase);
+    vec2 r = vec2(x - x0, y - y0);
+    complex w = wavepacket(r)
+        + wavepacket(vec2(r.x + 1.0, r.y)) 
+        + wavepacket(vec2(r.x - 1.0, r.y)) 
+        + wavepacket(vec2(r.x, r.y + 1.0))
+        + wavepacket(vec2(r.x, r.y - 1.0))
+        + wavepacket(vec2(r.x - 1.0, r.y - 1.0))
+        + wavepacket(vec2(r.x + 1.0, r.y + 1.0))
+        + wavepacket(vec2(r.x + 1.0, r.y - 1.0))
+        + wavepacket(vec2(r.x - 1.0, r.y + 1.0));
+    fragColor = vec4(w, w);
 }

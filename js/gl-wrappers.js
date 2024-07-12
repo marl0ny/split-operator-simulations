@@ -455,11 +455,7 @@ export class TextureParams {
         this.magFilter = magFilter;
     }
     equals(other) {
-        for (let e of Object.keys(this)) {
-            if (other[e] !== this[e])
-                return false;
-        }
-        return true;
+        return Object.keys(this).every(e => this[e] === other[e]);
     }
 }
 
@@ -694,6 +690,12 @@ export class RenderTarget {
     get id() {
         return this._id;
     }
+    get width() {
+        return this._params.width;
+    }
+    get height() {
+        return this._params.height;
+    }
     _initTexture() {
         if (this._id === 0) {
             // this._texture = gl.createTexture();
@@ -743,12 +745,24 @@ export class RenderTarget {
         if (this._id !== 0) {
             gl.bindFramebuffer(gl.FRAMEBUFFER, this._fbo);
             gl.bindRenderbuffer(gl.RENDERBUFFER, this._rbo);
-            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+            gl.clear(gl.COLOR_BUFFER_BIT| gl.DEPTH_BUFFER_BIT);
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
             gl.bindRenderbuffer(gl.RENDERBUFFER, null);
         }
     }
-    draw(program, uniforms, wireFrame) {
+    _adjust_viewport_before_drawing(config) {
+        if (config !== null
+            && keys.includes('width') && keys.includes('height'))
+            gl.viewport(0, 0, config.width, config.height);
+        else if (config !== null && keys.includes('viewport'))
+            gl.viewport(config['viewport'][0], config['viewport'][1],
+                        config['viewport'][2], config['viewport'][3])
+        else
+            gl.viewport(0, 0, this.width, this.height);
+    }
+    draw(program, uniforms, wireFrame, config=null) {
+        let originalViewport = gl.getParameter(gl.VIEWPORT);
+        this._adjust_viewport_before_drawing(config);
         gl.useProgram(program);
         if (this._id !== 0) {
             gl.bindFramebuffer(gl.FRAMEBUFFER, this._fbo);
@@ -787,6 +801,8 @@ export class RenderTarget {
             }
         }
         wireFrame.draw(program);
+        gl.viewport(originalViewport[0], originalViewport[1],
+                    originalViewport[2], originalViewport[3]);
         unbind();
     }
 }
@@ -822,13 +838,14 @@ export class Quad {
     _texture;
     _fbo;
     constructor(textureParams) {
-        for (id in Object.keys(gRecycledQuads)) {
+        for (let id of Object.keys(gRecycledQuads)) {
             if (gRecycledQuads[id].params.equals(textureParams)) {
                 this._id = id;
                 this._params = gRecycledQuads[id].params;
                 this._texture = gRecycledQuads[id].texture;
                 this._fbo = gRecycledQuads[id].fbo;
                 delete gRecycledQuads[id];
+                // console.log(this._id, this._params, this._texture, this._fbo);
                 return;
             }
         }
@@ -840,7 +857,15 @@ export class Quad {
     }
     recycle() {
         gRecycledQuads[this.id] 
-            = {params: this._params, texture: this._texture, fbo: this._fbo};
+            = {params: 
+                new TextureParams(
+                    this._params.format, 
+                    this._params.width, this._params.height,
+                    this._params.generateMipmap, 
+                    this._params.wrapS, this._params.wrapT,
+                    this._params.minFilter, this._params.magFilter
+               ), 
+               texture: this._texture, fbo: this._fbo};
         this._id = 0xffffffff;
     }
     get id() {
@@ -851,6 +876,9 @@ export class Quad {
     }
     get height() {
         return this._params.height;
+    }
+    get format() {
+        return this._params.format;
     }
     channelCount() {
         let base = toBase(this._params.format);
@@ -961,7 +989,19 @@ export class Quad {
         gl.enableVertexAttribArray(attrib);
         gl.vertexAttribPointer(attrib, 3, gl.FLOAT, false, 12, 0);
     }
-    draw(program, uniforms) {
+    _adjust_viewport_before_drawing(config) {
+        if (config !== null
+            && keys.includes('width') && keys.includes('height'))
+            gl.viewport(0, 0, config.width, config.height);
+        else if (config !== null && keys.includes('viewport'))
+            gl.viewport(config['viewport'][0], config['viewport'][1],
+                        config['viewport'][2], config['viewport'][3])
+        else
+            gl.viewport(0, 0, this.width, this.height);
+    }
+    draw(program, uniforms, config=null) {
+        let originalViewport = gl.getParameter(gl.VIEWPORT);
+        this._adjust_viewport_before_drawing(config);
         this._bind(program);
         for (let name of Object.keys(uniforms)) {
             let loc = gl.getUniformLocation(program, name);
@@ -999,9 +1039,13 @@ export class Quad {
                         (gl.version === 2)? 
                         gl.UNSIGNED_INT: gl.UNSIGNED_SHORT,
                         null);
+        gl.viewport(originalViewport[0], originalViewport[1],
+                    originalViewport[2], originalViewport[3]);
         unbind();
     }
     substituteArray(arr) {
+        let originalViewport = gl.getParameter(gl.VIEWPORT);
+        gl.viewport(0, 0, this.width, this.height);
         if (self.id !== 0)
             gl.bindFramebuffer(gl.FRAMEBUFFER, this._fbo);
         gl.activeTexture(gl.TEXTURE0 + this.id);
@@ -1011,6 +1055,8 @@ export class Quad {
             this.width, this.height,
             toBase(this._params.format), toType(this._params.format), 
             arr);
+        gl.viewport(originalViewport[0], originalViewport[1],
+                    originalViewport[2], originalViewport[3]);
         unbind();
     }
     asFloat32Array() {
@@ -1044,4 +1090,90 @@ export function withConfig(config, closure) {
     if (keys.includes('enable'))
         gl.enable(config.enable);
     closure();
+}
+
+/* If n is a perfect square, return its square root,
+else return those values closest to making it a square.
+Although this is implemented using brute force iteration,
+for the problem that this function is meant to solve
+the value of n shouldn't be too large (n < 1000).
+*/
+function decompose(n) {
+    let i = 1;
+    for (; i*i < n; i++);
+    for (; n % i; i--);
+    return new IVec2(
+        ((n / i) > i)? (n / i): i,
+        ((n / i) < i)? (n / i): i
+    );
+}
+
+export function get2DFrom3DDimensions(dimensions3D) {
+    let width = dimensions3D.ind[0];
+    let height = dimensions3D.ind[1];
+    let length = dimensions3D.ind[2];
+    let d = decompose(length);
+    let maxTextureSize = 10000;
+    let texDimensions2D = new IVec2(0.0, 0.0);
+    if (d.ind[0]*width < maxTextureSize &&
+        d.ind[1]*height < maxTextureSize) {
+        texDimensions2D.ind[0] = width*d.ind[0];
+        texDimensions2D.ind[1] = height*d.ind[1];
+    } else if (d.ind[1]*width < maxTextureSize &&
+               d.ind[0]*height < maxTextureSize) {
+        texDimensions2D.ind[0] = width*d.ind[1];
+        texDimensions2D.ind[1] = height*d.ind[0];
+    } else {
+        console.error(
+            `3D texture dimensions ${width}, ${height}, ${length} `
+             + `with possible 2D representations `
+             + `${width*d.ind[0]}, ${height*d.ind[1]} `
+             + `or ${width*d.ind[1]}, ${height*d.ind[0]} exceed maximum `
+             + `texture size. The maximum 2D texture side length `
+             + `is ${maxTextureSize}.`);
+    }
+    return texDimensions2D;
+
+}
+
+export function get2DFromWidthHeightLength(
+    width, height, length
+) {
+    return get2DFrom3DDimensions(new IVec3(
+        width, height, length
+    ));
+}
+
+export function get2DFrom3DTextureCoordinates(
+    uvw, texDimensions2D, dimensions3D
+) {
+    let width2D = texDimensions2D.ind[0];
+    let height2D = texDimensions2D.ind[1];
+    let width3D = dimensions3D.ind[0];
+    let height3D = dimensions3D.ind[1];
+    let length3D = dimensions3D.ind[2];
+    let wStack = width2D/width3D;
+    let xIndex = width3D*(uvw.ind[0] % 1.0);
+    let yIndex = height3D*(uvw.ind[1] % 1.0);
+    let zIndex = Math.floor(length3D*uvw.ind[2]) % length3D;
+    let uIndex = (zIndex % wStack)*width3D + xIndex;
+    let vIndex = Math.floor(zIndex / wStack)*height3D + yIndex;
+    return new Vec2(uIndex/width2D, vIndex/height2D);
+}
+
+export function get3DFrom2DTextureCoordinates(
+    uv, texDimensions2D, dimensions3D
+) {
+    let width2D = texDimensions2D.ind[0];
+    let height2D = texDimensions2D.ind[1];
+    let width3D = dimensions3D.ind[0];
+    let height3D = dimensions3D.ind[1];
+    let length3D = dimensions3D.ind[2];
+    let wStack = width2D/width3D;
+    let hStack = height2D/height3D;
+    let u = uv.ind[0]*wStack % 1.0;
+    let v = uv.ind[1]*hStack % 1.0;
+    let w = (Math.floor(uv.ind[1]*hStack)*wStack
+                + Math.floor(uv.ind[0]*wStack) + 0.5)/length3D;
+    return new Vec3(u, v, w)
 }

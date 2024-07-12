@@ -56,6 +56,10 @@ void main() {
     complex psi2 = psi.zw;
     complex potential = texture2D(potentialTex, UV).xy;
     complex iVdt = mul(IMAG_UNIT, mul(potential, dt));
-    fragColor = vec4(mul(expC(-iVdt/hbar), psi1),
-                     mul(expC(-iVdt/hbar), psi2));
+    if (potential.x == 0.0 && potential.y == 0.0) {
+        fragColor = vec4(psi1, psi2);
+    } else {
+        fragColor = vec4(mul(expC(-iVdt/hbar), psi1),
+                        mul(expC(-iVdt/hbar), psi2));
+    }
 }

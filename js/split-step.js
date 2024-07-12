@@ -1,4 +1,4 @@
-import { Quad, IScalar, Complex, div } from "./gl-wrappers.js";
+import { Quad, IScalar, Complex, div, withConfig } from "./gl-wrappers.js";
 import { fft2D, ifft2D } from "./fft.js";
 import { getShader } from "./shaders.js";
 
@@ -12,13 +12,31 @@ let gPrograms = {
         )
 };
 
+const PI = 3.141592653589793;
+
+export function initializeDefaultKineticEnergy(
+    dst, simulationWidth, simulationHeight, m) {
+    let width = dst.width, height = dst.height;
+    let keArr = new Float32Array(2*width*height);
+    for (let i = 0; i < height; i++) {
+        for (let j = 0; j < width; j++) {
+            let iFreq = (i < height/2)? i: -height + i;
+            let jFreq = (j < width/2)? j: -width + j;
+            let px = 2.0*PI*jFreq/simulationWidth;
+            let py = 2.0*PI*iFreq/simulationHeight;
+            keArr[2*(i*width + j)] = (px*px + py*py)/(2.0*m);
+        }
+    }
+    dst.substituteArray(keArr);
+}
+
 export class SimulationParameters {
     t;
     dt;
     m;
     hbar;
-    dimensions;
-    gridDimensions;
+    dimensions; // simulation dimensions of the 2D rectangular domain
+    gridDimensions; // number of points used along each dimension
     constructor(hbar, m, dt, dimensions, gridDimensions) {
         this.t = new Complex(0.0, 0.0);
         this.dt = dt;

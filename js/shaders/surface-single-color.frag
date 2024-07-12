@@ -11,18 +11,24 @@ precision highp float;
     
 #if __VERSION__ <= 120
 varying vec2 UV;
+varying vec3 FINAL_VERTEX_POSITION;
 varying vec3 NORMAL;
 #define fragColor gl_FragColor
 #else
 in vec2 UV;
 in vec3 NORMAL;
+in vec3 FINAL_VERTEX_POSITION;
 out vec4 fragColor;
 #endif
 
 uniform vec4 color;
 
 void main() {
-    // float brightness = dot(NORMAL, vec3(0.0, 0.0, -1.0));
-    float diffuse = 0.5*abs(dot(NORMAL, vec3(0.0, 0.0, 1.0)));
-    fragColor = vec4(color.rgb*(diffuse + 0.25), color.a);
+    vec3 lightSourceLoc = vec3(0.0, 0.0, -3.0);
+    vec3 vertexToLightSource = lightSourceLoc - FINAL_VERTEX_POSITION;
+    float diffuse1 = max(dot(NORMAL, normalize(vertexToLightSource)), 0.0);
+    float diffuse2 =  max(dot(-NORMAL, normalize(vertexToLightSource)), 0.0);
+    // float diffuse2 = max(0.5*dot(NORMAL, vec3(0.0, 0.0, -1.0)), 0.0); 
+    float diffuse = ((NORMAL.z < 0.0)? diffuse1: diffuse2);
+    fragColor = vec4(color.rgb*(diffuse), color.a);
 }

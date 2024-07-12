@@ -69,24 +69,19 @@ function refreshCosTable(n) {
                 }
             }
         }
-        let viewport = gl.getParameter(gl.VIEWPORT);
-        gl.viewport(0, 0, Math.floor(n/2), 1);
-        {   
-            let textureParams = (gl.version === 2)? 
-            new TextureParams(
-                gl.R32F, n/2, 1, false,
-                gl.REPEAT, gl.REPEAT,
-                gl.NEAREST, gl.NEAREST
-            ) :
-            new TextureParams(
-                gl.RGBA32F, n/2, 1, false,
-                gl.REPEAT, gl.REPEAT,
-                gl.NEAREST, gl.NEAREST
-            ); 
-            gCosTable.quad = new Quad(textureParams);
-            gCosTable.quad.substituteArray(gCosTable.ind);
-        }
-        gl.viewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+        let textureParams = (gl.version === 2)? 
+        new TextureParams(
+            gl.R32F, n/2, 1, false,
+            gl.REPEAT, gl.REPEAT,
+            gl.NEAREST, gl.NEAREST
+        ) :
+        new TextureParams(
+            gl.RGBA32F, n/2, 1, false,
+            gl.REPEAT, gl.REPEAT,
+            gl.NEAREST, gl.NEAREST
+        ); 
+        gCosTable.quad = new Quad(textureParams);
+        gCosTable.quad.substituteArray(gCosTable.ind);
         // console.log('Finished refreshing cos table.');
     }
 }

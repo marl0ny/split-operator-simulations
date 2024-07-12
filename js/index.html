@@ -16,7 +16,7 @@
 					<br>
 					<input type="range" id="stepsPerFrame"
 					name="steps/frame"
-					min="0" max="20.0" value="1.0"/>
+					min="0" max="20.0" value="2.0"/>
 					<br>
 					<label id="fps">fps: </label>
 					<br>
@@ -37,14 +37,14 @@
 					<label for="showPotential">Show V</label>
 					<br>
 					<input type="checkbox" id="showSurface"></input>
-					<label for="showSurface">Display surface</label>
+					<label for="showSurface">3D display</label>
 					<br>
 					<label for="timeStepReal" id="timeStepRealLabel">Re(Δt)
 					</label>
 					<br>
 					<input type="range" id="timeStepReal"
 							name="timeStepReal"
-							min="-100.0" max="100.0" value="25.0"/>
+							min="-80.0" max="80.0" value="64.0"/>
 					<br>
 					<label for="timeStepImag" id="timeStepImagLabel">Im(Δt)
 					</label>
@@ -53,6 +53,9 @@
 							name="timeStepImag"
 							min="-200.0" max="0.0" value="0.0"/>
 					<br>
+					<input type="checkbox" id="normalizePsi"/>
+					<label for="normalizePsi">Normalize 𝛙</label><br>
+					<label style="text-align: center;"> for each frame</label><br>
 				</div>
 				<div style="grid-column-start: 2; grid-column-end: 3">
 					<canvas style="touch-action: none; background-color: rgb(50, 50, 50);"
@@ -61,24 +64,39 @@
 				<div style="grid-column: 4; resize: vertical">
 					<label>Simulation domain</label><br>
 					<label id="xRangeLabel"> -128 &leq; x &lt; 128</label><br>
-					<label id="yRangeLabel"> -128 &leq; y &lt; 128</label><br><br>
-					<label for="presetPotential">Preset V(x, y)<br>
+					<label id="yRangeLabel"> -128 &leq; y &lt; 128</label><br>
+					<label id="changeGridLabel" for="changeGrid">Grid size
+					</label>
+					<select id="changeGrid">
+						<option value=16>16x16</option>
+						<option value=32>32x32</option>
+						<option value=64>64x64</option>
+						<option value=128>128x128</option>
+						<option value=256>256x256</option>
+						<option value=512>512x512</option>
+						<option value=1024>1024x1024</option>
+						<option value=2048>2048x2048</option>
+					</select><br><br>
+					<label for="presetPotential">Preset V(x, y, t)<br>
 						<select id="presetPotential">
 							<option value=0 selected>Free (periodic)</option>
 							<option value=1>Harmonic</option>
 							<option value=2>Double slit</option>
 							<option value=3>Circular well</option>
-							<option value=4>Spike</option>
-							<option value=5>Attractive Spike</option>
+							<option value=4>Repulsive spike</option>
+							<option value=5>Attractive spike</option>
 							<option value=6>Absorbing boundaries (A.B.)</option>
 							<option value=7>Double slit (A.B.)</option>
-							<option value=8>Spike (A.B.)</option>
-							<option value=9>Attractive Spike (A.B.)</option>
+							<option value=8>Repulsive spike (A.B.)</option>
+							<option value=9>Attractive spike (A.B.)</option>
+							<option value=10>Moving Gaussian</option>
+							<!--<option value=11>Moving att. spike (A.B.)</option>!-->
+							<option value=12>Attractive moving Gaussian</option>
 						</select>
 					</label><br>
 					<label for="potentialEntry">Enter V(x, y, t)<br>
 						<input type ="text" id="potentialEntry"
-						value="a*((x/width)^2 + (y/height)^2)"
+						value="a*((x/width)^2+(y/height)^2)"
 						name="potentialEntry" size="23"
 						/>
 					<br>
@@ -115,13 +133,13 @@
 					<br>-->
 					<label for="kineticEnergyEntry">Kinetic energy-momentum relation: KE(px, py)<br>
 						<input type="text" id="kineticEnergyEntry"
-							name="nonlinearEntry" size="23" value="(px^2 + py^2)/(2.0*m)">
+							name="nonlinearEntry" size="23" value="(px^2+py^2)/(2*m)">
 					</label>
 					<br>
 					<div id="kineticEnergyUserSliders"></div>
 				</div>
 			</div>
-		<script>const LENGTH=512;</script>
+		<script>const LENGTH=256;</script>
 		<script type="module" src="./main.js"></script>
 	</body>
 </html>

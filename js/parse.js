@@ -25,7 +25,7 @@ const FUNCTIONS = {
     // acos: Math.acos, asin: Math.asin, atan: Math.atan,
     sinh: Math.sinh, cosh: Math.cosh, tanh: Math.tanh,
     // asinh: Math.asinh, acosh: Math.acosh, atanh: Math.atanh,
-    log: Math.log,
+    log: Math.log, sqrt: Math.sqrt,
     step: z => (z >= 0.0)? 1.0: 0.0
 };
 

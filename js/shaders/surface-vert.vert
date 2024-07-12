@@ -2,10 +2,12 @@
 #if __VERSION__ <= 120
 attribute vec2 position;
 varying vec2 UV;
+varying vec3 FINAL_VERTEX_POSITION;
 varying vec3 NORMAL;
 #else
 in vec2 position;
 out vec2 UV;
+out vec3 FINAL_VERTEX_POSITION;
 out vec3 NORMAL;
 #endif
 
@@ -59,27 +61,35 @@ vec3 getNormal(vec2 xy) {
     float x = xy[0], y = xy[1];
     float dx = 1.0/float(dimensions2D[0]);
     float dy = 1.0/float(dimensions2D[1]);
-    float height = texture2D(heightTex, xy)[0];
-    float heightR = texture2D(heightTex, xy + vec2(dx, 0.0))[0];
-    float heightU = texture2D(heightTex, xy + vec2(0.0, dy))[0];
-    vec3 vC = vec3(x, y, -height);
-    vec3 vR = vec3(x + dx, y, -heightR);
-    vec3 vU = vec3(x, y + dy, -heightU);
+    float height = heightScale*texture2D(
+        heightTex, xy)[0];
+    float heightR = heightScale*texture2D(
+        heightTex, xy + vec2(dx, 0.0))[0];
+    float heightU = heightScale*texture2D(
+        heightTex, xy + vec2(0.0, dy))[0];
+    vec3 vC = vec3(x, y, height);
+    vec3 vR = vec3(x + dx, y, heightR);
+    vec3 vU = vec3(x, y + dy, heightU);
     vec3 eU = vU - vC;
     vec3 eR = vR - vC;
+    /* Note that since the z-axis points away from the screen,
+    and that the surface height map is inverted in the other direction,
+    these normal vectors point into the surface instead of away.
+    */
     return normalize(mul(quaternion(eR, 0.0), quaternion(eU, 0.0)).xyz);
 }
 
 
 void main() {
     UV = position;
-    float height = texture2D(heightTex, UV).r;
-    vec4 tPosition = scale*(vec4(position, 0.0, 0.0) 
-                            - vec4(0.5, 0.5,
-                                   heightScale*height, 
-                                   // min(heightScale*height, 0.5), 
-                                   0.0));
-    NORMAL = rotate(quaternion(getNormal(UV), 1.0), conj(rotation)).xyz;
-    gl_Position = project(rotate(tPosition, rotation)
-                          + vec4(translate, 0.0));
-}
+    float height = texture2D(heightTex, UV)[0];
+    vec4 position2 = scale*(vec4(UV - vec2(0.5, 0.5), 0.0, 0.0) 
+                            + vec4(0.0, 0.0, -heightScale*height, 0.0));
+
+    // vec4 finalPosition = vec4(position2.xyz, 1.0);
+    vec4 finalPosition = rotate(position2, rotation) + vec4(translate, 0.0);
+
+    NORMAL = rotate(quaternion(-getNormal(UV), 1.0), conj(rotation)).xyz;
+    FINAL_VERTEX_POSITION = finalPosition.xyz;
+    gl_Position = project(finalPosition);
+}   

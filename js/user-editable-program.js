@@ -137,7 +137,13 @@ complex tanhC(complex z) {
 complex powC(complex z, complex w) {
     if (z.y == 0.0 && w.y == 0.0)
         return complex(pow(z.x, w.x), 0.0);
+    if (w.x == 0.0 && w.y == 0.0)
+        return complex(1.0, 0.0);
     return expC(mul(logC(z), w));
+}
+
+complex sqrtC(complex z) {
+    return powC(z, complex(0.5, 0.0));
 }
 `;
 
@@ -324,6 +330,7 @@ class UserEditableProgramContainer {
             (a, e) => a + `uniform complex ${e};\n`, ``
         );
         let exprString = turnRPNExpressionToString(rpnList.map(e => e));
+        console.log(exprString);
         let uniforms = {};
         variablesLst.forEach(e => uniforms[e] = new Complex(1.0, 0.0));
         for (let e of Object.keys(uniforms)) {
