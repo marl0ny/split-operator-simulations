@@ -27,6 +27,9 @@ class MainGLSLPrograms {
                 getShader('./shaders/surface-single-color.frag'));
         this.copy
             = Quad.makeProgramFromSource(getShader('./shaders/copy.frag'));
+        this.copyFlip
+            = Quad.makeProgramFromSource(
+                getShader('./shaders/copy-flip.frag'));
         this.wavePacket
             = Quad.makeProgramFromSource(
                 getShader('./shaders/wavepacket.frag'));
@@ -87,6 +90,7 @@ class Frames {
             = new Quad({...TEX_PARAMS_CANVAS_F32, format: gl.RGBA32F});
         this.wavepacket1 = new Quad(TEX_PARAMS_SIM);
         this.wavepacket2 = new Quad(TEX_PARAMS_SIM);
+        this.abs2Psi = new Quad({...TEX_PARAMS_SIM, format: gl.RGBA32F});
         this.extra = new Quad({...TEX_PARAMS_SIM, format: gl.RGBA32F});
         this.nonlinearTerm = new Quad(TEX_PARAMS_SIM);
         this.pot = new Quad(TEX_PARAMS_SIM);
@@ -126,6 +130,7 @@ function changeSimulationSize(w, h) {
     let newFrames = {
         wavepacket1: new Quad(newTexParams),
         wavepacket2: new Quad(newTexParams),
+        abs2Psi: new Quad({...newTexParams, format: gl.RGBA32F}), 
         extra: new Quad({...newTexParams, format: gl.RGBA32F}),
         nonlinearTerm: new Quad(newTexParams),
         pot: new Quad(newTexParams),
@@ -244,7 +249,7 @@ document.getElementById("timeStepReal").addEventListener(
 );
 
 document.getElementById("potentialClippedMessage").innerHTML
-    = "To avoid numerical error,<br\> "
+    = "To reduce numerical error,<br\> "
     + " V will be clipped so that<br\> "
     + " |V(x, y, t)| \u2264 2"
 
@@ -426,6 +431,7 @@ function setPresetPotential(value) {
         REPULSIVE_COULOMB_AB: 8, ATTRACTIVE_COULOMB_AB: 9,
         MOVING_BUMP: 10, MOVING_ATTRACTIVE_SPIKE_AB: 11,
         ATTRACTIVE_MOVING_BUMP_AB: 12,
+        ROTATING_HARMONIC: 13
     };
     let u = `(x/width + 0.5)`, v = `(y/height + 0.5)`;
     let absorbingBoundary = 
@@ -491,6 +497,13 @@ function setPresetPotential(value) {
                 absorbingBoundary 
                 + `- 2*exp(-0.5*((x - 0.25*width*cos(t/100))^2 + `
                 + `(y - 0.25*height*sin(t/100))^2)/(0.1*width)^2)`
+            );
+            break;
+        case PRESETS.ROTATING_HARMONIC:
+            let x2 = `x*cos(t/20)/width+y*sin(t/20)/height`;
+            let y2 = `-x*sin(t/20)/width+y*cos(t/20)/height`;
+            gTextEditPotential.newText(
+                `5.0*(1.05*(${x2}))^2 + (${y2})^2`
             );
             break;
         default:
@@ -813,6 +826,68 @@ gCanvas.addEventListener("wheel", e => {
     }
 });
 
+document.getElementById("uploadImage").addEventListener(
+    "change", () => {
+        let im = document.getElementById("image");
+        im.file = document.getElementById("uploadImage").files[0];
+        const reader = new FileReader();
+        reader.onload = e => {
+            im.src = e.target.result;
+        };
+        reader.onerror = () => {
+            console.log('An error occured.');
+        }
+        reader.onloadend = e => {
+            // im.src = e.target.result;
+            let p = new Promise(() => setTimeout(
+                () => {
+                    console.log('width: ', im.width, 'height: ', im.height);
+                    let canvas = document.getElementById("imageCanvas");
+                    let width = gSimParams.gridDimensions.ind[0];
+                    let height = gSimParams.gridDimensions.ind[1];
+                    canvas.setAttribute("width", width);
+                    canvas.setAttribute("height", height);
+                    // ctx.rect(0, 0, width, height);
+                    let ctx = canvas.getContext("2d");
+                    // ctx.fill();
+                    let imW = im.width;
+                    let imH = im.height;
+                    if (imW/imH > width/height) {
+                        let ratio = (imH/imW)/(height/width);
+                        let heightOffset = parseInt(0.5*height*(1.0 - ratio));
+                        ctx.drawImage(im, 0, heightOffset, width, 
+                            parseInt(width*imH/imW));
+                    } else {
+                        let ratio = (imW/imH)/(width/height);
+                        let widthOffset = parseInt(0.5*width*(1.0 - ratio));
+                        ctx.drawImage(im, widthOffset, 0,
+                            parseInt(height*imW/imH), height);
+                    }
+                    let imageData = new Float32Array(
+                        ctx.getImageData(0, 0, width, height).data
+                    );
+                    for (let i = 0; i < imageData.length/4; i++) {
+                        imageData[4*i] *= 1.0/255.0;
+                        for (let j = 1; j < 4; j++)
+                            imageData[4*i + j] = 0.0;
+                    }
+                    console.log(imageData.length);
+                    gFrames.extra.substituteArray(imageData);
+                    gFrames.pot.draw(GLSL_PROGRAMS.copyFlip, 
+                        {tex: gFrames.extra});
+                }, 1000)
+            );
+            p.then(() => {});
+        };
+        reader.readAsDataURL(document.getElementById("uploadImage").files[0]);
+        // let canvas = document.getElementsById("imageCanvas");
+        // let ctx = canvas.getContext("2d");
+        // ctx.rect();
+        // let imageData = 
+    },
+    false
+)
+
 let gUserTime = 0.0;
 let gUserDeltaTs = [];
 function displayAverageFPS() {
@@ -864,21 +939,25 @@ function computeNormSquared(probQuad, useCPU) {
 }
 
 function normalizeWaveFunction() {
-    gFrames.extra.draw(
+    gFrames.abs2Psi.draw(
         GLSL_PROGRAMS.abs2, {tex: gFrames.wavepacket2});
-    let sum = computeNormSquared(gFrames.extra, false);
+    let sum = computeNormSquared(gFrames.abs2Psi, false);
+    if (Number.isNaN(sum))
+        return;
+    // console.log('Total sum: ', sum);
     let width = gSimParams.gridDimensions.ind[0];
     let height = gSimParams.gridDimensions.ind[1];
     if (gUserDeltaTs.length === 0) {
         console.log(sum/(width*height));
     }
-    gFrames.extra.draw(GLSL_PROGRAMS.scale,
+    // console.log('Normalization factor: ', Math.sqrt((width*height)/sum));
+    gFrames.wavepacket1.draw(GLSL_PROGRAMS.scale,
         {tex: gFrames.wavepacket2, 
             scale: Math.sqrt((width*height)/sum)});
     gFrames.wavepacket2.draw(
-       GLSL_PROGRAMS.copy, {tex: gFrames.extra});
-    gFrames.wavepacket1.draw(
-        GLSL_PROGRAMS.copy, {tex: gFrames.extra});
+       GLSL_PROGRAMS.copy, {tex: gFrames.wavepacket1});
+    // let arr = gFrames.wavepacket2.asFloat32Array();
+    // console.log('arr[0]:', arr[0]);
 }
 
 function animate() {

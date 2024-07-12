@@ -866,7 +866,6 @@ export class Quad {
                     this._params.minFilter, this._params.magFilter
                ), 
                texture: this._texture, fbo: this._fbo};
-        this._id = 0xffffffff;
     }
     get id() {
         return this._id;
@@ -940,7 +939,6 @@ export class Quad {
             // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
             return;
         }
-        console.log(this._id);
         gl.activeTexture(gl.TEXTURE0 + this._id);
         this._texture = gl.createTexture();
         gl.bindTexture(gl.TEXTURE_2D, this._texture);
@@ -1062,7 +1060,6 @@ export class Quad {
     asFloat32Array() {
         if (self.id !== 0)
             gl.bindFramebuffer(gl.FRAMEBUFFER, this._fbo);
-        gl.activeTexture(gl.TEXTURE0 + this.id);
         gl.bindTexture(gl.TEXTURE_2D, this._texture);
         let pixelSize = this.channelCount();
         let size = pixelSize*this.width*this.height;

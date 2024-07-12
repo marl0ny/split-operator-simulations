@@ -80,6 +80,8 @@ function refreshCosTable(n) {
             gl.REPEAT, gl.REPEAT,
             gl.NEAREST, gl.NEAREST
         ); 
+        if (gCosTable.quad !== null)
+            gCosTable.quad.recycle();
         gCosTable.quad = new Quad(textureParams);
         gCosTable.quad.substituteArray(gCosTable.ind);
         // console.log('Finished refreshing cos table.');
@@ -120,14 +122,23 @@ function revBitSort2(dst, src) {
 }
 
 let gIterQuads = [];
-function refreshIterQuads(width, height) {
+function refreshIterQuads(format, width, height) {
     if (gIterQuads.length === 0 
+        || gIterQuads[0].format !== format
         || gIterQuads[0].width !== width 
         || gIterQuads[0].height !== height) {
         // console.log('Refreshing fft iteration quads...')
         let texParams = new TextureParams(
-            gl.RGBA32F, width, height, false, 
-            gl.REPEAT, gl.REPEAT, gl.NEAREST, gl.NEAREST);
+            format, 
+            width, height, true, 
+            gl.REPEAT, gl.REPEAT, gl.LINEAR, gl.LINEAR);
+        // let texParams = new TextureParams(
+        //     gl.RGBA32F, width, height, false, 
+        //     gl.REPEAT, gl.REPEAT, gl.NEAREST, gl.NEAREST);
+        if (gIterQuads.length !== 0) {
+            gIterQuads[0].recycle();
+            gIterQuads[1].recycle();
+        }
         gIterQuads = [new Quad(texParams), new Quad(texParams)];
         // console.log('Finished refreshing fft iteration quads.');
     }
@@ -135,7 +146,7 @@ function refreshIterQuads(width, height) {
 
 export function fft2D(dst, src) {
     // console.log('fft2D...');
-    refreshIterQuads(src.width, src.height);
+    refreshIterQuads(src.format, src.width, src.height);
     let iterQuads1 = [gIterQuads[0], gIterQuads[1]];
     revBitSort2(iterQuads1[0], src);
     let iterQuads2 = fftIter(iterQuads1, false, false);
@@ -145,7 +156,7 @@ export function fft2D(dst, src) {
 }
 
 export function ifft2D(dst, src) {
-    refreshIterQuads(src.width, src.height);
+    refreshIterQuads(src.format, src.width, src.height);
     let iterQuads1 = [gIterQuads[0], gIterQuads[1]];
     revBitSort2(iterQuads1[0], src);
     let iterQuads2 = fftIter(iterQuads1, false, true);
