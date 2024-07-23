@@ -26,6 +26,7 @@ precision highp float;
 
 uniform sampler2D heightTex;
 uniform quaternion rotation;
+uniform ivec2 screenDimensions;
 uniform vec3 translate;
 uniform float heightScale;
 uniform float scale;
@@ -50,9 +51,10 @@ quaternion rotate(quaternion x, quaternion r) {
 
 vec4 project(vec4 x) {
     vec4 y;
-    y[0] = x[0]*5.0/(x[2] + 5.0);
-    y[1] = x[1]*5.0/(x[2] + 5.0);
-    y[2] = x[2]/5.0;
+    y[0] = x[0]*4.0/(x[2] + 4.0);
+    y[1] = float(screenDimensions[0])/float(screenDimensions[1])
+            *x[1]*4.0/(x[2] + 4.0);
+    y[2] = x[2]/4.0;
     y[3] = 1.0;
     return y;
 }

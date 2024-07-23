@@ -7,7 +7,7 @@
 #if (__VERSION__ > 120) || defined(GL_ES)
 precision highp float;
 #endif
-    
+
 #if __VERSION__ <= 120
 varying vec2 UV;
 #define fragColor gl_FragColor
@@ -16,8 +16,15 @@ in vec2 UV;
 out vec4 fragColor;
 #endif
 
-uniform vec4 color;
+uniform sampler2D tex;
+uniform float brightness;
+uniform float offset;
+uniform float maxBrightness;
 
 void main() {
-    fragColor = color;
+    vec3 color = vec3(texture2D(tex, UV)[0] + offset);
+    fragColor 
+        = vec4(max(min(brightness*color, maxBrightness), -maxBrightness),
+        1.0);
 }
+

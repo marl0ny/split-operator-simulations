@@ -5,10 +5,10 @@ import { getShader } from "./shaders.js";
 let gPrograms = {
     splitStepMomentum: 
         Quad.makeProgramFromSource(
-            getShader('./shaders/split-step-kinetic.frag')),
+            getShader('./shaders/split-step/kinetic.frag')),
     splitStepSpatial: 
         Quad.makeProgramFromSource(
-            getShader('./shaders/split-step-spatial.frag')
+            getShader('./shaders/split-step/spatial.frag')
         )
 };
 

@@ -2,8 +2,9 @@ export let gCanvas = document.getElementById("sketchCanvas");
 {
     let clientW = document.documentElement.clientWidth;
     let clientH = document.documentElement.clientHeight;
-    let sideLength = 0.95*((clientW > clientH)? clientH: clientW);
-    gCanvas.width = sideLength;
+    let sideLength = 0.97*((clientW > clientH)? clientH: clientW);
+    // gCanvas.width = sideLength;
+    gCanvas.width = (clientW >= clientH)? clientW*0.7: sideLength;
     gCanvas.height = sideLength;
     // gCanvas.width = clientW;
     // gCanvas.height = clientH;
@@ -597,6 +598,32 @@ void main() {
 }
 `
 
+const QUAD_FRAG_COPY_SHADER = `
+#if (__VERSION__ >= 330) || (defined(GL_ES) && __VERSION__ >= 300)
+#define texture2D texture
+#else
+#define texture texture2D
+#endif
+
+#if (__VERSION__ > 120) || defined(GL_ES)
+precision highp float;
+#endif
+    
+#if __VERSION__ <= 120
+varying vec2 UV;
+#define fragColor gl_FragColor
+#else
+in vec2 UV;
+out vec4 fragColor;
+#endif
+
+uniform sampler2D tex;
+
+void main() {
+    fragColor = texture2D(tex, UV);
+}
+`
+
 const getQuadVertices = () => new Float32Array(
     [-1.0, -1.0, 0.0, -1.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, -1.0, 0.0]);
 
@@ -867,6 +894,45 @@ export class Quad {
                ), 
                texture: this._texture, fbo: this._fbo};
     }
+    reset(newTexParams) {
+        if (this._id !== 0) {
+            gl.deleteTexture(this._texture);
+            gl.deleteFramebuffer(this._fbo);
+            this._params.format = newTexParams.format;
+            this._params.width = newTexParams.width;
+            this._params.height = newTexParams.height;
+            this._params.generateMipmap = newTexParams.generateMipmap;
+            this._params.wrapS = newTexParams.wrapS;
+            this._params.wrapT = newTexParams.wrapT;
+            this._params.minFilter = newTexParams.minFilter;
+            this._params.magFilter = newTexParams.magFilter;
+            gl.activeTexture(gl.TEXTURE0 + this._id);
+            this._texture = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D, this._texture);
+            let params = this._params;
+            console.log(this._texture);
+            console.log(params.format, toBase(params.format),
+                        toType(params.format));
+            console.log(gl.RGBA32F, gl.RGBA, gl.FLOAT);
+            gl.texImage2D(gl.TEXTURE_2D, 0, params.format, 
+                params.width, params.height, 0,
+                toBase(params.format), toType(params.format), null);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, params.wrapS);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, params.wrapT);
+            gl.texParameteri(gl.TEXTURE_2D, 
+                gl.TEXTURE_MIN_FILTER, params.minFilter);
+            gl.texParameteri(gl.TEXTURE_2D, 
+                gl.TEXTURE_MAG_FILTER, params.magFilter);
+            if (params.generateMipmap) {
+                gl.generateMipmap(gl.TEXTURE_2D);
+            }
+            this._fbo = gl.createFramebuffer();
+            gl.bindFramebuffer(gl.FRAMEBUFFER, this._fbo);
+            gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0,
+                                    gl.TEXTURE_2D, this._texture, 0);
+        } 
+
+    }
     get id() {
         return this._id;
     }
@@ -939,6 +1005,12 @@ export class Quad {
             // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
             return;
         }
+        /* console.log(
+            "Number of texture units: ",
+            gl.getParameter(gl.COMBINED_TEXTURE_IMAGE_UNITS),
+            "Texture id: ",
+            this._id
+        );*/
         gl.activeTexture(gl.TEXTURE0 + this._id);
         this._texture = gl.createTexture();
         gl.bindTexture(gl.TEXTURE_2D, this._texture);
@@ -988,14 +1060,17 @@ export class Quad {
         gl.vertexAttribPointer(attrib, 3, gl.FLOAT, false, 12, 0);
     }
     _adjust_viewport_before_drawing(config) {
+        if (config === null) {
+            gl.viewport(0, 0, this.width, this.height);
+            return;
+        }
+        let keys = Object.keys(config);
         if (config !== null
             && keys.includes('width') && keys.includes('height'))
             gl.viewport(0, 0, config.width, config.height);
         else if (config !== null && keys.includes('viewport'))
             gl.viewport(config['viewport'][0], config['viewport'][1],
                         config['viewport'][2], config['viewport'][3])
-        else
-            gl.viewport(0, 0, this.width, this.height);
     }
     draw(program, uniforms, config=null) {
         let originalViewport = gl.getParameter(gl.VIEWPORT);
@@ -1045,9 +1120,9 @@ export class Quad {
         let originalViewport = gl.getParameter(gl.VIEWPORT);
         gl.viewport(0, 0, this.width, this.height);
         if (self.id !== 0)
-            gl.bindFramebuffer(gl.FRAMEBUFFER, this._fbo);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, this._fbo);   
         gl.activeTexture(gl.TEXTURE0 + this.id);
-        gl.bindTexture(gl.TEXTURE_2D, this._texture);    
+        // gl.bindTexture(gl.TEXTURE_2D, this._texture);    
         gl.texSubImage2D(
             gl.TEXTURE_2D, 0, 0, 0, 
             this.width, this.height,
@@ -1060,13 +1135,14 @@ export class Quad {
     asFloat32Array() {
         if (self.id !== 0)
             gl.bindFramebuffer(gl.FRAMEBUFFER, this._fbo);
-        gl.bindTexture(gl.TEXTURE_2D, this._texture);
         let pixelSize = this.channelCount();
         let size = pixelSize*this.width*this.height;
         let arr = new Float32Array(size);
         gl.readPixels(
             0, 0, this.width, this.height,
             toBase(this._params.format), gl.FLOAT, arr);
+        // gl.activeTexture(gl.TEXTURE0);
+        // gl.bindTexture(gl.TEXTURE_2D, null);
         unbind();
         return arr;
     }

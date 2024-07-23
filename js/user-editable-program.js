@@ -279,6 +279,7 @@ class UserEditableProgramContainer {
         slider.max = "100.0";
         slider.name = `variable-${varName}`;
         slider.value = "10.0";
+        slider.style = "width: 100%;"
         let label = document.createElement("label");
         let br = document.createElement("br");
         label.for = slider.name;

@@ -74,5 +74,6 @@ void main() {
         + (
             1.0 // + diffuse
         )*brightness2*argumentToColor(atan(z2.y, z2.x));
+    // fragColor = vec4(color, min(1.0, 10.0*brightness2));
     fragColor = vec4(color, 1.0);
 }

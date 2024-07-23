@@ -9,18 +9,32 @@
         </style>
     </head>
 	<body style="background-color: rgb(255, 255, 255);">
-			 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr;">
+		<!--
+			How to get floating divs to work:
+			https://stackoverflow.com/q/2006134 by eric-d-bari
+			https://stackoverflow.com/a/2006162 by marcgg
+		!-->
+		<!--
+			<div id="hoveringElements" style="position: relative; z-index: 10;">
+				<div id="stats" style="position: absolute; top: 0px; right: 0px">
+					<label id="hoveringStats" 
+						style="color: white;", hidden: true>This is some text.</label>
+			</div>
+		!-->
+		</div>
+			 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr;">
 				<div style="grid-column: 1; /*background-color: rgb(200, 200, 200);*/">
 					<label for="stepsPerFrame" id="stepsPerFrameLabel">Updates/frame
 					</label>
 					<br>
 					<input type="range" id="stepsPerFrame"
 					name="steps/frame"
-					min="0" max="20.0" value="2.0"/>
+					min="0" max="20.0" value="2.0"
+					style="width: 95%;"/>
 					<!--Default should be 2.-->
 					<br>
-					<label id="fps">fps: </label>
-					<br>
+					<label id="fps">fps: </label><br>
+					<!--<hr style="text-align: start;"/>!-->
 					<button type="button"
 						aria-pressed="true" id="newWaveFuncButton">New 𝛙</button>
 					<br>
@@ -32,7 +46,8 @@
 					<label for="sketchWidth" id="sketchWidthLabel">Sketch size</label>
 					<br>
 					<input type="range" id="sketchWidth" name="sketchWidth"
-						min="0" max="100" value="50"/>
+						min="0" max="100" value="50"
+						style="width: 95%;"/>
 					<br>
 					<input type="checkbox" id="showPotential" checked="true"></input>
 					<label for="showPotential">Show V</label>
@@ -45,7 +60,8 @@
 					<br>
 					<input type="range" id="timeStepReal"
 							name="timeStepReal"
-							min="-80.0" max="80.0" value="64.0"/>
+							min="-80.0" max="80.0" value="64.0"
+							style="width: 95%;"/>
 					<!--default value should be 64.-->
 					<br>
 					<label for="timeStepImag" id="timeStepImagLabel">Im(Δt)
@@ -53,17 +69,23 @@
 					<br>
 					<input type="range" id="timeStepImag"
 							name="timeStepImag"
-							min="-200.0" max="0.0" value="0.0"/>
+							min="-200.0" max="0.0" value="0.0"
+							style="width: 95%;"/>
 					<br>
 					<input type="checkbox" id="normalizePsi"/>
-					<label for="normalizePsi">Normalize 𝛙<br> for each frame</label><br>
-					<!--<label style="text-align: center;"> for each frame</label><br>!-->
+					<label for="normalizePsi">Normalize 𝛙<br> at each frame</label><br/><br/>
+					<label id="displayMousePosition", style="opacity: 0;">x: 0, y: 0</label><br/>
+					<label id="displayInitialMomentum", style="opacity: 0;"> &lt;px&gt;: 0, &lt;py&gt;: 0</label>
+					<!--<label style="text-align: center;"> at each frame</label><br>!-->
 				</div>
-				<div style="grid-column-start: 2; grid-column-end: 3">
-					<canvas style="touch-action: none; background-color: rgb(50, 50, 50);"
+				<div style="grid-column: 2">
+					<canvas style="
+									touch-action: none; background-color: rgb(50, 50, 50);
+								   text-align: center;"
 						id="sketchCanvas"></canvas>
 				</div>
-				<div style="grid-column: 4; resize: vertical">
+				<!--<div style="grid-column: 3; width: 0%"></div>!-->
+				<div style="grid-column: 3; resize: vertical; padding: 10px">
 					<label>Simulation domain</label><br>
 					<label id="xRangeLabel"> -128 &leq; x &lt; 128</label><br>
 					<label id="yRangeLabel"> -128 &leq; y &lt; 128</label><br>
@@ -78,7 +100,8 @@
 						<option value=512>512x512</option>
 						<option value=1024>1024x1024</option>
 						<option value=2048>2048x2048</option>
-					</select><br><br>
+					</select><br>
+					<hr>
 					<label for="presetPotential">Preset V(x, y, t)<br>
 						<select id="presetPotential">
 							<option value=0 selected>Free (periodic)</option>
@@ -97,10 +120,6 @@
 							<!--<option value=13>Rotating harmonic</option>!-->
 						</select>
 					</label><br>
-					<div>
-						<label for="uploadImage">Set V(x, y) using image
-							<input id="uploadImage" type="file">
-					</label></div>
 					<label for="potentialEntry">Enter V(x, y, t)<br>
 						<input type ="text" id="potentialEntry"
 						value="a*((x/width)^2+(y/height)^2)"
@@ -109,11 +128,19 @@
 					<br>
 					</label>
 					<label id="potentialClippedMessage">
-						Please note that to reduce numerical error,
-						V will be clipped such that<br/>|V(x, y, t)| &lt; 2
+						To reduce numerical error,<br/>
+						V will be clipped so that<br/>
+						|V(x, y, t)| &lt; 2
 					</label>
 					<div id="potentialUserSliders"></div>
-					<br/>
+					<hr/>
+					<div>
+						<label for="uploadImage">Set V using image
+							<input id="uploadImage" type="file">
+					</label><br>
+					<label>Will look blurry for grid sizes of 256x256 and smaller.</label>
+					</div>
+					<hr/>
 					<label for="presetNonlinear">Preset nonlinear term<br>
 						<select id="presetNonlinear" style="width: 48;">
 							<option value=0 selected>None</option>
@@ -129,7 +156,7 @@
 					</label>
 					<br>
 					<div id="nonlinearUserSliders"></div>
-					<br>
+					<hr/>
 					<!--<label for="presetKineticEnergy">Preset kinetic term<br>
 						<select id="presetNonlinear" style="width: 48;">
 							<option value=0 selected>None</option>
@@ -138,7 +165,7 @@
 						</select>
 					</label>
 					<br>-->
-					<label for="kineticEnergyEntry">Kinetic energy-momentum relation: KE(px, py)<br>
+					<label for="kineticEnergyEntry">Kinetic energy-momentum<br>relation: KE(px, py)<br>
 						<input type="text" id="kineticEnergyEntry"
 							name="nonlinearEntry" size="23" value="(px^2+py^2)/(2*m)">
 					</label>

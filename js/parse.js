@@ -153,8 +153,6 @@ function parseAfterExponent(inputStr,
 function parseAfterDecimal(inputStr, valStrBeforeDecimal, indexAfterDecimal) {
     let j = indexAfterDecimal;
     let valStr = valStrBeforeDecimal + '.';
-    // if (j === inputStr.length)
-    //    return {parseSuccess: false, parsedNumber: null, endIndex: -1};
     if (isSingleCharacterNumber(inputStr[j])) {
         let {parsedNumber: valStr2, endIndex: k} = parseInteger(inputStr, j); 
         j = k;
@@ -289,24 +287,6 @@ function handleOperators(opNew, operatorStack, rpnList) {
                 }
             }
         }
-        /* let opPrev = operatorStack.pop();
-        if (precedenceOf(opNew) <= precedenceOf(opPrev)) {
-            while (operatorStack.length > 0 &&
-                precedenceOf(opNew) <= precedenceOf(opPrev)) {
-                rpnList.push(opPrev);
-                opPrev = operatorStack.pop();
-            }
-            if (precedenceOf(opNew) <= precedenceOf(opPrev)) {
-                rpnList.push(opPrev);
-                operatorStack.push(opNew);
-            } else {
-                operatorStack.push(opPrev);
-                operatorStack.push(opNew);
-            }
-        } else {
-            operatorStack.push(opPrev);
-            operatorStack.push(opNew);
-        }*/
     } else { // Operator stack is empty
         operatorStack.push(opNew);
     }
@@ -371,7 +351,6 @@ function computeRPNExpression(rpnList, variables={}) {
                 default:
                     break;
             }
-            // console.log(opL, e, opR, ' = ', val);
             rpnStack.push(val);
         } else if (isALetter(e[0])) {
             if (Object.keys(FUNCTIONS).find(f => f === e)) {
@@ -393,7 +372,6 @@ export function turnRPNExpressionToString(rpnList) {
     while(rpnList.length > 0) {
         let e = rpnList.shift();
         if (!isNaN(parseFloat(e))) {
-            // rpnStack.push(e);
             rpnStack.push(`r2C(${parseFloat(e).toExponential()})`);
         } else if (isSingleCharacterOp(e)) {
             let opR = rpnStack.pop();
@@ -414,18 +392,57 @@ export function turnRPNExpressionToString(rpnList) {
                     break;
                 case '^':
                     val = `powC(${opL}, ${opR})`;
-                    // val = `pow(${opL}, ${opR})`;
                     break;
                 default:
                     break;
             }
-            // console.log(opL, e, opR, ' = ', val);
             rpnStack.push(val);
         } else if (isALetter(e[0])) {
             if (Object.keys(FUNCTIONS).find(f => f === e)) {
                 let val = rpnStack.pop();
-                // rpnStack.push(`${e}(${val})`);
                 rpnStack.push(`${e}C(${val})`);
+            } else {
+                rpnStack.push(e);
+            }
+        }
+    }
+    return rpnStack.pop();
+}
+
+export function turnRPNExpressionToLATEXString(rpnList) {
+    let rpnStack = [];
+    while(rpnList.length > 0) {
+        let e = rpnList.shift();
+        if (!isNaN(parseFloat(e))) {
+            rpnStack.push(`${parseFloat(e)}`);
+        } else if (isSingleCharacterOp(e)) {
+            let opR = rpnStack.pop();
+            let opL = rpnStack.pop();
+            let val;
+            switch (e) {
+                case '+':
+                    val = `${opL}+${opR}`;
+                    break;
+                case '-':
+                    val = `${opL}-${opR}`;
+                    break;
+                case '*':
+                    val = `${opL}${opR}`;
+                    break;
+                case '/':
+                    val = `\\frac{${opL}}{${opR}}`;
+                    break;
+                case '^':
+                    val = `\\{${opL}}^{${opR}}`;
+                    break;
+                default:
+                    break;
+            }
+            rpnStack.push(val);
+        } else if (isALetter(e[0])) {
+            if (Object.keys(FUNCTIONS).find(f => f === e)) {
+                let val = rpnStack.pop();
+                rpnStack.push(`\\${e}(${val})`);
             } else {
                 rpnStack.push(e);
             }

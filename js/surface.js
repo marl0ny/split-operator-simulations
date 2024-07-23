@@ -31,7 +31,7 @@ export default function makeSurface(width, height) {
 }
 
 export function makeSurfaceProgram(fragmentShaderSource) {
-    return makeProgramFromSources(getShader("./shaders/surface-vert.vert"), 
+    return makeProgramFromSources(getShader("./shaders/surface/vert.vert"), 
                                   fragmentShaderSource);
 }
 

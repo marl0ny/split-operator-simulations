@@ -1,3 +1,5 @@
+/* Copy and flip the contents of a texture along the y-direction
+ to the output texture */
 #if (__VERSION__ >= 330) || (defined(GL_ES) && __VERSION__ >= 300)
 #define texture2D texture
 #else
@@ -7,7 +9,7 @@
 #if (__VERSION__ > 120) || defined(GL_ES)
 precision highp float;
 #endif
-
+    
 #if __VERSION__ <= 120
 varying vec2 UV;
 #define fragColor gl_FragColor
@@ -17,12 +19,7 @@ out vec4 fragColor;
 #endif
 
 uniform sampler2D tex;
-uniform float brightness;
-uniform float offset;
-uniform float maxBrightness;
 
 void main() {
-    vec3 color = vec3(texture2D(tex, UV)[0] + offset);
-    fragColor = vec4(min(brightness*color, maxBrightness), 1.0);
+    fragColor = texture2D(tex, vec2(UV.x, 1.0 - UV.y));
 }
-

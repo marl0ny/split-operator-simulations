@@ -64,18 +64,18 @@ class Programs {
     // color;
     constructor() {
         this.sampleVolume = Quad.makeProgramFromSource(
-            getShader("./shaders/vol-render-sample.frag")
+            getShader("./shaders/vol-render/sample.frag")
         );
         this.gradient = Quad.makeProgramFromSource(
-            getShader("./shaders/gradient3d.frag")
+            getShader("./shaders/gradient/gradient3d.frag")
         );
         this.showVolume = makeProgramFromSources(
-            getShader("./shaders/vol-render-display.vert"),
-            getShader("./shaders/vol-render-display.frag")
+            getShader("./shaders/vol-render/display.vert"),
+            getShader("./shaders/vol-render/display.frag")
         );
         this.sampleShowVolume = makeProgramFromSources(
-            getShader("./shaders/vol-render-display.vert"),
-            getShader("./shaders/vol-render-sample-display.frag")
+            getShader("./shaders/vol-render/display.vert"),
+            getShader("./shaders/vol-render/sample-display.frag")
         );
     }
 }

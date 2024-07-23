@@ -21,38 +21,41 @@ class MainGLSLPrograms {
     constructor() {
         this.surfaceWaveFunc
             = makeSurfaceProgram(
-                getShader('./shaders/surface-domain-coloring.frag'));
+                getShader('./shaders/surface/domain-coloring.frag'));
         this.surfacePotential
             = makeSurfaceProgram(
-                getShader('./shaders/surface-single-color.frag'));
+                getShader('./shaders/surface/single-color.frag'));
         this.copy
-            = Quad.makeProgramFromSource(getShader('./shaders/copy.frag'));
+            = Quad.makeProgramFromSource(
+                getShader('./shaders/util/copy.frag'));
         this.copyFlip
             = Quad.makeProgramFromSource(
-                getShader('./shaders/copy-flip.frag'));
+                getShader('./shaders/util/copy-flip.frag'));
         this.wavePacket
             = Quad.makeProgramFromSource(
-                getShader('./shaders/wavepacket.frag'));
+                getShader('./shaders/init-wavepacket/gaussian.frag'));
         this.abs2 = Quad.makeProgramFromSource(
-            getShader('./shaders/abs2-xy.frag'));
+            getShader('./shaders/util/abs2-xy.frag'));
         this.abs = Quad.makeProgramFromSource(
-            getShader('./shaders/abs-xy.frag'));
+            getShader('./shaders/util/abs-xy.frag'));
         this.domainColoring 
             = Quad.makeProgramFromSource(
-                getShader('./shaders/domain-coloring.frag'));
+                getShader('./shaders/util/domain-coloring.frag'));
         this.grayScale
             = Quad.makeProgramFromSource(
-                getShader('./shaders/gray-scale.frag'));
+                getShader('./shaders/util/gray-scale.frag'));
         this.blend2 
             = Quad.makeProgramFromSource(
-                getShader("./shaders/blend2colors.frag"));
+                getShader("./shaders/util/blend2colors.frag"));
         this.scale 
-            = Quad.makeProgramFromSource(getShader('./shaders/scale.frag'));
+            = Quad.makeProgramFromSource(
+                getShader('./shaders/util/scale.frag'));
         this.add2 
-            = Quad.makeProgramFromSource(getShader('./shaders/add2.frag'));
+            = Quad.makeProgramFromSource(
+                getShader('./shaders/util/add2.frag'));
         this.sketchPotential
             = Quad.makeProgramFromSource(
-                getShader('./shaders/sketch-potential.frag'));
+                getShader('./shaders/sketch/potential.frag'));
     }
 }
 
@@ -60,8 +63,16 @@ const GLSL_PROGRAMS = new MainGLSLPrograms();
 
 const TEX_PARAMS_CANVAS_F32 = new TextureParams(
     (gl.version === 2)? gl.RG32F: gl.RGBA32F, gCanvas.width, gCanvas.height,
-    false, gl.CLAMP_TO_EDGE, gl.CLAMP_TO_EDGE,
-    gl.NEAREST, gl.NEAREST
+    true, gl.CLAMP_TO_EDGE, gl.CLAMP_TO_EDGE,
+    gl.LINEAR, gl.LINEAR
+);
+
+const TEX_PARAMS_SQUARE_F32 = new TextureParams(
+    (gl.version === 2)? gl.RG32F: gl.RGBA32F, 
+    (gCanvas.width > gCanvas.height)? gCanvas.height: gCanvas.width,
+    (gCanvas.width > gCanvas.height)? gCanvas.height: gCanvas.width,
+    true, gl.CLAMP_TO_EDGE, gl.CLAMP_TO_EDGE,
+    gl.LINEAR, gl.LINEAR
 );
 
 const WIDTH = LENGTH;
@@ -85,20 +96,26 @@ class Frames {
     constructor() {
         this.target = new Quad(TEX_PARAMS_CANVAS_F32);
         this.render1 
-            = new Quad({...TEX_PARAMS_CANVAS_F32, format: gl.RGBA32F});
+            = new Quad({...TEX_PARAMS_SQUARE_F32, format: gl.RGBA32F});
         this.render2
-            = new Quad({...TEX_PARAMS_CANVAS_F32, format: gl.RGBA32F});
-        this.wavepacket1 = new Quad(TEX_PARAMS_SIM);
-        this.wavepacket2 = new Quad(TEX_PARAMS_SIM);
-        this.abs2Psi = new Quad({...TEX_PARAMS_SIM, format: gl.RGBA32F});
+            = new Quad({...TEX_PARAMS_SQUARE_F32, format: gl.RGBA32F});
+        this.psi1 = new Quad(TEX_PARAMS_SIM);
+        this.psi2 = new Quad(TEX_PARAMS_SIM);
+        this.abs2Psi = new Quad(TEX_PARAMS_SIM);
         this.extra = new Quad({...TEX_PARAMS_SIM, format: gl.RGBA32F});
         this.nonlinearTerm = new Quad(TEX_PARAMS_SIM);
         this.pot = new Quad(TEX_PARAMS_SIM);
         this.pot2 = new Quad(TEX_PARAMS_SIM);
         this.heightMap1 = new Quad(TEX_PARAMS_SIM);
         this.heightMap2 = new Quad(TEX_PARAMS_SIM);
-        this.wireFrame1 = makeSurface(4*WIDTH, 4*HEIGHT);
-        this.wireFrame2 = makeSurface(4*WIDTH, 4*HEIGHT);
+        this.wireFrame1 = makeSurface(
+            (gl.version === 2)? 4*WIDTH: WIDTH,
+            (gl.version === 2)? 4*HEIGHT: HEIGHT
+        );
+        this.wireFrame2 = makeSurface(
+            (gl.version === 2)? 4*WIDTH: WIDTH,
+            (gl.version === 2)? 4*HEIGHT: HEIGHT
+        );
         this.render 
             = new RenderTarget({...TEX_PARAMS_CANVAS_F32, 
                                 format: gl.RGBA32F});
@@ -127,29 +144,24 @@ function changeSimulationSize(w, h) {
     gSimParams.gridDimensions.ind[0] = w;
     gSimParams.gridDimensions.ind[1] = h;
     let newTexParams = {...TEX_PARAMS_SIM, width: w, height: h};
-    let newFrames = {
-        wavepacket1: new Quad(newTexParams),
-        wavepacket2: new Quad(newTexParams),
-        abs2Psi: new Quad({...newTexParams, format: gl.RGBA32F}), 
-        extra: new Quad({...newTexParams, format: gl.RGBA32F}),
-        nonlinearTerm: new Quad(newTexParams),
-        pot: new Quad(newTexParams),
-        pot2: new Quad(newTexParams),
-        heightMap1: new Quad(newTexParams),
-        heightMap2: new Quad(newTexParams),
-        kineticEnergy: (gFrames.kineticEnergy === null)?
-            null: new Quad(newTexParams),
+    let framesNewTex = {
+        'psi1': newTexParams, 'psi2': newTexParams,
+        'abs2Psi': newTexParams,
+        // 'extra': {...newTexParams, format: gl.RGBA32F},
+        'nonlinearTerm': newTexParams,
+        'pot': newTexParams, 'pot2': newTexParams,
+        'heightMap1': newTexParams, 'heightMap2': newTexParams,
+        'kineticEnergy': newTexParams
     };
-    for (let k of Object.keys(newFrames)) {
-        if (newFrames[k] !== null) {
-            newFrames[k].draw(GLSL_PROGRAMS.copy, {tex: gFrames[k]});
-            gFrames[k].recycle();
-            gFrames[k] = newFrames[k];
+    for (let k of Object.keys(framesNewTex)) {
+        if (gFrames[k] !== null) {
+            gFrames['extra'].draw(GLSL_PROGRAMS.copy, {tex: gFrames[k]});
+            gFrames[k].reset(framesNewTex[k]);
+            gFrames[k].draw(GLSL_PROGRAMS.copy, {tex: gFrames['extra']});
         }
+        gFrames['extra'].reset({...newTexParams, format: gl.RGBA32F});
     }
-
 }
-
 
 document.getElementById("changeGrid").value
     = Number.parseInt(gSimParams.gridDimensions.ind[0]);
@@ -169,31 +181,35 @@ document.getElementById("changeGrid").addEventListener("change",
 let gWavePacketAmplitude = 1.0;
 
 
-gFrames.wavepacket1.draw(
-    GLSL_PROGRAMS.wavePacket,
-    {
-        waveNumber: new Vec2(0.0, 0.1*HEIGHT),
-        texOffset: new Vec2(0.5, 0.3),
-        amplitude: gWavePacketAmplitude,
-        sigmaXY: new Vec2(0.04, 0.04)
-    }
-);
-gFrames.wavepacket2.draw(
-    GLSL_PROGRAMS.wavePacket, 
-    {
-        waveNumber: new Vec2(0.0, 10.0),
-        texOffset: new Vec2(0.25, 0.25),
-        amplitude: gWavePacketAmplitude,
-        sigmaXY: new Vec2(0.04, 0.04)
-    }
-);
-splitStep(gFrames.wavepacket2, gFrames.wavepacket1, 
-          gFrames.kineticEnergy, gFrames.pot,
-          gSimParams);
+const initialStep = () => {
+    gFrames.psi1.draw(
+        GLSL_PROGRAMS.wavePacket,
+        {
+            waveNumber: new Vec2(0.0, 0.1*HEIGHT),
+            texOffset: new Vec2(0.5, 0.3),
+            amplitude: gWavePacketAmplitude,
+            sigmaXY: new Vec2(0.04, 0.04)
+        }
+    );
+    gFrames.psi2.draw(
+        GLSL_PROGRAMS.wavePacket, 
+        {
+            waveNumber: new Vec2(0.0, 10.0),
+            texOffset: new Vec2(0.25, 0.25),
+            amplitude: gWavePacketAmplitude,
+            sigmaXY: new Vec2(0.04, 0.04)
+        }
+    );
+    splitStep(gFrames.psi2, gFrames.psi1, 
+            gFrames.kineticEnergy, gFrames.pot,
+            gSimParams);
+    [gFrames.psi1, gFrames.psi2] 
+        = [gFrames.psi2, gFrames.psi1];
+}
+initialStep();
 
-
-gFrames.heightMap1.draw(GLSL_PROGRAMS.abs, {tex: gFrames.wavepacket1});
-gFrames.heightMap2.draw(GLSL_PROGRAMS.abs, {tex: gFrames.wavepacket2});
+gFrames.heightMap1.draw(GLSL_PROGRAMS.abs, {tex: gFrames.psi1});
+gFrames.heightMap2.draw(GLSL_PROGRAMS.abs, {tex: gFrames.psi2});
 
 
 function getMouseXY(e) {
@@ -482,7 +498,7 @@ function setPresetPotential(value) {
         case PRESETS.MOVING_BUMP:
             gTextEditPotential.newText(
                 `2*exp(-0.5*((x - 0.3*width*cos(t/100))^2 + `
-                + `(y - 0.3*height*sin(t/100))^2)/5^2)`
+                + `(y - 0.3*height*sin(t/100))^2)/(width*5/256)^2)`
             );
             break;
         case PRESETS.MOVING_ATTRACTIVE_SPIKE_AB:
@@ -495,8 +511,8 @@ function setPresetPotential(value) {
         case PRESETS.ATTRACTIVE_MOVING_BUMP_AB:
             gTextEditPotential.newText(
                 absorbingBoundary 
-                + `- 2*exp(-0.5*((x - 0.25*width*cos(t/100))^2 + `
-                + `(y - 0.25*height*sin(t/100))^2)/(0.1*width)^2)`
+                + `- 2*exp(-0.5*((x - 0.15*r*width*cos(t/100))^2 + `
+                + `(y - 0.15*r*height*sin(t/100))^2)/(0.1*width)^2)`
             );
             break;
         case PRESETS.ROTATING_HARMONIC:
@@ -576,7 +592,23 @@ function setRotation(x0, y0, x1, y1) {
     //             '\nquaternion: ', gRotation);
     let rot = Quaternion.rotator(angle, axis.x, axis.y, axis.z);
     gRotation = mul(gRotation, rot);  
-} 
+}
+
+function equalizeXYScaling(xy) {
+    let canvasWidth = gCanvas.width;
+    let canvasHeight = gCanvas.height;
+    let x0 = xy[0], y0 = xy[1];
+    if (canvasWidth >= canvasHeight) {
+        let offset = ((canvasWidth - canvasHeight)/2.0)/canvasWidth;
+        let x1 = (x0 - offset)*canvasWidth/canvasHeight;
+        return [x1, y0];
+    }
+    else {
+        let offset = ((canvasHeight - canvasWidth)/2.0)/canvasHeight;
+        let y1 = (y0 - offset)*canvasHeight/canvasWidth;
+        return [x0, y1];
+    }
+}
 
 function respondToMouseInputByModifyingSurfaceView(e) {
     if (getMouseXY(e)[0] < 0.0 || getMouseXY(e)[0] > 1.0 ||
@@ -584,11 +616,11 @@ function respondToMouseInputByModifyingSurfaceView(e) {
         return;
     }
     if (gMousePosition.length === 0) {
-        gMousePosition = getMouseXY(e);
+        gMousePosition = equalizeXYScaling(getMouseXY(e));
         return;
     }
     // console.log(gMousePosition);
-    let [x1, y1] = getMouseXY(e);
+    let [x1, y1] = equalizeXYScaling(getMouseXY(e));
     let [x0, y0] = gMousePosition;
     setRotation(x0, y0, x1, y1);
     gMousePosition = [x1, y1];
@@ -600,11 +632,11 @@ function respondToTouchInputByModifyingSurfaceView(e) {
     if (touchCount === 1 && !gTouchesPosition.lockToDouble) {
         let touch = touches[0];
         if (gTouchesPosition.isEmpty(0)) {
-            let [x, y] = getTouchXY(touch);
+            let [x, y] = equalizeXYScaling(getTouchXY(touch));
             gTouchesPosition.setXY(0, x, y);
             return;    
         }
-        let [x1, y1] = getTouchXY(touch);
+        let [x1, y1] = equalizeXYScaling(getTouchXY(touch));
         let [x0, y0] = gTouchesPosition.getXY(0);
         // console.log('x0, y0: ', x0, y0);
         setRotation(x0, y0, x1, y1);
@@ -615,15 +647,17 @@ function respondToTouchInputByModifyingSurfaceView(e) {
         for (let i = 0; i < 2; i++) {
             let index = 1 + i;
             if (gTouchesPosition.isEmpty(index)) {
-                let [x, y] = getTouchXY(touches[i]);
+                let [x, y] = equalizeXYScaling(getTouchXY(touches[i]));
                 gTouchesPosition.setXY(index, x, y);
                 return;
             }
         }
         let prevXY1 = new Vec2(...gTouchesPosition.getXY(1));
         let prevXY2 = new Vec2(...gTouchesPosition.getXY(2));
-        let nextXY1 = new Vec2(...getTouchXY(touches[0]));
-        let nextXY2 = new Vec2(...getTouchXY(touches[1]));
+        let nextXY1 = new Vec2(
+            ...equalizeXYScaling(getTouchXY(touches[0])));
+        let nextXY2 = new Vec2(
+            ...equalizeXYScaling(getTouchXY(touches[1])));
         let prevDiameter = sub(prevXY2, prevXY1).length();
         let nextDiameter = sub(nextXY2, nextXY1).length();
         gTouchesPosition.setXY(1, nextXY1.x, nextXY1.y);
@@ -633,7 +667,7 @@ function respondToTouchInputByModifyingSurfaceView(e) {
     }
 }
 
-function drawNewWavePacket(x0, y0, x1, y1, addTo=false) {
+function getWaveNumber(x0, y0, x1, y1) {
     let d = new Vec2(
         gSimParams.gridDimensions.ind[0]*(x1 - x0), 
         gSimParams.gridDimensions.ind[1]*(y1 - y0));
@@ -644,8 +678,12 @@ function drawNewWavePacket(x0, y0, x1, y1, addTo=false) {
         let dNorm = div(d, d.length());
         d = mul(dLen, dNorm);
     }
+    return d;
+}
+
+function drawNewWavePacket(x0, y0, x1, y1, addTo=false) {
     let wavepacketUniforms = {
-        waveNumber: d,
+        waveNumber: getWaveNumber(x0, y0, x1, y1),
         texOffset: new Vec2(x0, y0),
         amplitude: gWavePacketAmplitude,
         sigmaXY: new Vec2(
@@ -655,18 +693,38 @@ function drawNewWavePacket(x0, y0, x1, y1, addTo=false) {
     if (addTo) {
         gFrames.extra.draw(
             GLSL_PROGRAMS.wavePacket, wavepacketUniforms);
-        gFrames.wavepacket2.draw(
+        gFrames.psi2.draw(
             GLSL_PROGRAMS.add2,
-            {tex1: gFrames.wavepacket1,
+            {tex1: gFrames.psi1,
              tex2: gFrames.extra} 
         );
         return;
 
     }
-    gFrames.wavepacket1.draw(
+    gFrames.psi1.draw(
         GLSL_PROGRAMS.wavePacket, wavepacketUniforms);
-    gFrames.wavepacket2.draw(
+    gFrames.psi2.draw(
         GLSL_PROGRAMS.wavePacket, wavepacketUniforms);
+}
+
+function displayInitialMomentum(x0, y0, x1, y1) {
+    let wn = getWaveNumber(x0, y0, x1, y1);
+    let displayInitialMomentumLabel
+        = document.getElementById('displayInitialMomentum');
+    displayInitialMomentumLabel.style =
+        `color: black; opacity: 1;`;
+    let w = gSimParams.dimensions.ind[0];
+    let h = gSimParams.dimensions.ind[1];
+    displayInitialMomentumLabel.textContent 
+        = `<px>=${(2.0*wn.x/w).toFixed(3)}\u03c0  `
+        + `<py>=${(2.0*wn.y/h).toFixed(3)}\u03c0`;
+}
+
+function clearInitialMomentumDisplay() {
+    let displayInitialMomentumLabel
+        = document.getElementById('displayInitialMomentum');
+    displayInitialMomentumLabel.style =
+        `color: black; opacity: 0;`;
 }
 
 function respondToMouseInputByModifyingWaveFunction(e) {
@@ -676,13 +734,14 @@ function respondToMouseInputByModifyingWaveFunction(e) {
             gMousePosition = [];
         return;
     }
-    let [x1, y1] = getMouseXY(e);
+    let [x1, y1] = equalizeXYScaling(getMouseXY(e));
     if (gMousePosition.length === 0) {
         gMousePosition = [x1, y1];
         drawNewWavePacket(x1, y1, x1, y1);
         return;
     }
     let [x0, y0] = gMousePosition;
+    displayInitialMomentum(x0, y0, x1, y1);
     drawNewWavePacket(x0, y0, x1, y1);
 }
 
@@ -691,13 +750,14 @@ function respondToTouchInputByModifyingWaveFunction(e) {
     let touchCount = touches.length;
     for (let i = 0; i < touchCount; i++) {
         let touch = touches[i];
-        let [x1, y1] = getTouchXY(touch);
+        let [x1, y1] = equalizeXYScaling(getTouchXY(touch));
         if (gTouchesPosition.isEmpty(i)) {
             gTouchesPosition.setXY(i, x1, y1);
             drawNewWavePacket(x1, y1, x1, y1, (i !== 0));
             return;
         }
         let [x0, y0] = gTouchesPosition.getXY(i);
+        displayInitialMomentum(x0, y0, x1, y1);
         drawNewWavePacket(x0, y0, x1, y1, (i !== 0));
     }
 }
@@ -705,23 +765,49 @@ function respondToTouchInputByModifyingWaveFunction(e) {
 function mouseSketchPotential(e, drawStrength) {
     if (getMouseXY(e)[0] < 0.0 || getMouseXY(e)[0] > 1.0 ||
         getMouseXY(e)[1] < 0.0 || getMouseXY(e)[0] > 1.0) {
+        if (gMousePosition.length >= 0)
+            gMousePosition = [];
         return;
     }
-    let xy = getMouseXY(e);
+    let xy = equalizeXYScaling(getMouseXY(e));
+    let sketchSize = 0.02*gSketchWidth/(100.0);
+    if (gMousePosition.length > 0) {
+        let [x1, y1] = xy;
+        let [x0, y0] = gMousePosition;
+        let d = new Vec2(x1 - x0, y1 - y0);
+        let dLength = d.length();
+        if (dLength !== 0.0) {
+            let n0 = div(d, dLength);
+            let inc = mul(sketchSize, n0);
+            console.log(d.length(), sketchSize);
+            for (let k = 0; d.length() > sketchSize && k < 10; k++) {
+                // console.log(d);
+                d = sub(d, inc);
+                gFrames.pot2.draw(
+                    GLSL_PROGRAMS.sketchPotential,
+                    {tex: gFrames.pot,
+                     location: new Vec2(x0 + d.ind[0],  y0 + d.ind[1]),
+                     sigmaXY: new Vec2(sketchSize, sketchSize),
+                     amplitude: drawStrength}
+                );
+                gFrames.pot.draw(GLSL_PROGRAMS.copy, {tex: gFrames.pot2});
+            }
+        }
+    }
     gFrames.pot2.draw(
-        GLSL_PROGRAMS.sketchPotential, 
+        GLSL_PROGRAMS.sketchPotential,
         {tex: gFrames.pot, location: new Vec2(xy[0], xy[1]),
-            sigmaXY: new Vec2(0.02*gSketchWidth/(100.0), 
-                            0.02*gSketchWidth/(100.0)),
-            amplitude: drawStrength}
+         sigmaXY: new Vec2(sketchSize, sketchSize),
+         amplitude: drawStrength}
     );
     gFrames.pot.draw(GLSL_PROGRAMS.copy, {tex: gFrames.pot2});
+    gMousePosition = xy;
 }
 
 function touchSketchPotential(e, drawStrength) {
     let touches = e.changedTouches;
     for (let touch of touches) {
-        let xy = getTouchXY(touch);
+        let xy = equalizeXYScaling(getTouchXY(touch));
         gFrames.pot2.draw(
             GLSL_PROGRAMS.sketchPotential, 
             {tex: gFrames.pot, location: new Vec2(xy[0], xy[1]),
@@ -734,6 +820,7 @@ function touchSketchPotential(e, drawStrength) {
 }
 
 gCanvas.addEventListener("touchend", e => {
+    clearInitialMomentumDisplay();
     gTouchesPosition.reset();
 });
 
@@ -757,6 +844,47 @@ gCanvas.addEventListener("touchmove", e => {
     }
 });
 
+/* function displayHoveringText(e) {
+    let [x, y] = getMouseXY(e);
+    // console.log(x, y);
+    if (!(getMouseXY(e)[0] < 0.0 || getMouseXY(e)[0] > 1.0 ||
+        getMouseXY(e)[1] < 0.0 || getMouseXY(e)[0] > 1.0)
+        && !gShowSurface) {
+        let hoveringStats = document.getElementById("hoveringStats");
+        hoveringStats.textContent 
+            = `px: ${((x - 0.5)*gSimParams.dimensions.ind[0]).toFixed(1)}\n`
+            + `py: ${((y - 0.5)*gSimParams.dimensions.ind[1]).toFixed(1)}`;
+        hoveringStats.style = `position: absolute; width: 150px;` 
+            + `right: ${document.documentElement.clientWidth - e.clientX - 120}px; `
+            + `top: ${e.clientY+8}px; color: white; opacity: 1;`;
+        console.log(hoveringStats.style);
+    } else {
+        document.getElementById("hoveringStats").style = `opacity: 0;`;
+    }
+}*/
+
+function displayTextPosition(e) {
+    let mousePositionDisplay 
+        = document.getElementById("displayMousePosition");
+    let xy = equalizeXYScaling(getMouseXY(e));
+    if (!(xy[0] < 0.0 || xy[0] > 1.0 ||
+            xy[1] < 0.0 || xy[1] > 1.0)
+        && !gShowSurface) {
+        if (gMousePosition.length === 0) {
+            let [x, y] = xy;
+            mousePositionDisplay.textContent
+                = `x: ${((x - 0.5)*gSimParams.dimensions.ind[0]).toFixed(1)}, `
+                + `y: ${((y - 0.5)*gSimParams.dimensions.ind[1]).toFixed(1)}`;
+        }
+        mousePositionDisplay.style = `color: black; opacity: 1;`;
+    } else {
+        mousePositionDisplay.style = `color: black; opacity: 0;`;
+    }
+}
+
+document.addEventListener("mousemove", e => {
+    displayTextPosition(e);
+});
 
 gCanvas.addEventListener("mousemove", e => {
     if (e.buttons !== 0) {
@@ -803,6 +931,7 @@ gCanvas.addEventListener("mousedown", e => {
 });
 
 gCanvas.addEventListener("mouseup", () => {
+    clearInitialMomentumDisplay();
     if (gShowSurface) {
         gMousePosition = [];
     } else {
@@ -828,62 +957,68 @@ gCanvas.addEventListener("wheel", e => {
 
 document.getElementById("uploadImage").addEventListener(
     "change", () => {
+        if (gTextEditPotential.isTimeDependent)
+            gTextEditPotential.isTimeDependent = false;
         let im = document.getElementById("image");
         im.file = document.getElementById("uploadImage").files[0];
         const reader = new FileReader();
         reader.onload = e => {
             im.src = e.target.result;
         };
-        reader.onerror = () => {
-            console.log('An error occured.');
-        }
-        reader.onloadend = e => {
-            // im.src = e.target.result;
-            let p = new Promise(() => setTimeout(
-                () => {
-                    console.log('width: ', im.width, 'height: ', im.height);
-                    let canvas = document.getElementById("imageCanvas");
-                    let width = gSimParams.gridDimensions.ind[0];
-                    let height = gSimParams.gridDimensions.ind[1];
-                    canvas.setAttribute("width", width);
-                    canvas.setAttribute("height", height);
-                    // ctx.rect(0, 0, width, height);
-                    let ctx = canvas.getContext("2d");
-                    // ctx.fill();
-                    let imW = im.width;
-                    let imH = im.height;
-                    if (imW/imH > width/height) {
-                        let ratio = (imH/imW)/(height/width);
-                        let heightOffset = parseInt(0.5*height*(1.0 - ratio));
-                        ctx.drawImage(im, 0, heightOffset, width, 
-                            parseInt(width*imH/imW));
-                    } else {
-                        let ratio = (imW/imH)/(width/height);
-                        let widthOffset = parseInt(0.5*width*(1.0 - ratio));
-                        ctx.drawImage(im, widthOffset, 0,
-                            parseInt(height*imW/imH), height);
-                    }
-                    let imageData = new Float32Array(
-                        ctx.getImageData(0, 0, width, height).data
-                    );
-                    for (let i = 0; i < imageData.length/4; i++) {
-                        imageData[4*i] *= 1.0/255.0;
-                        for (let j = 1; j < 4; j++)
-                            imageData[4*i + j] = 0.0;
-                    }
-                    console.log(imageData.length);
-                    gFrames.extra.substituteArray(imageData);
-                    gFrames.pot.draw(GLSL_PROGRAMS.copyFlip, 
-                        {tex: gFrames.extra});
-                }, 1000)
+        let loadImageToPotentialFunc = () => {
+            let canvas = document.getElementById("imageCanvas");
+            let width = gSimParams.gridDimensions.ind[0];
+            let height = gSimParams.gridDimensions.ind[1];
+            canvas.setAttribute("width", width);
+            canvas.setAttribute("height", height);
+            // ctx.rect(0, 0, width, height);
+            let ctx = canvas.getContext("2d");
+            // ctx.fill();
+            let imW = im.width;
+            let imH = im.height;
+            let heightOffset = 0;
+            let widthOffset = 0;
+            if (imW/imH >= width/height) {
+                let ratio = (imW/imH)/(width/height);
+                widthOffset = parseInt(0.5*width*(1.0 - ratio));
+                ctx.drawImage(im, widthOffset, heightOffset,
+                              width*(imW/imH)/(width/height), height);
+            } else {
+                let ratio = (imH/imW)/(height/width);
+                heightOffset = parseInt(0.5*height*(1.0 - ratio));
+                ctx.drawImage(im, widthOffset, heightOffset,
+                              width, (imH/imW)/(height/width)*height);
+            }
+            let imageData = new Float32Array(
+                ctx.getImageData(0, 0, width, height).data
             );
-            p.then(() => {});
+            for (let i = 0; i < imageData.length/4; i++) {
+                let normColorVal = Math.sqrt(
+                    imageData[4*i]*imageData[4*i]
+                    + imageData[4*i + 1]*imageData[4*i + 1] 
+                    + imageData[4*i + 2]*imageData[4*i + 2])/3.0;
+                imageData[4*i] = normColorVal/255.0;
+                for (let j = 1; j < 4; j++)
+                    imageData[4*i + j] = 0.0;
+            }
+            console.log(imageData.length);
+            gFrames.extra.substituteArray(imageData);
+            gFrames.pot.draw(GLSL_PROGRAMS.copyFlip, 
+                {tex: gFrames.extra});
+        }
+        let promiseFunc = () => {
+            if (im.width === 0 && im.height === 0) {
+                let p = new Promise(() => setTimeout(promiseFunc, 10));
+                return Promise.resolve(p);
+            } else {
+                loadImageToPotentialFunc();
+            }
         };
+        reader.onloadend = () => {
+            let p = new Promise(() => setTimeout(promiseFunc, 10));
+            Promise.resolve(p);
+        }
         reader.readAsDataURL(document.getElementById("uploadImage").files[0]);
-        // let canvas = document.getElementsById("imageCanvas");
-        // let ctx = canvas.getContext("2d");
-        // ctx.rect();
-        // let imageData = 
     },
     false
 )
@@ -895,7 +1030,8 @@ function displayAverageFPS() {
     let deltaT = (time - gUserTime)/1000.0;
     gUserDeltaTs.push(deltaT);
     let elapsedT;
-    if (elapsedT = (gUserDeltaTs.reduce((a, b) => a + b) > 1.0)) {
+    // let stopT = 0.5;
+    if ((elapsedT = gUserDeltaTs.reduce((a, b) => a + b)) > 0.25) {
         document.getElementById("fps").textContent 
             = `fps: ${ Math.floor(gUserDeltaTs.length/elapsedT)}`;
         gUserDeltaTs = [];
@@ -940,24 +1076,87 @@ function computeNormSquared(probQuad, useCPU) {
 
 function normalizeWaveFunction() {
     gFrames.abs2Psi.draw(
-        GLSL_PROGRAMS.abs2, {tex: gFrames.wavepacket2});
+        GLSL_PROGRAMS.abs2, {tex: gFrames.psi1});
     let sum = computeNormSquared(gFrames.abs2Psi, false);
-    if (Number.isNaN(sum))
-        return;
-    // console.log('Total sum: ', sum);
     let width = gSimParams.gridDimensions.ind[0];
     let height = gSimParams.gridDimensions.ind[1];
+    let normFactor = Math.sqrt((width*height)/sum);
+    // console.log(`Width and height: ${width}x${height}`);
+    // console.log('Total sum: ', sum);
+    // console.log('Normalization factor: ', normFactor);
+    if (Number.isNaN(sum) || sum === 0.0 
+        || normFactor === 0.0)
+        return;
     if (gUserDeltaTs.length === 0) {
-        console.log(sum/(width*height));
+        console.log('|\u03A8|^2: ', normFactor);
     }
-    // console.log('Normalization factor: ', Math.sqrt((width*height)/sum));
-    gFrames.wavepacket1.draw(GLSL_PROGRAMS.scale,
-        {tex: gFrames.wavepacket2, 
-            scale: Math.sqrt((width*height)/sum)});
-    gFrames.wavepacket2.draw(
-       GLSL_PROGRAMS.copy, {tex: gFrames.wavepacket1});
-    // let arr = gFrames.wavepacket2.asFloat32Array();
-    // console.log('arr[0]:', arr[0]);
+    gFrames.psi2.draw(GLSL_PROGRAMS.scale,
+        {tex: gFrames.psi1, 
+            scale: normFactor});
+    gFrames.psi1.draw(
+       GLSL_PROGRAMS.copy, {tex: gFrames.psi2});
+}
+
+function drawSurface() {
+    gFrames.heightMap1.draw(
+        GLSL_PROGRAMS.abs,
+        {tex: gFrames.psi1}
+    );
+    gFrames.heightMap2.draw(
+        GLSL_PROGRAMS.grayScale,
+        {
+            tex: gFrames.pot, 
+            brightness: 1.0, maxBrightness: 1000000.0, 
+            offset: -0.1
+        }
+    );
+    let width = gSimParams.gridDimensions.ind[0];
+    let height = gSimParams.gridDimensions.ind[1];
+    let renderUniforms = {
+        scale: gScale, 
+        heightScale: 0.05,
+        translate: new Vec3(0.0, 0.0, 0.0),
+        screenDimensions: new IVec2(gCanvas.width, gCanvas.height),
+        rotation: gRotation,
+        heightTex: gFrames.heightMap1,
+        tex: gFrames.psi1,
+        dimensions2D: new IVec2(width, height),
+        brightness: 0.5,
+    };
+    withConfig({
+        enable: gl.DEPTH_TEST, 
+        depthFunc: gl.LESS,
+        width: gCanvas.width, height: gCanvas.height}, () => {
+        gFrames.render.clear();
+        if (gShowPotential) {
+            gFrames.render.draw(
+                GLSL_PROGRAMS.surfacePotential,
+                {
+                    ...renderUniforms,
+                    heightScale: 0.1,
+                    heightTex: gFrames.heightMap2,
+                    color: new Vec4(1.0, 1.0, 1.0, 0.5)
+                },
+                gFrames.wireFrame2
+            );
+        }
+    });
+    withConfig({
+                width: gCanvas.width, height: gCanvas.height}, () => {
+        /*if (gl.version === 2) {
+            gl.enable(gl.BLEND);
+            gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        }*/
+        gFrames.render.draw(
+            GLSL_PROGRAMS.surfaceWaveFunc,
+            renderUniforms, gFrames.wireFrame1);
+        /*if (gl.version === 2) {
+            gl.disable(gl.BLEND);
+        }*/
+    });
+    // gl.disable(gl.DEPTH_TEST);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gFrames.target.draw(GLSL_PROGRAMS.copy, {tex: gFrames.render});
 }
 
 function animate() {
@@ -970,15 +1169,20 @@ function animate() {
         if (gFrames.kineticEnergy === null)
             gFrames.kineticEnergy = new Quad({
                 ...TEX_PARAMS_SIM, 
-                width: gFrames.wavepacket1.width,
-                height: gFrames.wavepacket1.height});
+                width: gSimParams.gridDimensions.ind[0],
+                height: gSimParams.gridDimensions.ind[1]
+            });
         gFrames.kineticEnergy.draw(
             gTextEditKE.program,
             {...gTextEditKE.uniforms, 
             m: new Complex(gSimParams.m, 0.0), t: gSimParams.t,
-            dimensions2D: new Vec2(gFrames.pot.width, gFrames.pot.height),
+            dimensions2D: new Vec2(
+                gSimParams.dimensions.ind[0],
+                gSimParams.dimensions.ind[1]),
             texelDimensions2D:
-                new IVec2(gFrames.pot.width, gFrames.pot.height)}
+                new IVec2(
+                    gSimParams.gridDimensions.ind[0],
+                    gSimParams.gridDimensions.ind[1])}
         );
     });
     for (let i = 0; i < gStepsPerFrame; i++) {
@@ -992,7 +1196,7 @@ function animate() {
                 gTextEditNonlinear.program, 
                 {
                     ...gTextEditNonlinear.uniforms, 
-                    psiTex: gFrames.wavepacket2,
+                    psiTex: gFrames.psi1,
                     normFactor: normFactor,
                 }
             );
@@ -1004,81 +1208,31 @@ function animate() {
             );
             potential = gFrames.pot2;
         }
-        splitStep(gFrames.wavepacket1, gFrames.wavepacket2,
+        splitStep(gFrames.psi2, gFrames.psi1,
                   kineticEnergy, potential, gSimParams);
-        [gFrames.wavepacket1, gFrames.wavepacket2] 
-            = [gFrames.wavepacket2, gFrames.wavepacket1];
+        [gFrames.psi1, gFrames.psi2] 
+            = [gFrames.psi2, gFrames.psi1];
         gSimParams.t = add(gSimParams.t, 
             new Complex(gSimParams.dt.real, 0.0));
     }
     if (gNormalize)
         normalizeWaveFunction();
     if (gShowSurface) {
-        gFrames.heightMap1.draw(
-            GLSL_PROGRAMS.abs,
-            {tex: gFrames.wavepacket2}
-        );
-        gFrames.heightMap2.draw(
-            GLSL_PROGRAMS.grayScale,
-            {
-                tex: gFrames.pot, 
-                brightness: 1.0, maxBrightness: 1000000.0, 
-                offset: -0.1
-            }
-        );
-        withConfig({enable: gl.DEPTH_TEST, depthFunc: gl.LESS,
-                    width: gCanvas.width, height: gCanvas.height}, () => {
-            /* if (gl.version === 2) {
-                gl.enable(gl.BLEND);
-                gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-            }*/
-            let width = gSimParams.gridDimensions.ind[0];
-            let height = gSimParams.gridDimensions.ind[1];
-            gFrames.render.clear();
-            let renderUniforms = {
-                scale: gScale, 
-                heightScale: 0.05,
-                translate: new Vec3(0.0, 0.0, 0.0),
-                rotation: gRotation,
-                heightTex: gFrames.heightMap1,
-                tex: gFrames.wavepacket1,
-                dimensions2D: new IVec2(width, height),
-                brightness: 0.5,
-            };
-            gFrames.render.draw(
-                GLSL_PROGRAMS.surfaceWaveFunc,
-                renderUniforms, gFrames.wireFrame1);
-            if (gShowPotential) {
-                gFrames.render.draw(
-                    GLSL_PROGRAMS.surfacePotential,
-                    {
-                        ...renderUniforms,
-                        heightScale: 0.1,
-                        heightTex: gFrames.heightMap2,
-                        color: new Vec4(1.0, 1.0, 1.0, 0.5)
-                    },
-                    gFrames.wireFrame2
-                );
-            }
-            /*if (gl.version === 2) {
-                gl.disable(gl.BLEND);
-                gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-            }*/
-            // gl.clear(gl.DEPTH_BUFFER_BIT);
-            // gl.disable(gl.DEPTH_TEST);
-        });
-        gFrames.target.draw(GLSL_PROGRAMS.copy, {tex: gFrames.render});
+        drawSurface();
     } else {
         gFrames.render1.draw(
             GLSL_PROGRAMS.domainColoring,
-            {tex: gFrames.wavepacket2,
+            {tex: gFrames.psi1,
                 brightness: 0.5});
         gFrames.render2.draw(GLSL_PROGRAMS.grayScale, 
             {tex: gFrames.pot, brightness: 1.0, maxBrightness: 0.5,
                 offset: 0.0});
         gFrames.target.draw(GLSL_PROGRAMS.blend2, 
             {tex1: gFrames.render1, tex2: gFrames.render2, scale1: 1.0,
-                scale2: (gShowPotential)? 1.0: 0.0});
+                scale2: (gShowPotential)? 1.0: 0.0},
+            {viewport: [parseInt((gCanvas.width - gFrames.render1.width)/2.0)
+                , 0, gFrames.render1.width, gFrames.render1.height]}
+        );
     }
     requestAnimationFrame(animate);
 }

@@ -17,11 +17,15 @@ import {gl, TextureParams, IScalar, Quad} from "./gl-wrappers.js";
 import SHADERS, { getShader } from "./shaders.js";
 
 let gPrograms = {
-    fftIter: Quad.makeProgramFromSource(SHADERS['./shaders/fft-iter.frag']), 
+    fftIter: Quad.makeProgramFromSource(
+        SHADERS['./shaders/fft/fft-iter.frag']),
     revBitSort2: 
-        Quad.makeProgramFromSource(SHADERS['./shaders/rev-bit-sort2.frag']),
-    fftShift: Quad.makeProgramFromSource(SHADERS['./shaders/fftshift.frag']),
-    copy: Quad.makeProgramFromSource(getShader('./shaders/copy.frag')),
+        Quad.makeProgramFromSource(
+            SHADERS['./shaders/fft/rev-bit-sort2.frag']),
+    fftShift: Quad.makeProgramFromSource(
+        SHADERS['./shaders/fft/fft-iter.frag']),
+    copy: Quad.makeProgramFromSource(
+        getShader('./shaders/util/copy.frag')),
 };
 
 

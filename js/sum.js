@@ -5,7 +5,7 @@ import { getShader } from "./shaders.js";
 
 
 const SCALE_PROGRAM = Quad.makeProgramFromSource(
-    getShader("./shaders/scale.frag"));
+    getShader("./shaders/util/scale.frag"));
 
 /* Sum the contents of a quad if its texture's width
 and height are equal and its width and height are a
@@ -19,7 +19,8 @@ export function sumSquarePowerOfTwo(t) {
     for (let w = sideLength/2; w >= 1; w /= 2) {
         let s = new Quad (
             new TextureParams(
-                t.format, w, w, true,
+                (w === 1)? gl.RGBA32F: t.format,
+                w, w, true,
                 gl.REPEAT, gl.REPEAT,
                 gl.LINEAR, gl.LINEAR
             )

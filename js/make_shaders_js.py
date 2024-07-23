@@ -5,7 +5,7 @@ from time import sleep
 
 def get_shader_file_list(path):
     lst = []
-    for e in glob.glob("./shaders/*"):
+    for e in glob.glob(path, recursive=True):
         if e.endswith(".frag") or e.endswith(".vert"):
             lst.append(e)
     lst.sort()
@@ -14,7 +14,7 @@ def get_shader_file_list(path):
 
 def refresh_shader_js():
     contents = {}
-    for e in get_shader_file_list("./shaders/*"):
+    for e in get_shader_file_list("./shaders/**/*"):
         if e.endswith(".frag") or e.endswith(".vert"):
             with open(e, 'r') as f:
                 content = "".join([line for line in f])
@@ -33,14 +33,14 @@ def refresh_shader_js():
 
 refresh_shader_js()
 files_and_mod_dates = [{}]
-for e in get_shader_file_list("./shaders/*"):
+for e in get_shader_file_list("./shaders/**/*"):
     if e.endswith(".frag") or e.endswith(".vert"):
         files_and_mod_dates[0][e] = os.stat(e).st_mtime
 print("Creating shaders.js file.")
 
 while True:
     new_files_and_mod_dates = {}
-    for e in get_shader_file_list("./shaders/*"):
+    for e in get_shader_file_list("./shaders/**/*"):
         if e.endswith(".frag") or e.endswith(".vert"):
             new_files_and_mod_dates[e] = os.stat(e).st_mtime
     new_files = set(new_files_and_mod_dates.keys())
