@@ -23,7 +23,7 @@ let gPrograms = {
         Quad.makeProgramFromSource(
             SHADERS['./shaders/fft/rev-bit-sort2.frag']),
     fftShift: Quad.makeProgramFromSource(
-        SHADERS['./shaders/fft/fft-iter.frag']),
+        SHADERS['./shaders/fft/fftshift.frag']),
     copy: Quad.makeProgramFromSource(
         getShader('./shaders/util/copy.frag')),
 };

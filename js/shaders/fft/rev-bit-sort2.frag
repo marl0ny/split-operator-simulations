@@ -37,8 +37,8 @@ bool revBitSort2SingleIter(inout int rev, inout int i,
 /* Older versions of GLSL do not support for loops.
  This very long function reverse bit sorts a finite-sized
  input texture with power of two dimensions without using any for loops.
- For more more modern versions of GLSL a different implementation of reverse
- bit sorting which uses for loops is used instead.
+ For more modern versions of GLSL a different implementation of reverse
+ bit sorting which includes for loops is used instead.
 */
 vec2 revBitSort2NoForLoop(vec2 uv) {
     vec2 uv2 = vec2(0.0, 0.0);

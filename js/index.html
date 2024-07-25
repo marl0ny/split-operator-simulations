@@ -29,14 +29,14 @@
 					<br>
 					<input type="range" id="stepsPerFrame"
 					name="steps/frame"
-					min="0" max="20.0" value="2.0"
+					min="0" max="20.0" value="0.0"
 					style="width: 95%;"/>
 					<!--Default should be 2.-->
 					<br>
 					<label id="fps">fps: </label><br>
 					<!--<hr style="text-align: start;"/>!-->
 					<button type="button"
-						aria-pressed="true" id="newWaveFuncButton">New 𝛙</button>
+						aria-pressed="true" id="newWaveFuncButton">New Ψ</button>
 					<br>
 					<button type="button"
 						aria-pressed="true" id="sketchButton">Sketch V</button>
@@ -50,8 +50,11 @@
 						style="width: 95%;"/>
 					<br>
 					<input type="checkbox" id="showPotential" checked="true"></input>
-					<label for="showPotential">Show V</label>
+					<label for="showPotential">Show V(<b>r</b>)</label>
+					<!--<label for="showPotential">Show V(x, y)</label>!-->
 					<br>
+					<input type="checkbox" id="showMomentumSpacePsi"></input>
+					<label for="showMomentumSpacePsi">Show Ψ(<b>p</b>)</label><br>
 					<input type="checkbox" id="showSurface"></input>
 					<label for="showSurface">3D display</label>
 					<br>
@@ -73,7 +76,7 @@
 							style="width: 95%;"/>
 					<br>
 					<input type="checkbox" id="normalizePsi"/>
-					<label for="normalizePsi">Normalize 𝛙<br> at each frame</label><br/><br/>
+					<label for="normalizePsi">Normalize Ψ after each frame</label><br/><br/>
 					<label id="displayMousePosition", style="opacity: 0;">x: 0, y: 0</label><br/>
 					<label id="displayInitialMomentum", style="opacity: 0;"> &lt;px&gt;: 0, &lt;py&gt;: 0</label>
 					<!--<label style="text-align: center;"> at each frame</label><br>!-->
@@ -145,12 +148,13 @@
 						<select id="presetNonlinear" style="width: 48;">
 							<option value=0 selected>None</option>
 							<option value=1>100*abs(a*psi)^2</option>
+							<!-- 100.0*abs(a*psi)^2 - 0.016*a -->
 							<option value=2>a*exp(-abs(psi)^2/0.01^2)</option>
 							<option value=3>Combination of above two</option>
 						</select>
 					</label>
 					<br>
-					<label for="nonlinearEntry">Enter nonlinearity f(𝛙)<br>
+					<label for="nonlinearEntry">Enter nonlinearity f(Ψ)<br>
 						<input type="text" id="nonlinearEntry"
 							name="nonlinearEntry" size="23" value="">
 					</label>

@@ -1,4 +1,5 @@
-import { gl, gCanvas, TextureParams, RenderTarget, 
+import gCanvas from "./canvas.js";
+import { gl, gMainRenderWindow, TextureParams, RenderTarget, 
          Quad, Vec2, IVec2, IVec3, Vec3, Vec4, Complex,
          Quaternion, mul, add, div,
          withConfig,
@@ -15,6 +16,7 @@ import {
 import { getShader } from "./shaders.js";
 import { sumSquarePowerOfTwo } from "./sum.js";
 import Touches from "./touch-manager.js";
+import { fft2D, fftShift } from "./fft.js";
 
 
 class MainGLSLPrograms {
@@ -34,6 +36,9 @@ class MainGLSLPrograms {
         this.wavePacket
             = Quad.makeProgramFromSource(
                 getShader('./shaders/init-wavepacket/gaussian.frag'));
+        this.sechPacket
+            = Quad.makeProgramFromSource(
+                getShader('./shaders/init-wavepacket/sech.frag'));
         this.abs2 = Quad.makeProgramFromSource(
             getShader('./shaders/util/abs2-xy.frag'));
         this.abs = Quad.makeProgramFromSource(
@@ -50,6 +55,12 @@ class MainGLSLPrograms {
         this.scale 
             = Quad.makeProgramFromSource(
                 getShader('./shaders/util/scale.frag'));
+        this.scaleRGBA 
+                = Quad.makeProgramFromSource(
+                    getShader('./shaders/util/scale-rgba.frag'));
+        this.uniformColor
+                = Quad.makeProgramFromSource(
+                    getShader('./shaders/util/uniform-color.frag'));
         this.add2 
             = Quad.makeProgramFromSource(
                 getShader('./shaders/util/add2.frag'));
@@ -94,13 +105,20 @@ console.log('texture test', TEX_PARAMS_SIM.equals(TEX_PARAMS_SIM2));
 
 class Frames {
     constructor() {
-        this.target = new Quad(TEX_PARAMS_CANVAS_F32);
+        this.target = gMainRenderWindow;
         this.render1 
-            = new Quad({...TEX_PARAMS_SQUARE_F32, format: gl.RGBA32F});
+            = new Quad({...TEX_PARAMS_SQUARE_F32, 
+                format: gl.RGBA32F,
+                // format: (gl.version === 2)? gl.RGBA16F: gl.RGBA32F
+            });
         this.render2
-            = new Quad({...TEX_PARAMS_SQUARE_F32, format: gl.RGBA32F});
+            = new Quad({...TEX_PARAMS_SQUARE_F32,
+                format: gl.RGBA32F,
+                // format: (gl.version === 2)? gl.RGBA16F: gl.RGBA32F
+            });
         this.psi1 = new Quad(TEX_PARAMS_SIM);
         this.psi2 = new Quad(TEX_PARAMS_SIM);
+        this.psiP = new Quad(TEX_PARAMS_SIM);
         this.abs2Psi = new Quad(TEX_PARAMS_SIM);
         this.extra = new Quad({...TEX_PARAMS_SIM, format: gl.RGBA32F});
         this.nonlinearTerm = new Quad(TEX_PARAMS_SIM);
@@ -146,6 +164,7 @@ function changeSimulationSize(w, h) {
     let newTexParams = {...TEX_PARAMS_SIM, width: w, height: h};
     let framesNewTex = {
         'psi1': newTexParams, 'psi2': newTexParams,
+        'psiP': newTexParams,
         'abs2Psi': newTexParams,
         // 'extra': {...newTexParams, format: gl.RGBA32F},
         'nonlinearTerm': newTexParams,
@@ -202,7 +221,7 @@ const initialStep = () => {
     );
     splitStep(gFrames.psi2, gFrames.psi1, 
             gFrames.kineticEnergy, gFrames.pot,
-            gSimParams);
+            gSimParams, gFrames.gShowPsiP);
     [gFrames.psi1, gFrames.psi2] 
         = [gFrames.psi2, gFrames.psi1];
 }
@@ -266,7 +285,7 @@ document.getElementById("timeStepReal").addEventListener(
 
 document.getElementById("potentialClippedMessage").innerHTML
     = "To reduce numerical error,<br\> "
-    + " V will be clipped so that<br\> "
+    + " V will be bounded so that<br\> "
     + " |V(x, y, t)| \u2264 2"
 
 let gNormalize = document.getElementById("normalizePsi").checked;
@@ -336,6 +355,11 @@ document.getElementById("sketchWidth").addEventListener(
         gSketchWidth = e.target.value;
         refreshSketchSizeDisplay(gSketchWidth, gInputMode);
     }
+);
+
+let gShowPsiP = document.getElementById("showMomentumSpacePsi").checked;
+document.getElementById("showMomentumSpacePsi").addEventListener(
+    "input", e => gShowPsiP = e.target.checked
 );
 
 let gShowSurface = document.getElementById("showSurface").checked;
@@ -467,7 +491,8 @@ function setPresetPotential(value) {
             gTextEditPotential.newText(`0`);
             break;
         case PRESETS.HARMONIC:
-            gTextEditPotential.newText(`2.0*((${u}-0.5)^2 + (${v}-0.5)^2)`);
+            gTextEditPotential.newText(
+                `2.0*abs(strength)*((${u}-0.5)^2 + (${v}-0.5)^2)`);
             break;
         case PRESETS.DOUBLE_SLIT:
             gTextEditPotential.newText(doubleSlit);
@@ -703,6 +728,10 @@ function drawNewWavePacket(x0, y0, x1, y1, addTo=false) {
     }
     gFrames.psi1.draw(
         GLSL_PROGRAMS.wavePacket, wavepacketUniforms);
+    if (gStepsPerFrame === 0 && gShowPsiP) {
+        fft2D(gFrames.psi2, gFrames.psi1);
+        fftShift(gFrames.psiP, gFrames.psi2);
+    }
     gFrames.psi2.draw(
         GLSL_PROGRAMS.wavePacket, wavepacketUniforms);
 }
@@ -1061,6 +1090,31 @@ function refreshPotential() {
     }
 }
 
+function showPsiPWindow() {
+    gFrames.render2.draw(GLSL_PROGRAMS.domainColoring,
+        {tex: gFrames.psiP,
+            brightness: 0.5/(gSimParams.gridDimensions.ind[0],
+                             gSimParams.gridDimensions.ind[1])});
+    let minSideLength = Math.min(gCanvas.width, gCanvas.height);
+    let windowLength = minSideLength*0.3;
+    let uLOffset = minSideLength*0.01;
+    gFrames.target.draw(GLSL_PROGRAMS.uniformColor, 
+        {color: new Vec4(1.0, 1.0, 1.0, 1.0)},
+        {viewport: [Math.floor(gCanvas.width - windowLength - uLOffset - 1),
+                    Math.floor(gCanvas.height - windowLength - uLOffset - 1),
+                    Math.ceil(windowLength - uLOffset + 1), 
+                    Math.ceil(windowLength - uLOffset + 1)
+        ]});
+    gFrames.target.draw(GLSL_PROGRAMS.scaleRGBA, 
+                        {tex: gFrames.render2,
+                         scale: new Vec4(1.0, 1.0, 1.0, 1.0)},
+                        {viewport: [gCanvas.width - windowLength - uLOffset,
+                                    gCanvas.height - windowLength - uLOffset,
+                                    windowLength - uLOffset, 
+                                    windowLength - uLOffset
+                        ]});
+}
+
 function computeNormSquared(probQuad, useCPU) {
     if (!useCPU) {
         let sumArr = sumSquarePowerOfTwo(probQuad);
@@ -1154,7 +1208,7 @@ function drawSurface() {
             gl.disable(gl.BLEND);
         }*/
     });
-    // gl.disable(gl.DEPTH_TEST);
+    gl.disable(gl.DEPTH_TEST);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gFrames.target.draw(GLSL_PROGRAMS.copy, {tex: gFrames.render});
 }
@@ -1209,7 +1263,8 @@ function animate() {
             potential = gFrames.pot2;
         }
         splitStep(gFrames.psi2, gFrames.psi1,
-                  kineticEnergy, potential, gSimParams);
+                  kineticEnergy, potential, gSimParams,
+                  (gShowPsiP)? gFrames.psiP: null);
         [gFrames.psi1, gFrames.psi2] 
             = [gFrames.psi2, gFrames.psi1];
         gSimParams.t = add(gSimParams.t, 
@@ -1234,6 +1289,8 @@ function animate() {
                 , 0, gFrames.render1.width, gFrames.render1.height]}
         );
     }
+    if (gShowPsiP)
+        showPsiPWindow();
     requestAnimationFrame(animate);
 }
 

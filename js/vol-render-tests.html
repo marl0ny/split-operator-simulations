@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<meta charset="utf-8"/>
+<html>
+	<head>
+        <style>
+            h2 {font-family:Arial, Helvetica, sans-serif; }
+            label {font-family:Arial, Helvetica, sans-serif; }
+			text {font-family:Arial, Helvetica, sans-serif; }
+        </style>
+    </head>
+	<body style="background-color: rgb(255, 255, 255);">
+        <div>
+            <canvas style="
+                            touch-action: none; background-color: rgb(50, 50, 50);
+                           text-align: center;"
+                id="sketchCanvas"></canvas>
+        </div>
+    </body>
+
+<script type="module">
+
+import gCanvas from "./canvas.js";
+import { gl, gMainRenderWindow, Quad, Vec4, IVec2, IVec3,
+    TrianglesFrame, RenderTarget, Attribute, withConfig,
+    TextureParams} from "./gl-wrappers.js";
+import { getShader } from "./shaders.js";
+import { getVerticesAndElements } from "./volume-render.js";
+let uniformColorProgram = Quad.makeProgramFromSource(
+    getShader('./shaders/util/uniform-color.frag')
+);
+let [vertices, elements] = getVerticesAndElements(
+    new IVec2(512, 512), new IVec3(64, 64, 64)
+);
+let triangles = new TrianglesFrame(
+    {"position": new Attribute(2, gl.FLOAT, false)},
+    vertices, elements);
+let renderTarget = new RenderTarget(
+    new TextureParams(
+        gl.RGBA32F, gCanvas.height, gCanvas.height,
+        true, gl.REPEAT, gl.REPEAT, gl.LINEAR, gl.LINEAR
+    )
+);
+
+let renderUniforms = {
+};
+withConfig({
+    enable: gl.DEPTH_TEST, depthFunc: gl.LESS,
+    width: gCanvas.width, height: gCanvas.height}, 
+() => {
+    renderTarget.draw(
+        renderProgram, {}
+    );
+});
+
+gMainRenderWindow.draw(
+    uniformColorProgram,
+    {color: new Vec4(0.0, 1.0, 0.0, 1.0)}
+);
+
+</script>
+
+
+</html>

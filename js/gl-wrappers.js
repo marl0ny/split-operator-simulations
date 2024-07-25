@@ -1,14 +1,4 @@
-export let gCanvas = document.getElementById("sketchCanvas");
-{
-    let clientW = document.documentElement.clientWidth;
-    let clientH = document.documentElement.clientHeight;
-    let sideLength = 0.97*((clientW > clientH)? clientH: clientW);
-    // gCanvas.width = sideLength;
-    gCanvas.width = (clientW >= clientH)? clientW*0.7: sideLength;
-    gCanvas.height = sideLength;
-    // gCanvas.width = clientW;
-    // gCanvas.height = clientH;
-}
+import gCanvas from "./canvas.js";
 
 function initializeWebGL1(gl) {
     gl.version = 1;
@@ -51,7 +41,7 @@ export const gl = ((canvas) => {
     // return initializeWebGL1(canvas.getContext("webgl"));
     let gl = canvas.getContext("webgl2");
     if (gl === null) {
-        console.error(`Your browser does not support WebGL2. `
+        console.warn(`Your browser does not support WebGL2. `
                       + `Trying WebGL1 instead...`);
         gl = canvas.getContext("webgl");
         initializeWebGL1(gl);
@@ -1148,6 +1138,11 @@ export class Quad {
     }
 
 }
+
+export const gMainRenderWindow = new Quad(
+    new TextureParams(gl.RGBA, gCanvas.width, gCanvas.height, 
+    gl.CLAMP_TO_EDGE, gl.CLAMP_TO_EDGE, gl.LINEAR, gl.LINEAR));
+
 
 export function withConfig(config, closure) {
     let keys = Object.keys(config);

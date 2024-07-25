@@ -1,4 +1,4 @@
-import { Vec3, Attribute, Quad, TrianglesFrame, RenderTarget, Quaternion, TextureParams,
+import { gl, Vec3, Attribute, Quad, TrianglesFrame, RenderTarget, Quaternion, TextureParams,
     makeProgramFromSources, 
     get2DFrom3DTextureCoordinates} from "./gl-wrappers.js";
 import getShader from "./shaders.js"
@@ -208,13 +208,13 @@ export class VolumeRender {
     viewDimensions;
 
     // 2D texture dimensions
-    // 2D dimensions of the inital volume data texture
+    // 2D dimensions of the initial volume data texture
     sampleTexelDimensions2D;
     // 2D dimensions of the texture used in the volume render frame
     renderTexelDimensions2D;
 
     // 3D texture dimensions
-    // 3D dimensions of the inital volume data texture
+    // 3D dimensions of the initial volume data texture
     sampleTexelDimensions3D;
     // 3D dimensions of the texture used in the volume render frame
     renderTexelDimensions3D;

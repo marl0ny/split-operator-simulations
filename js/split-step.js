@@ -1,5 +1,5 @@
 import { Quad, IScalar, Complex, div, withConfig } from "./gl-wrappers.js";
-import { fft2D, ifft2D } from "./fft.js";
+import { fft2D, fftShift, ifft2D } from "./fft.js";
 import { getShader } from "./shaders.js";
 
 let gPrograms = {
@@ -80,13 +80,18 @@ function splitStepMomentum(psiF, psiI, kineticEnergy, simParams) {
 
 export default function splitStep(psiF, psiI,
                                   kineticEnergy, potential,
-                                  simParams) {
+                                  simParams, 
+                                  momentumPsiOutput=null) {
     let spatialSimParams = new SimulationParameters(
         simParams.hbar, simParams.m, div(simParams.dt, 2.0),
         simParams.dimensions, simParams.gridDimensions
     );
     splitStepSpatial(psiF, psiI, potential, spatialSimParams);
     fft2D(psiI, psiF);
+    if (momentumPsiOutput !== null) {
+        console.log(momentumPsiOutput, psiI);
+        fftShift(momentumPsiOutput, psiI);
+    }
     splitStepMomentum(psiF, psiI, kineticEnergy, simParams);
     ifft2D(psiI, psiF);
     splitStepSpatial(psiF, psiI, potential, spatialSimParams);
