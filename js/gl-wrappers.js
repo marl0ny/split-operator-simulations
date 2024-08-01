@@ -1182,7 +1182,7 @@ export class MultidimensionalDataQuad extends Quad {
             textureDimensions = get2DFrom3DDimensions(
                 new IVec3(dimensions[0], dimensions[1], dimensions[2]));
         } else {
-            throw "Dimensions higher that 3 not implemented yet.";
+            throw "Dimensions higher than 3 not implemented yet.";
         }
         let actualTextureParams = new TextureParams(
             textureParams.format, 
@@ -1192,6 +1192,30 @@ export class MultidimensionalDataQuad extends Quad {
             textureParams.minFilter, textureParams.maFilter
         )
         super(actualTextureParams);
+        this.dataDimensions = dimensions;
+    }
+    reset(dimensions, textureParams) {
+        let textureDimensions;
+        if (dimensions.length == 1) {
+            textureDimensions
+                = new IVec2(dimensions[0], 1);
+        } else if (dimensions.length == 2) {
+            textureDimensions
+                = new IVec2(dimensions[0], dimensions[1]);
+        } else if (dimensions.length === 3) {
+            textureDimensions = get2DFrom3DDimensions(
+                new IVec3(dimensions[0], dimensions[1], dimensions[2]));
+        } else {
+            throw "Dimensions higher than 3 not implemented yet.";
+        }
+        let actualTextureParams = new TextureParams(
+            textureParams.format, 
+            textureDimensions.ind[0], textureDimensions.ind[1],
+            textureParams.generateMipmap,
+            textureParams.wrapS, textureParams.wrapT, 
+            textureParams.minFilter, textureParams.maFilter
+        )
+        super.reset(actualTextureParams);
         this.dataDimensions = dimensions;
     }
     get textureDimensions() {

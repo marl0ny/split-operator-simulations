@@ -257,6 +257,57 @@ const USER_DEFINED_KE_FUNCTION_FRAG2 =
 `;
 }`;
 
+const USER_DEFINED_3D_KE_FUNCTION_FRAG1 = 
+`
+uniform vec3 dimensions3D;
+uniform ivec2 texelDimensions2D;
+uniform ivec3 texelDimensions3D;
+uniform complex m;
+
+vec3 to3DTextureCoordinates(vec2 uv) {
+    int width3D = texelDimensions3D[0];
+    int height3D = texelDimensions3D[1];
+    int length3D = texelDimensions3D[2];
+    int width2D = texelDimensions2D[0];
+    int height2D = texelDimensions2D[1];
+    float wStack = float(width2D)/float(width3D);
+    float hStack = float(height2D)/float(height3D);
+    float u = mod(uv[0]*wStack, 1.0);
+    float v = mod(uv[1]*hStack, 1.0);
+    float w = (floor(uv[1]*hStack)*wStack
+               + floor(uv[0]*wStack) + 0.5)/float(length3D);
+    return vec3(u, v, w);
+}
+
+vec3 getMomentum(vec3 uvw) {
+    float u = uvw[0], v = uvw[1], w = uvw[2];
+    float width3D = dimensions3D[0];
+    float height3D = dimensions3D[1];
+    float length3D = dimensions3D[2];
+    int texelWidth = texelDimensions3D[0];
+    int texelHeight = texelDimensions3D[1];
+    int texelLength = texelDimensions3D[2];
+    float freqU = ((u < 0.5)? u: -1.0 + u)*float(texelWidth) - 0.5;
+    float freqV = ((v < 0.5)? v: -1.0 + v)*float(texelHeight) - 0.5;
+    float freqW = ((w < 0.5)? w: -1.0 + w)*float(texelLength) - 0.5;
+    return vec3(
+        2.0*PI*freqU/width3D, 2.0*PI*freqV/height3D, 2.0*PI*freqW/length3D);
+}
+
+complex function(vec2 uv) {
+    vec3 uvw = to3DTextureCoordinates(uv);
+    vec3 pVec = getMomentum(uvw);
+    complex px = complex(pVec[0], 0.0);
+    complex py = complex(pVec[1], 0.0);
+    complex pz = complex(pVec[2], 0.0);
+    complex i = IMAG_UNIT;
+    complex pi = complex(PI, 0.0);
+    return `;
+
+const USER_DEFINED_3D_KE_FUNCTION_FRAG2 = 
+`;
+}`;
+
 const USER_DEFINED_NL_FUNCTION_FRAG1 = 
 `
 uniform sampler2D psiTex;
@@ -485,6 +536,25 @@ extends UserEditableProgramContainer {
     _removeReservedVariables(variables) {
         for (let v of ['i', 'x', 'y', 'z', 
                         't', 'pi', 'width', 'height', 'depth',
+                        'texelDimensions2D', 'texelDimensions3D'])
+            variables.delete(v);
+        return variables;
+    }
+}
+
+export class UserEditable3DKEProgramContainer
+extends UserEditableProgramContainer {
+    _constructUserShader(userUniformString, userExpressionString) {
+        return (COMPLEX_FUNCS_SHADER
+            + userUniformString
+            + USER_DEFINED_3D_KE_FUNCTION_FRAG1
+            + userExpressionString
+            + USER_DEFINED_3D_KE_FUNCTION_FRAG2
+            + MAIN_FUNC_SHADER);
+    }
+    _removeReservedVariables(variables) {
+        for (let v of ['i', 'px', 'py', 'pz', 't', 'pi', 'pVec', 'm',
+                        'dimensions3D', 
                         'texelDimensions2D', 'texelDimensions3D'])
             variables.delete(v);
         return variables;

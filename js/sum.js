@@ -1,5 +1,4 @@
-// TODO
-
+/* Sum the contents of a texture. */
 import { gl, Quad, TextureParams } from "./gl-wrappers.js";
 import { getShader } from "./shaders.js";
 

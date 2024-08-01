@@ -1,3 +1,5 @@
+/* Script for managing the 3D split step implementation
+*/
 import { Quad, IScalar, Complex, div, 
          get2DFrom3DDimensions } from "./gl-wrappers.js";
 import { fft3D, fftShift3D, ifft3D } from "./fft3d.js";

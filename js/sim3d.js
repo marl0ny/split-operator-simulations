@@ -3,7 +3,7 @@ import {gl, gMainRenderWindow, TextureParams, Quad,
     IVec2, Vec2, Vec3, IVec3, Quaternion, Complex,
     MultidimensionalDataQuad,
     get2DFrom3DDimensions,
-    makeProgramFromSources, add, mul, sub, div,
+    add, mul, sub, div,
     Vec4} from "./gl-wrappers.js";
 import { getShader } from "./shaders.js";
 import splitStep3D, {SimulationParameters} from "./split-step3d.js";
@@ -11,7 +11,7 @@ import { VolumeRender } from "./volume-render.js";
 import { 
     UserEditable3DPotentialProgramContainer,
     UserEditableNonlinearProgramContainer, 
-    UserEditableKEProgramContainer} from "./user-editable-program.js";
+    UserEditable3DKEProgramContainer} from "./user-editable-program.js";
 import { sumPowerOfTwo } from "./sum.js";
 
 gCanvas.width = gCanvas.height;
@@ -35,7 +35,11 @@ class GLSLPrograms {
             );
         this.domainColoring
             = Quad.makeProgramFromSource(
-                getShader("./shaders/util/domain-coloring2.frag")
+                getShader("./shaders/vol-render/domain-coloring.frag")
+            );
+        this.grayScale
+            = Quad.makeProgramFromSource(
+                getShader("./shaders/vol-render/gray-scale.frag")
             );
         this.uniformColor
             = Quad.makeProgramFromSource(
@@ -49,6 +53,10 @@ class GLSLPrograms {
             = Quad.makeProgramFromSource(
                 getShader("./shaders/util/add2.frag")
             );
+        this.sample3D
+            = Quad.makeProgramFromSource(
+                getShader("./shaders/util/sample3d.frag")
+            );
     }
 
 }
@@ -58,12 +66,18 @@ let gTextEditPotential
 let gTextEditNonlinear
     = new UserEditableNonlinearProgramContainer('nonlinearUserSliders');
 let gUseNonlinear = false;
+let gTextEditKE
+    = new UserEditable3DKEProgramContainer('kineticEnergyUserSliders');
 
 
 document.getElementById("nonlinearEntry").addEventListener(
     "input", e => {
         gTextEditNonlinear.newText(e.target.value);
     }
+);
+
+document.getElementById("kineticEnergyEntry").addEventListener(
+    "input", e => gTextEditKE.newText(e.target.value)
 );
 
 document.getElementById("presetNonlinear").value = 0;
@@ -172,6 +186,10 @@ class Frames {
         this.psi2 = new MultidimensionalDataQuad(
             [...gSimParams.gridDimensions.ind], TEX_PARAMS_SIM
         );
+        this.extra = new MultidimensionalDataQuad(
+            [...gSimParams.gridDimensions.ind],
+            {...TEX_PARAMS_SIM, format: gl.RGBA32F}
+        );
         this.domainColorVolData = new MultidimensionalDataQuad(
             [...gSimParams.gridDimensions.ind], 
             {...TEX_PARAMS_SIM, format: gl.RGBA32F}
@@ -188,6 +206,67 @@ class Frames {
             [...gSimParams.gridDimensions.ind],
             {...TEX_PARAMS_SIM, format: gl.RGBA32F} 
         );
+    }
+}
+
+function changeGridSize(width, height, length) {
+    if (width === gSimParams.dimensions.ind[0] &&
+        height === gSimParams.dimensions.ind[1] &&
+        length === gSimParams.dimensions.ind[2])
+        return;
+    let oldGridDimensions = new IVec3(
+        gSimParams.gridDimensions.ind[0],
+        gSimParams.gridDimensions.ind[1],
+        gSimParams.gridDimensions.ind[2]
+    );
+    gSimParams.dimensions.ind[0] = width;
+    gSimParams.dimensions.ind[1] = height;
+    gSimParams.dimensions.ind[2] = length;
+    gSimParams.gridDimensions.ind[0] = width;
+    gSimParams.gridDimensions.ind[1] = height;
+    gSimParams.gridDimensions.ind[2] = length;
+    let newTexDimensions = get2DFrom3DDimensions(
+        gSimParams.gridDimensions
+    );
+    let newTexParams = {...TEX_PARAMS_SIM, 
+        width: newTexDimensions.ind[0],
+        height: newTexDimensions.ind[1]};
+    let framesNewTex = {
+        'psi1': newTexParams,
+        'psi2': newTexParams,
+        // 'psiP': newTexParams,
+        'abs2Psi': {...newTexParams, format: gl.RGBA32F},
+        'abs2Psi2': {...newTexParams, format: gl.RGBA32F},
+        // 'extra': {...newTexParams, format: gl.RGBA32F},
+        'nonlinearTerm': newTexParams,
+        'potential': newTexParams,
+        'potential2': newTexParams,
+        'kineticEnergy': newTexParams,
+        'domainColorVolData': {...newTexParams, format: gl.RGBA32F},
+        'domainColorVolData2': {...newTexParams, format: gl.RGBA32F},
+    };
+    for (let k of Object.keys(framesNewTex)) {
+        if (gFrames[k] !== null) {
+            gFrames['extra'].draw(GLSL_PROGRAMS.sample3D, 
+                {
+                    tex: gFrames[k],
+                    destinationTexelDimensions3D: oldGridDimensions,
+                    destinationTexelDimensions2D:
+                        get2DFrom3DDimensions(oldGridDimensions),
+                    sourceTexelDimensions2D: 
+                        get2DFrom3DDimensions(gSimParams.gridDimensions),
+                    sourceTexelDimensions3D: gSimParams.gridDimensions,
+
+                });
+            gFrames[k].reset([...gSimParams.gridDimensions.ind], framesNewTex[k]);
+            gFrames[k].draw(GLSL_PROGRAMS.copy, 
+                {
+                    tex: gFrames['extra'],
+                });
+        }
+        gFrames['extra'].reset(
+            [...gSimParams.gridDimensions.ind], 
+            {...newTexParams, format: gl.RGBA32F});
     }
 }
 
@@ -263,6 +342,21 @@ function drawNewWavePacket(x0, y0, x1, y1, addTo=false) {
     gFrames.psi2.draw(
         GLSL_PROGRAMS.wavePacket, wavepacketUniforms);
 }
+
+document.getElementById("changeGrid").value
+    = Number.parseInt(gSimParams.gridDimensions.ind[0]);
+document.getElementById("changeGrid").addEventListener("change",
+    e => {
+        let size = Number.parseInt(e.target.value);
+        changeGridSize(size, size, size);
+        /* document.getElementById("xRangeLabel").textContent 
+        = `-${gSimParams.gridDimensions.ind[0]/2} \u2264 `
+            + `x < ${gSimParams.gridDimensions.ind[0]/2}`;
+        document.getElementById("yRangeLabel").textContent 
+        = `-${gSimParams.gridDimensions.ind[1]/2} \u2264 y < `
+            + `${gSimParams.gridDimensions.ind[1]/2}`;*/
+    }
+)
 
 
 function initialStep() {
@@ -639,12 +733,33 @@ function normalizeWaveFunction() {
        GLSL_PROGRAMS.copy, {tex: gFrames.psi2});
 }
 
+function refreshKE() {
+    gTextEditKE.refresh(() => {
+        if (gFrames.kineticEnergy === null)
+            gFrames.kineticEnergy = new MultidimensionalDataQuad(
+                [...gSimParams.gridDimensions.ind], TEX_PARAMS_SIM);
+        gFrames.kineticEnergy.draw(
+            gTextEditKE.program,
+            {...gTextEditKE.uniforms, 
+            m: new Complex(gSimParams.m, 0.0), t: gSimParams.t,
+            dimensions3D: gSimParams.dimensions,
+            texelDimensions2D:
+                get2DFrom3DDimensions(gSimParams.gridDimensions),
+            texelDimensions3D: gSimParams.gridDimensions
+            }
+
+        );
+    });
+}
+
 function animation() {
     displayAverageFPS();
     refreshPotential();
+    refreshKE();
     gTextEditNonlinear.refresh(() => {
         gUseNonlinear = true;
     });
+    // gTextEditKE.
     for (let i = 0; i < gStepsPerFrame; i++) {
         let potential = gFrames.potential;
         if (gUseNonlinear) {
@@ -681,27 +796,31 @@ function animation() {
     gFrames.abs2Psi.draw(
         GLSL_PROGRAMS.abs2, {tex: gFrames.psi1}
     );
-    /* gFrames.abs2Psi2.draw(
-        GLSL_PROGRAMS.scale, {tex: gFrames.abs2Psi, scale: 1.0}
-    );*/
     gFrames.domainColorVolData.draw(
         GLSL_PROGRAMS.domainColoring,
         {tex: gFrames.psi1, brightness: 1.0}
     );
+    /* gFrames.extra.draw(
+        GLSL_PROGRAMS.grayScale,
+        {
+            tex: gFrames.potential, brightness: 1.0,
+            offset: 0.0, maxBrightness: 0.5
+        }
+    );
+    gFrames.domainColorVolData2.draw(
+        GLSLPrograms.add2, 
+        {
+            tex1: gFrames.domainColorVolData, 
+            tex2: gFrames.extra
+        }
+    )
+    let view = gVolRender.view(gFrames.domainColorVolData2, gScale, gRotation);*/
     let view = gVolRender.view(gFrames.domainColorVolData, gScale, gRotation);
     gFrames.target.draw(
         GLSL_PROGRAMS.scale, {tex: view, scale: 1.0},
         {viewport: [0.5*(gCanvas.width - gCanvas.height), 0, 
             gCanvas.height, gCanvas.height]}
     );
-    /*
-    gFrames.target.draw(
-        GLSL_PROGRAMS.domainColoring, {
-            tex: gFrames.psi1, brightness: 1.0
-        },
-        {viewport: [0.5*(gCanvas.width - gCanvas.height), 0, 
-                    gCanvas.height, gCanvas.height]}
-    );*/
     requestAnimationFrame(animation);
 }
 

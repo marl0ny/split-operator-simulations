@@ -50,6 +50,15 @@
                     id="sketchCanvas"></canvas>
             </div>
             <div style="grid-column: 3; padding: 10px;">
+                <label id="changeGridLabel" for="changeGrid">Grid size
+                </label>
+                <select id="changeGrid">
+                    <option value=64>64x64x64</option>
+                    <option value=128>128x128x128</option>
+                    <option value=256>256x256x256</option>
+                    <option value=512>512x512x512</option>
+                </select><br>
+                <hr/>
                 <label for="presetPotential">Preset V(x, y, t)<br>
                     <select id="presetPotential">
                         <option value=0 selected>Free (periodic)</option>
@@ -68,7 +77,7 @@
                         <!--<option value=13>Rotating harmonic</option>!-->
                     </select>
                 </label><br>
-                <label for="potentialEntry">Enter V(x, y, t)<br>
+                <label for="potentialEntry">Enter V(x, y, z, t)<br>
                     <input type ="text" id="potentialEntry"
                     value="a*((x/width)^2+(y/height)^2+(z/depth)^2)"
                     name="potentialEntry" size="23"
@@ -92,9 +101,10 @@
                 </label>
                 <br>
                 <div id="nonlinearUserSliders"></div><br>
-                <label for="kineticEnergyEntry">Kinetic energy-momentum<br>relation: KE(px, py)<br>
+                <hr/>
+                <label for="kineticEnergyEntry">Kinetic energy-momentum<br>relation: KE(px, py, pz)<br>
                     <input type="text" id="kineticEnergyEntry"
-                        name="nonlinearEntry" size="23" value="(px^2+py^2)/(2*m)">
+                        name="nonlinearEntry" size="23" value="(px^2+py^2+pz^2)/(2*m)">
                 </label>
                 <br>
                 <div id="kineticEnergyUserSliders"></div>

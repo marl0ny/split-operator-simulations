@@ -1,4 +1,4 @@
-/* This file manages the GLSL FFT programs.
+/* This script manages the 3D GLSL FFT programs.
 
 References:
 
@@ -90,8 +90,9 @@ function refreshCosTable(n) {
             gl.NEAREST, gl.NEAREST
         ); 
         if (gCosTable.quad !== null)
-            gCosTable.quad.recycle();
-        gCosTable.quad = new Quad(textureParams);
+            gCosTable.quad.reset(textureParams);
+        else
+            gCosTable.quad = new Quad(textureParams);
         gCosTable.quad.substituteArray(gCosTable.ind);
         // console.log('Finished refreshing cos table.');
     }
@@ -146,8 +147,9 @@ function refreshIterQuads(format, texDimensions3D) {
             dimensions2D.ind[0], dimensions2D.ind[1], true, 
             gl.REPEAT, gl.REPEAT, gl.LINEAR, gl.LINEAR);
         if (gIterQuads.length !== 0) {
-            gIterQuads[0].destroy();
-            gIterQuads[1].destroy();
+            gIterQuads[0].reset([...texDimensions3D.ind], texParams);
+            gIterQuads[1].reset([...texDimensions3D.ind], texParams);
+            return;
         }
         gIterQuads = [
             new MultidimensionalDataQuad(
@@ -155,6 +157,7 @@ function refreshIterQuads(format, texDimensions3D) {
             new MultidimensionalDataQuad(
                 [...texDimensions3D.ind], texParams)
         ];
+
     }
 }
 

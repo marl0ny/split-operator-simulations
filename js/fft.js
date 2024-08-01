@@ -85,8 +85,9 @@ function refreshCosTable(n) {
             gl.NEAREST, gl.NEAREST
         ); 
         if (gCosTable.quad !== null)
-            gCosTable.quad.recycle();
-        gCosTable.quad = new Quad(textureParams);
+            gCosTable.quad.reset(textureParams);
+        else
+            gCosTable.quad = new Quad(textureParams);
         gCosTable.quad.substituteArray(gCosTable.ind);
         // console.log('Finished refreshing cos table.');
     }

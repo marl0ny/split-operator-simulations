@@ -1,4 +1,6 @@
-import { Quad, IScalar, Complex, div, withConfig } from "./gl-wrappers.js";
+/* Script for managing the 2D split step implementation.
+*/
+import { Quad, IScalar, Complex, div } from "./gl-wrappers.js";
 import { fft2D, fftShift, ifft2D } from "./fft.js";
 import { getShader } from "./shaders.js";
 
