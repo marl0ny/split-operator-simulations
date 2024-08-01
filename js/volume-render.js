@@ -1,13 +1,38 @@
-import { gl, Vec3, Attribute, Quad, TrianglesFrame, RenderTarget, Quaternion, TextureParams,
+import { gl, IVec2, IVec3, Vec3, Vec4, Attribute, Quad, TrianglesFrame,
+    RenderTarget, Quaternion, TextureParams,
     makeProgramFromSources, 
-    get2DFrom3DTextureCoordinates} from "./gl-wrappers.js";
-import getShader from "./shaders.js"
+    get2DFrom3DTextureCoordinates,
+    get2DFrom3DDimensions,
+    IScalar, MultidimensionalDataQuad, LinesFrame,
+    get3DFrom2DTextureCoordinates, withConfig} from "./gl-wrappers.js";
+import { getShader } from "./shaders.js"
 
-export function getVerticesAndElements(
-    renderTexelDimensions2D, renderTexelDimensions3D) {
-    let width = renderTexelDimensions3D.ind[0];
-    let height = renderTexelDimensions3D.ind[1];
-    let length = renderTexelDimensions3D.ind[2];
+function getCubeOutlineVerticesAndElements() {
+    let vertices = new Float32Array([
+        -1.0, -1.0, -1.0, // 0 - bottom left
+        1.0, -1.0, -1.0, // 1 - bottom right
+        1.0, 1.0, -1.0, // 2 - upper right
+        -1.0, 1.0, -1.0, // 3 - upper left
+        -1.0, -1.0, 1.0, // 4
+        1.0, -1.0, 1.0, // 5
+        1.0, 1.0, 1.0, // 6
+        -1.0, 1.0, 1.0, // 7
+    ]);
+    let elements = [0, 1, 1, 2, 2, 3, 3, 0,
+                    0, 4, 3, 7, 2, 6, 1, 5,
+                    4, 5, 5, 6, 6, 7, 7, 4];
+    return [vertices, 
+            (gl.version === 2)?
+            new Int32Array(elements): new Uint16Array(elements)];
+
+
+}
+
+function getVolumeRenderVerticesAndElements(
+    volumeTexelDimensions2D, volumeTexelDimensions3D) {
+    let width = volumeTexelDimensions3D.ind[0];
+    let height = volumeTexelDimensions3D.ind[1];
+    let length = volumeTexelDimensions3D.ind[2];
     let elementSize = 4;
     let vertices = new Float32Array(2*elementSize*length);
     let elements = [];
@@ -27,13 +52,13 @@ export function getVerticesAndElements(
             0.5/width, (height - 0.5)/height, (i + 0.5)/length
         );
         let uvBottomLeft = get2DFrom3DTextureCoordinates(
-            uvwBottomLeft, renderTexelDimensions2D, renderTexelDimensions3D);
+            uvwBottomLeft, volumeTexelDimensions2D, volumeTexelDimensions3D);
         let uvBottomRight = get2DFrom3DTextureCoordinates(
-            uvwBottomRight, renderTexelDimensions2D, renderTexelDimensions3D);
+            uvwBottomRight, volumeTexelDimensions2D, volumeTexelDimensions3D);
         let uvUpperRight = get2DFrom3DTextureCoordinates(
-            uvwUpperRight, renderTexelDimensions2D, renderTexelDimensions3D);
+            uvwUpperRight, volumeTexelDimensions2D, volumeTexelDimensions3D);
         let uvUpperLeft = get2DFrom3DTextureCoordinates(
-            uvwUpperLeft, renderTexelDimensions2D, renderTexelDimensions3D);
+            uvwUpperLeft, volumeTexelDimensions2D, volumeTexelDimensions3D);
         const X = 0, Y = 1;
         vertices[2*(elementSize*j) + X] = uvBottomLeft.x;
         vertices[2*(elementSize*j) + Y] = uvBottomLeft.y;
@@ -57,13 +82,16 @@ export function getVerticesAndElements(
 
 class Programs {
     gradient;
-    sampleVolume;
+    sampleData;
     showVolume;
-    sampleShowVolume;
-    // cube;
-    // color;
+    sampleDataShowVolume;
+    cubeOutline;
+    zeroBoundaries;
     constructor() {
-        this.sampleVolume = Quad.makeProgramFromSource(
+        this.copy = Quad.makeProgramFromSource(
+            getShader("./shaders/util/copy.frag")
+        );
+        this.sampleData = Quad.makeProgramFromSource(
             getShader("./shaders/vol-render/sample.frag")
         );
         this.gradient = Quad.makeProgramFromSource(
@@ -73,51 +101,82 @@ class Programs {
             getShader("./shaders/vol-render/display.vert"),
             getShader("./shaders/vol-render/display.frag")
         );
-        this.sampleShowVolume = makeProgramFromSources(
+        this.sampleDataShowVolume = makeProgramFromSources(
             getShader("./shaders/vol-render/display.vert"),
             getShader("./shaders/vol-render/sample-display.frag")
         );
+        this.cubeOutline = makeProgramFromSources(
+            getShader("./shaders/vol-render/cube-outline.vert"),
+            getShader("./shaders/util/uniform-color.frag"),
+        );
+        this.zeroBoundaries
+            = Quad.makeProgramFromSource(
+                getShader("./shaders/util/zero-boundaries-3d.frag")
+            );
     }
 }
 
 
-class Renders {
-    gradient;
-    volHalfPrecision;
-    gradientHalfPrecision;
-    sampleVolume;
-    sampleGrad;
-    out;
-    constructor(
-        viewDimensions, renderTexelDimensions2D, sampleTexelDimensions) {
-        const TEX_PARAMS_SAMPLE_F32 = new TextureParams(
+class Frames {
+    data;
+    gradientData;
+    dataHalfPrecision;
+    gradientDataHalfPrecision;
+    volume;
+    volumeGrad;
+    view;
+    constructor() {
+        this.data = null;
+        this.gradientData = null;
+        this.dataHalfPrecision = null;
+        this.gradientDataHalfPrecision = null;
+        this.volume = null;
+        this.volumeGrad = null;
+        this.view = null;
+    }
+    createVolumeFrames(volumeTexelDimensions2D) {
+        const TEX_PARAMS_VOLUME_F16 = new TextureParams(
+            gl.RGBA16F,
+            volumeTexelDimensions2D.ind[0],
+            volumeTexelDimensions2D.ind[1],
+            true,
+            gl.CLAMP_TO_EDGE, gl.CLAMP_TO_EDGE,
+            gl.LINEAR, gl.LINEAR
+        );
+        this.volume = new Quad(TEX_PARAMS_VOLUME_F16);
+        this.volumeGrad = new Quad(TEX_PARAMS_VOLUME_F16);
+    }
+    createDataFrames(dataTexelDimensions2D) {
+        if (this.gradientData !== null && 
+            this.gradientData.width === dataTexelDimensions2D.ind[0] &&
+            this.gradientData.height === dataTexelDimensions2D.ind[1])
+            return;
+        const TEX_PARAMS_DATA_F32 = new TextureParams(
             gl.RGBA32F,
-            sampleTexelDimensions.width,
-            sampleTexelDimensions.height,
-            true, 
-            gl.REPEAT, gl.REPEAT, 
-            gl.LINEAR, gl.LINEAR
-        );
-        const TEX_PARAMS_SAMPLE_F16 = new TextureParams(
-            gl.RGBA16F,
-            sampleTexelDimensions.width,
-            sampleTexelDimensions.height,
+            dataTexelDimensions2D.ind[0],
+            dataTexelDimensions2D.ind[1],
             true,
             gl.CLAMP_TO_EDGE, gl.CLAMP_TO_EDGE,
             gl.LINEAR, gl.LINEAR
         );
-        const TEX_PARAMS_RENDER_F16 = new TextureParams(
+        const TEX_PARAMS_DATA_F16 = new TextureParams(
             gl.RGBA16F,
-            renderTexelDimensions2D.width,
-            renderTexelDimensions2D.height,
+            dataTexelDimensions2D.ind[0],
+            dataTexelDimensions2D.ind[1],
             true,
             gl.CLAMP_TO_EDGE, gl.CLAMP_TO_EDGE,
             gl.LINEAR, gl.LINEAR
         );
+        this.data = new Quad(TEX_PARAMS_DATA_F32);
+        this.gradientData = new Quad(TEX_PARAMS_DATA_F32);
+        this.dataHalfPrecision = new Quad(TEX_PARAMS_DATA_F16);
+        this.gradientDataHalfPrecision = new Quad(TEX_PARAMS_DATA_F16);
+    }
+    createView(viewDimensions) {
         const TEX_PARAMS_VIEW_F16_MIPMAP_FILTER = new TextureParams(
             gl.RGBA16F,
-            viewDimensions.width,
-            viewDimensions.height,
+            viewDimensions.ind[0],
+            viewDimensions.ind[1],
             true,
             gl.CLAMP_TO_EDGE, gl.CLAMP_TO_EDGE,
             gl.LINEAR, gl.LINEAR
@@ -130,18 +189,17 @@ class Renders {
             gl.CLAMP_TO_EDGE, gl.CLAMP_TO_EDGE,
             gl.LINEAR, gl.LINEAR
         );*/
-        this.gradient = new Quad(TEX_PARAMS_SAMPLE_F32);
-        this.volHalfPrecision = new Quad(TEX_PARAMS_SAMPLE_F16);
-        this.gradientHalfPrecision = new Quad(TEX_PARAMS_SAMPLE_F16);
-        this.sampleVolume = new Quad(TEX_PARAMS_RENDER_F16);
-        this.sampleGrad = new Quad(TEX_PARAMS_RENDER_F16);
-        this.out = new RenderTarget(TEX_PARAMS_VIEW_F16_MIPMAP_FILTER);
-
+        this.view = new RenderTarget(TEX_PARAMS_VIEW_F16_MIPMAP_FILTER);
     }
 }
 
 const ORIENTATION = {
     Z: 0, X: 1, Y: 2
+};
+
+const BOUNDARY_TYPE = {
+    USE_TEXTURE_WRAPPING: 0,
+    DIRICHLET: 1, DIRICHLET_MASK: 2,
 };
 
 function gradient(dst, volumeData, boundaryMask, 
@@ -154,7 +212,7 @@ function gradient(dst, volumeData, boundaryMask,
             tex: volumeData,
             orderOfAccuracy: orderOfAccuracy,
             boundaryType: boundaryType,
-            boundaryMask: boundaryMask,
+            // boundaryMask: boundaryMask,
             staggeredMode: staggeredMode,
             index: index,
             texelDimensions2D: texelDimensions2D,
@@ -169,36 +227,47 @@ function gradient(dst, volumeData, boundaryMask,
     );
 }
 
-function sampleVolumeData(
-    dst, volumeData, sampleVolumeProgram,
+function sampleData(
+    dst, srcData, sampleDataProgram,
     viewScale,
     rotation,
-    renderTexelDimensions3D, renderTexelDimensions2D,
-    sampleTexelDimensions3D, sampleTexelDimensions2D
+    volumeTexelDimensions3D, volumeTexelDimensions2D,
+    dataTexelDimensions3D, dataTexelDimensions2D
 ) {
     dst.draw(
-        sampleVolumeProgram,
+        sampleDataProgram,
         {
-            tex: volumeData,
+            tex: srcData,
             viewScale: viewScale,
             rotation: rotation,
-            renderTexelDimensions3D: renderTexelDimensions3D,
-            renderTexelDimensions2D: renderTexelDimensions2D,
-            sampleTexelDimensions3D: sampleTexelDimensions3D,
-            sampleTexelDimensions2D: sampleTexelDimensions2D
+            volumeTexelDimensions3D: volumeTexelDimensions3D,
+            volumeTexelDimensions2D: volumeTexelDimensions2D,
+            dataTexelDimensions3D: dataTexelDimensions3D,
+            dataTexelDimensions2D: dataTexelDimensions2D
         }
     );
 }
 
-function showSampledVolume(
-    dst, sampleGrad, sampleVol,
-    showVolProgram, cubeProgram, sizeofElements,
-    rotation, debugRotation,
-    scale,
-    renderTexelDimensions3D,
-    renderTexelDimensions2D,
+function displayVolume(
+    renderTarget, displayVolumeProgram, uniforms, 
+    volumeRenderTrianglesFrame
 ) {
-    
+    withConfig({
+        enable: gl.DEPTH_TEST, depthFunc: gl.LESS,
+        width: renderTarget.textureDimensions.ind[0],
+        height: renderTarget.textureDimensions.ind[1]}, 
+    () => {
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        // renderTarget.clear();
+        renderTarget.draw(
+            displayVolumeProgram, uniforms,
+            volumeRenderTrianglesFrame
+        );
+        gl.disable(gl.BLEND);
+    });
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.disable(gl.DEPTH_TEST);
 }
 
 
@@ -209,42 +278,148 @@ export class VolumeRender {
 
     // 2D texture dimensions
     // 2D dimensions of the initial volume data texture
-    sampleTexelDimensions2D;
+    dataTexelDimensions2D;
     // 2D dimensions of the texture used in the volume render frame
-    renderTexelDimensions2D;
+    volumeTexelDimensions2D;
 
     // 3D texture dimensions
     // 3D dimensions of the initial volume data texture
-    sampleTexelDimensions3D;
+    dataTexelDimensions3D;
     // 3D dimensions of the texture used in the volume render frame
-    renderTexelDimensions3D;
+    volumeTexelDimensions3D;
+    cubeOutline;
+    cubeOutlineVertices;
     programs;
-    wireFrame;
-    renders;
-    constructor(viewDimensions, renderDimensions, sampleDimensions) {
+    _triangles;
+    _frames;
+    constructor(viewDimensions, volumeDimensions3D) {
         this.debugRotation = new Quaternion(1.0);
         this.programs = new Programs();
         this.viewDimensions = viewDimensions;
-        this.sampleTexelDimensions3D = sampleDimensions;
-        this.renderTexelDimensions3D = renderDimensions;
-        this.sampleTexelDimensions2D 
-            = get2DFrom3DTextureCoordinates(sampleDimensions);
-        this.renderTexelDimensions2D 
-            = get2DFrom3DTextureCoordinates(renderDimensions);
+        this.volumeTexelDimensions3D = volumeDimensions3D;
+        this.volumeTexelDimensions2D 
+            = get2DFrom3DDimensions(volumeDimensions3D);
+        // this.dataTexelDimensions3D = dataDimensions3D;
+        // this.dataTexelDimensions2D 
+        //     = get2DFrom3DDimensions(dataDimensions3D);
         let [vertices, elements] 
-            = getVerticesAndElements(
-                this.renderTexelDimensions2D, this.renderTexelDimensions3D);
-        this.wireFrame = new TrianglesFrame(
+            = getVolumeRenderVerticesAndElements(
+                this.volumeTexelDimensions2D, this.volumeTexelDimensions3D);
+        this._triangles = new TrianglesFrame(
             {"uvIndex": new Attribute(2, gl.FLOAT, false)},
             vertices, elements);
-        this.renders
-            = new Renders(
-                viewDimensions, this.renderTexelDimensions2D, 
-                this.sampleTexelDimensions2D);
-        
+        this._frames = new Frames();
+        this._frames.createVolumeFrames(this.volumeTexelDimensions2D);
+        this._frames.createView(viewDimensions);
+
+        let [cubeVertices, cubeElements] = getCubeOutlineVerticesAndElements();
+        this.cubeOutline = new LinesFrame(
+            {"position": new Attribute(3, gl.FLOAT, false)},
+            cubeVertices, cubeElements);
+        this.cubeOutlineVertices = [];
+        for (let i = 0; i < 8; i++)
+            this.cubeOutlineVertices.push(
+                new Quaternion(
+                    1.0,
+                    cubeVertices[3*i], 
+                    cubeVertices[3*i+1],
+                    cubeVertices[3*i+2])
+            );
     }
 
+    view(srcData, scale, rotation) {
+        if (!(srcData instanceof MultidimensionalDataQuad)) {
+            console.error('Input for VolumeRender method view '
+                            + 'must be a MultidimensionalDataQuad.');
+            return;
+        }
+        let maxX = 0.0, maxY = 0.0, maxZ = 0.0;
+        for (let i = 0; i < this.cubeOutlineVertices.length; i++) {
+            let v
+                = Quaternion.rotate(this.cubeOutlineVertices[i], rotation);
+            let x = v.i, y = v.j, z = v.k;
+            maxX = (x > maxX)? x: maxX;
+            maxY = (y > maxY)? y: maxY;
+            maxZ = (z > maxZ)? z: maxZ;
+        }
+        let rotScale = (scale > 1.0)? scale: 1.0/Math.max(maxX, maxY, maxZ);
+        // let rotScale = 1.0;
+        let dataTexelDimensions2D = new IVec2(srcData.width, srcData.height);
+        let dataTexelDimensions3D = new IVec3(
+            ...srcData.dataDimensions);
+        this._frames.createDataFrames(dataTexelDimensions2D);
+        this._frames.data.draw(
+            this.programs.zeroBoundaries, 
+            {tex: srcData,
+             texelDimensions2D: dataTexelDimensions2D,
+             texelDimensions3D: dataTexelDimensions3D,
+            });
+        /* this._frames.dataHalfPrecision.draw(
+            this.programs.copy, {tex: srcData}
+        );*/
+        gradient(this._frames.gradientDataHalfPrecision,
+                 this._frames.data, new IScalar(0),
+                 this.programs.gradient, new IScalar(2), 
+                 BOUNDARY_TYPE.USE_TEXTURE_WRAPPING,
+                 new IScalar(0), new IScalar(3),
+                 dataTexelDimensions3D, dataTexelDimensions2D);
+        this._frames.volume.clear();
+        this._frames.volumeGrad.clear();
+        sampleData(
+            this._frames.volume, this._frames.data,
+            this.programs.sampleData,
+            rotScale, rotation,
+            this.volumeTexelDimensions3D, this.volumeTexelDimensions2D,
+            dataTexelDimensions3D, dataTexelDimensions2D);
+        sampleData(
+            this._frames.volumeGrad, this._frames.gradientDataHalfPrecision,
+            this.programs.sampleData,
+            rotScale, rotation,
+            this.volumeTexelDimensions3D, this.volumeTexelDimensions2D,
+            dataTexelDimensions3D, dataTexelDimensions2D);
 
+        this._frames.view.clear();
 
-
+        withConfig({
+            enable: gl.DEPTH_TEST, depthFunc: gl.LESS,
+            width: this._frames.view.textureDimensions.ind[0],
+            height: this._frames.view.textureDimensions.ind[1]}, 
+        () => {
+            gl.enable(gl.BLEND);
+            gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+            this._frames.view.draw(
+                this.programs.cubeOutline, {
+                    rotation: rotation,
+                    viewScale: scale,
+                    color: new Vec4(1.0, 1.0, 1.0, 0.5)
+                },
+                this.cubeOutline
+            );
+        });
+        displayVolume(this._frames.view,
+            this.programs.showVolume, {
+                rotation: rotation,
+                gradientTex: this._frames.volumeGrad,
+                densityTex: this._frames.volume,
+                fragmentTexelDimensions3D: this.volumeTexelDimensions3D,
+                fragmentTexelDimensions2D: this.volumeTexelDimensions2D,
+                texelDimensions2D: this.volumeTexelDimensions2D,
+                texelDimensions3D: this.volumeTexelDimensions3D,
+                debugRotation: this.debugRotation,
+                debugShow2DTexture: false,
+                scale: scale/rotScale,
+            },
+            this._triangles
+        );
+        return this._frames.view;
+    }
+    get gradientHalfPrecision() {
+        return this._frames.gradientDataHalfPrecision;
+    }
+    get volumeQuad() {
+        return this._frames.volume;
+    }
+    get volumeGradientQuad() {
+        return this._frames.volumeGrad;
+    }
 }

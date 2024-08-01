@@ -286,6 +286,13 @@ export class Quaternion {
         let s = Math.sin(angle/2.0);
         return new Quaternion(c, s*x/norm, s*y/norm, s*z/norm);
     }
+    static rotate(x, r) {
+        let xr = mul(x, r);
+        let rInv = r.conj();
+        let x2 = mul(rInv, xr);
+        x2.real = 1.0;
+        return x2;
+    }
 }
 
 export function dot(a, b) {
@@ -588,32 +595,6 @@ void main() {
 }
 `
 
-const QUAD_FRAG_COPY_SHADER = `
-#if (__VERSION__ >= 330) || (defined(GL_ES) && __VERSION__ >= 300)
-#define texture2D texture
-#else
-#define texture texture2D
-#endif
-
-#if (__VERSION__ > 120) || defined(GL_ES)
-precision highp float;
-#endif
-    
-#if __VERSION__ <= 120
-varying vec2 UV;
-#define fragColor gl_FragColor
-#else
-in vec2 UV;
-out vec4 fragColor;
-#endif
-
-uniform sampler2D tex;
-
-void main() {
-    fragColor = texture2D(tex, UV);
-}
-`
-
 const getQuadVertices = () => new Float32Array(
     [-1.0, -1.0, 0.0, -1.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, -1.0, 0.0]);
 
@@ -641,6 +622,36 @@ class AbstractWireFrame {
             gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this._ebo);
             gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, elements, gl.STATIC_DRAW);
         }
+    }
+    getVertices() {
+        let vertices = [];
+        let index = 0;
+        for (let k of Object.keys(this._attributes)) {
+            let attribute = this._attributes[k];
+            if (attribute.size === 1) {
+                vertices.push({k: this._vertices[index]})
+                index += 1;
+            } else if (attribute.size === 2) {
+                vertices.push({
+                    k: new Vec2(this._vertices[index],
+                                this._vertices[index + 1])});
+                index += 2;
+            } else if (attribute.size === 3) {
+                vertices.push({
+                    k: new Vec3(this._vertices[index],
+                                this._vertices[index + 1],
+                                this._vertices[index + 2])});
+                index += 3;
+            } else if (attribute.size === 4) {
+                vertices.push({
+                    k: new Vec2(this._vertices[index],
+                                this._vertices[index + 1],
+                                this._vertices[index + 2],
+                                this._vertices[index + 3])});
+                index += 4;
+            }
+        }
+        return vertices;
     }
     draw(program) {
         // gl.BindVertexArray(this._vao)
@@ -706,6 +717,9 @@ export class RenderTarget {
     }
     get id() {
         return this._id;
+    }
+    get textureDimensions() {
+        return new IVec2(this.width, this.height);
     }
     get width() {
         return this._params.width;
@@ -883,6 +897,21 @@ export class Quad {
                     this._params.minFilter, this._params.magFilter
                ), 
                texture: this._texture, fbo: this._fbo};
+    }
+    destroy() {
+        if (this._id !== 0) {
+            gl.delete(this._texture);
+            gl.deleteFramebuffer(this._fbo);
+        }
+    }
+    clear() {
+        if (this._id !== 0) {
+            gl.bindFramebuffer(gl.FRAMEBUFFER, this._fbo);
+            gl.bindRenderbuffer(gl.RENDERBUFFER, this._rbo);
+            gl.clear(gl.COLOR_BUFFER_BIT| gl.DEPTH_BUFFER_BIT);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+            gl.bindRenderbuffer(gl.RENDERBUFFER, null);
+        }
     }
     reset(newTexParams) {
         if (this._id !== 0) {
@@ -1080,11 +1109,11 @@ export class Quad {
             } else if (val instanceof Vec2) {
                 gl.uniform2f(loc, val.x, val.y);
             } else if (val instanceof IVec2) {
+                // console.log(name, val);
                 gl.uniform2i(loc, val.x, val.y);
             } else if (val instanceof IVec4) {
                 gl.uniform4i(loc, val.x, val.y, val.z, val.w);
             } else if (val instanceof Vec3) {
-                console.log(name, loc, val.x, val.y, val.z);
                 gl.uniform3f(loc, val.x, val.y, val.z);
             } else if (val instanceof IVec3) {
                 gl.uniform3i(loc, val.x, val.y, val.z);
@@ -1138,6 +1167,41 @@ export class Quad {
     }
 
 }
+
+export class MultidimensionalDataQuad extends Quad {
+    dataDimensions;
+    constructor(dimensions, textureParams) {
+        let textureDimensions;
+        if (dimensions.length == 1) {
+            textureDimensions
+                = new IVec2(dimensions[0], 1);
+        } else if (dimensions.length == 2) {
+            textureDimensions
+                = new IVec2(dimensions[0], dimensions[1]);
+        } else if (dimensions.length === 3) {
+            textureDimensions = get2DFrom3DDimensions(
+                new IVec3(dimensions[0], dimensions[1], dimensions[2]));
+        } else {
+            throw "Dimensions higher that 3 not implemented yet.";
+        }
+        let actualTextureParams = new TextureParams(
+            textureParams.format, 
+            textureDimensions.ind[0], textureDimensions.ind[1],
+            textureParams.generateMipmap,
+            textureParams.wrapS, textureParams.wrapT, 
+            textureParams.minFilter, textureParams.maFilter
+        )
+        super(actualTextureParams);
+        this.dataDimensions = dimensions;
+    }
+    get textureDimensions() {
+        return new IVec2(this._params.width, this._params.height);
+    }
+    get dimensions3D() {
+        if (this.dataDimensions.length === 3)
+            return new IVec3(...this.dataDimensions);
+    }
+} 
 
 export const gMainRenderWindow = new Quad(
     new TextureParams(gl.RGBA, gCanvas.width, gCanvas.height, 

@@ -85,8 +85,7 @@ void main() {
         return;
     }
     UV = uvIndex.xy;
-    // float scaleAdj = min(scale, 2.0);
     vec4 viewPos = vec4(to3DTextureCoordinates(UV), 1.0)
                    - vec4(0.5, 0.5, 0.5, 0.0);
-    gl_Position = project(2.0*rotate(viewPos, debugRotation));
+    gl_Position = project(2.0*scale*rotate(viewPos, debugRotation));
 }

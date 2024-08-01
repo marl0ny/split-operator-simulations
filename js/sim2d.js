@@ -4,7 +4,8 @@ import { gl, gMainRenderWindow, TextureParams, RenderTarget,
          Quaternion, mul, add, div,
          withConfig,
          get3DFrom2DTextureCoordinates,
-         sub} from "./gl-wrappers.js";
+         sub,
+         MultidimensionalDataQuad} from "./gl-wrappers.js";
 import splitStep, { 
     initializeDefaultKineticEnergy, SimulationParameters 
 } from "./split-step.js";

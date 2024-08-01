@@ -29,7 +29,7 @@
 					<br>
 					<input type="range" id="stepsPerFrame"
 					name="steps/frame"
-					min="0" max="20.0" value="0.0"
+					min="0" max="20.0" value="2.0"
 					style="width: 95%;"/>
 					<!--Default should be 2.-->
 					<br>
@@ -141,7 +141,7 @@
 						<label for="uploadImage">Set V using image
 							<input id="uploadImage" type="file">
 					</label><br>
-					<label>Will look blurry for grid sizes of 256x256 and smaller.</label>
+					<label>Will look pixilated for smaller grid sizes.</label>
 					</div>
 					<hr/>
 					<label for="presetNonlinear">Preset nonlinear term<br>
@@ -171,7 +171,7 @@
 					<br>-->
 					<label for="kineticEnergyEntry">Kinetic energy-momentum<br>relation: KE(px, py)<br>
 						<input type="text" id="kineticEnergyEntry"
-							name="nonlinearEntry" size="23" value="(px^2+py^2)/(2*m)">
+							name="nonlinearEntry" size="23" value="(px^2+py^2+pz^2)/(2*m)">
 					</label>
 					<br>
 					<div id="kineticEnergyUserSliders"></div>
@@ -180,6 +180,6 @@
 			<div> <img id="image" hidden="true"> </div>
 			<div> <canvas id="imageCanvas" hidden="true"> </div>
 		<script>const LENGTH=256;</script>
-		<script type="module" src="./main.js"></script>
+		<script type="module" src="./sim2d.js"></script>
 	</body>
 </html>

@@ -1,3 +1,4 @@
+/* Script for creating a surface plot render.*/
 import { gl, Attribute, 
     TrianglesFrame, makeProgramFromSources } from "./gl-wrappers.js";
 import { getShader } from "./shaders.js";

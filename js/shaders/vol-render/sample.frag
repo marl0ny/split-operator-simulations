@@ -21,13 +21,13 @@ out vec4 fragColor;
 uniform sampler2D tex;
 uniform float viewScale;
 uniform vec4 rotation;
-uniform ivec3 renderTexelDimensions3D;
-uniform ivec2 renderTexelDimensions2D;
-uniform ivec3 sampleTexelDimensions3D;
-uniform ivec2 sampleTexelDimensions2D;
+uniform ivec3 volumeTexelDimensions3D;
+uniform ivec2 volumeTexelDimensions2D;
+uniform ivec3 dataTexelDimensions3D;
+uniform ivec2 dataTexelDimensions2D;
 
 /* Sample and interpolate data points from the texture containing the 
-initial raw 3D volumetric data to points on volume render frame.
+initial raw 3D data to points on volume render frame.
 This corresponds to the sampling step given in the Wikipedia page
 for volume ray casting.
 
@@ -59,12 +59,12 @@ quaternion rotate(quaternion x, quaternion r) {
     return x2; 
 }
 
-vec2 to2DSampleTextureCoordinates(vec3 uvw) {
-    int width2D = sampleTexelDimensions2D[0];
-    int height2D = sampleTexelDimensions2D[1];
-    int width3D = sampleTexelDimensions3D[0];
-    int height3D = sampleTexelDimensions3D[1];
-    int length3D = sampleTexelDimensions3D[2];
+vec2 to2DDataTextureCoordinates(vec3 uvw) {
+    int width2D = dataTexelDimensions2D[0];
+    int height2D = dataTexelDimensions2D[1];
+    int width3D = dataTexelDimensions3D[0];
+    int height3D = dataTexelDimensions3D[1];
+    int length3D = dataTexelDimensions3D[2];
     float wStack = float(width2D)/float(width3D);
     // float hStack = float(height2D)/float(height3D);
     float xIndex = float(width3D)*mod(uvw[0], 1.0);
@@ -75,12 +75,12 @@ vec2 to2DSampleTextureCoordinates(vec3 uvw) {
     return vec2(uIndex/float(width2D), vIndex/float(height2D));
 }
 
-vec3 to3DRenderTextureCoordinates(vec2 uv) {
-    int width3D = renderTexelDimensions3D[0];
-    int height3D = renderTexelDimensions3D[1];
-    int length3D = renderTexelDimensions3D[2];
-    int width2D = renderTexelDimensions2D[0];
-    int height2D = renderTexelDimensions2D[1];
+vec3 to3DVolumeTextureCoordinates(vec2 uv) {
+    int width3D = volumeTexelDimensions3D[0];
+    int height3D = volumeTexelDimensions3D[1];
+    int length3D = volumeTexelDimensions3D[2];
+    int width2D = volumeTexelDimensions2D[0];
+    int height2D = volumeTexelDimensions2D[1];
     float wStack = float(width2D)/float(width3D);
     float hStack = float(height2D)/float(height3D);
     float u = mod(uv[0]*wStack, 1.0);
@@ -106,9 +106,9 @@ rendered to.
 */
 vec4 sample2DTextureAs3D(sampler2D tex, vec3 position) {
     vec3 r = position;
-    float width3D = float(sampleTexelDimensions3D[0]);
-    float height3D = float(sampleTexelDimensions3D[1]);
-    float length3D = float(sampleTexelDimensions3D[2]);
+    float width3D = float(dataTexelDimensions3D[0]);
+    float height3D = float(dataTexelDimensions3D[1]);
+    float length3D = float(dataTexelDimensions3D[2]);
     float x0 = (floor(r.x*width3D - 0.5) + 0.5)/width3D;
     float y0 = (floor(r.y*height3D - 0.5) + 0.5)/height3D;
     float z0 = (floor(r.z*length3D - 0.5) + 0.5)/length3D;
@@ -123,14 +123,14 @@ vec4 sample2DTextureAs3D(sampler2D tex, vec3 position) {
     vec3 r101 = vec3(x1, y0, z1);
     vec3 r011 = vec3(x0, y1, z1);
     vec3 r111 = vec3(x1, y1, z1);
-    vec4 f000 = texture2D(tex, to2DSampleTextureCoordinates(r000));
-    vec4 f100 = texture2D(tex, to2DSampleTextureCoordinates(r100));
-    vec4 f010 = texture2D(tex, to2DSampleTextureCoordinates(r010));
-    vec4 f001 = texture2D(tex, to2DSampleTextureCoordinates(r001));
-    vec4 f110 = texture2D(tex, to2DSampleTextureCoordinates(r110));
-    vec4 f101 = texture2D(tex, to2DSampleTextureCoordinates(r101));
-    vec4 f011 = texture2D(tex, to2DSampleTextureCoordinates(r011));
-    vec4 f111 = texture2D(tex, to2DSampleTextureCoordinates(r111));
+    vec4 f000 = texture2D(tex, to2DDataTextureCoordinates(r000));
+    vec4 f100 = texture2D(tex, to2DDataTextureCoordinates(r100));
+    vec4 f010 = texture2D(tex, to2DDataTextureCoordinates(r010));
+    vec4 f001 = texture2D(tex, to2DDataTextureCoordinates(r001));
+    vec4 f110 = texture2D(tex, to2DDataTextureCoordinates(r110));
+    vec4 f101 = texture2D(tex, to2DDataTextureCoordinates(r101));
+    vec4 f011 = texture2D(tex, to2DDataTextureCoordinates(r011));
+    vec4 f111 = texture2D(tex, to2DDataTextureCoordinates(r111));
     vec4 f0 = blI(r.xy, x0, y0, x1, y1, f000, f100, f010, f110);
     vec4 f1 = blI(r.xy, x0, y0, x1, y1, f001, f101, f011, f111);
     // Originally I made a mistake with the interpolation
@@ -143,7 +143,7 @@ vec4 sample2DTextureAs3D(sampler2D tex, vec3 position) {
 
 void main() {
     vec4 viewPosition 
-        = vec4(to3DRenderTextureCoordinates(UV) - vec3(0.5), 1.0);
+        = vec4(to3DVolumeTextureCoordinates(UV) - vec3(0.5), 1.0);
     // float viewScaleAdj = max(viewScale, 2.0);
     float viewScaleAdj = viewScale;
     vec3 r = rotate(viewPosition, conj(rotation)).xyz/viewScaleAdj
