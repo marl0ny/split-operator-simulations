@@ -24,6 +24,13 @@
                 <button type="button"
 					aria-pressed="true" id="newWaveFuncButton">New Ψ</button>
 				<br>
+                <label id="viewModeLabel" for="viewMode">View type: 
+                </label>
+                <select id="viewMode">
+                    <option value=1>Ψ(<b>r</b>) only</option>
+                    <option value=2>V(<b>r</b>) only</option>
+                    <option value=3>Ψ(<b>r</b>) + V(<b>r</b>)</option>
+                </select><br>
                 <label for="timeStepReal" id="timeStepRealLabel">Re(Δt)
                 </label>
                 <br>
@@ -59,7 +66,7 @@
                     <option value=512>512x512x512</option>
                 </select><br>
                 <hr/>
-                <label for="presetPotential">Preset V(x, y, t)<br>
+                <label for="presetPotential">Preset V(x, y, z, t)<br>
                     <select id="presetPotential">
                         <option value=0 selected>Free (periodic)</option>
                         <option value=1>Harmonic</option>

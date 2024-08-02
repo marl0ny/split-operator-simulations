@@ -76,5 +76,5 @@ void main() {
     complex phaseFactor = complex(cos(phaseAdjust), sin(phaseAdjust));
     complex z2 = mul(phaseFactor, z1);
     vec3 color = argumentToColor(atan(z2.y, z2.x));
-    fragColor = vec4(color, brightness*length(z2));
+    fragColor = vec4(brightness*length(z2)*color, brightness*length(z2));
 }

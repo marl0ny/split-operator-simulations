@@ -16,8 +16,9 @@ import { sumPowerOfTwo } from "./sum.js";
 
 gCanvas.width = gCanvas.height;
 
-console.log('2D from 3D (128^3): ', get2DFrom3DDimensions(new IVec3(128, 128, 128)));
-console.log('2D from 3D (256^3): ', get2DFrom3DDimensions(new IVec3(256, 256, 256)));
+// console.log('2D from 3D (128^3): ', get2DFrom3DDimensions(new IVec3(128, 128, 128)));
+// console.log('2D from 3D (256^3): ', get2DFrom3DDimensions(new IVec3(256, 256, 256)));
+// console.log('2D from 3D (512^3): ', get2DFrom3DDimensions(new IVec3(512, 512, 512)));
 
 class GLSLPrograms {
     constructor() {
@@ -53,6 +54,10 @@ class GLSLPrograms {
             = Quad.makeProgramFromSource(
                 getShader("./shaders/util/add2.frag")
             );
+        this.mul
+            = Quad.makeProgramFromSource(
+                getShader("./shaders/util/mul.frag")
+        );
         this.sample3D
             = Quad.makeProgramFromSource(
                 getShader("./shaders/util/sample3d.frag")
@@ -245,17 +250,20 @@ function changeGridSize(width, height, length) {
         'domainColorVolData': {...newTexParams, format: gl.RGBA32F},
         'domainColorVolData2': {...newTexParams, format: gl.RGBA32F},
     };
+    gFrames['extra'].reset(
+        [...gSimParams.gridDimensions.ind], 
+        {...newTexParams, format: gl.RGBA32F});
     for (let k of Object.keys(framesNewTex)) {
         if (gFrames[k] !== null) {
             gFrames['extra'].draw(GLSL_PROGRAMS.sample3D, 
                 {
                     tex: gFrames[k],
-                    destinationTexelDimensions3D: oldGridDimensions,
-                    destinationTexelDimensions2D:
+                    sourceTexelDimensions3D: oldGridDimensions,
+                    sourceTexelDimensions2D:
                         get2DFrom3DDimensions(oldGridDimensions),
-                    sourceTexelDimensions2D: 
+                    destinationTexelDimensions2D: 
                         get2DFrom3DDimensions(gSimParams.gridDimensions),
-                    sourceTexelDimensions3D: gSimParams.gridDimensions,
+                    destinationTexelDimensions3D: gSimParams.gridDimensions,
 
                 });
             gFrames[k].reset([...gSimParams.gridDimensions.ind], framesNewTex[k]);
@@ -264,9 +272,6 @@ function changeGridSize(width, height, length) {
                     tex: gFrames['extra'],
                 });
         }
-        gFrames['extra'].reset(
-            [...gSimParams.gridDimensions.ind], 
-            {...newTexParams, format: gl.RGBA32F});
     }
 }
 
@@ -549,6 +554,22 @@ document.getElementById("potentialEntry").addEventListener(
     }
 );
 
+const VIEW_MODE = {
+    SHOW_PSI: 1,
+    SHOW_V: 2,
+    SHOW_PSI_V: 3,
+
+};
+
+let gViewMode = document.getElementById("viewMode").value;
+
+document.getElementById("viewMode").addEventListener(
+    "change", e => {
+        gViewMode = e.target.value;
+        console.log(`view mode switched ${e.target.value}`);
+    }
+);
+
 
 let gClipPotential = true;
 
@@ -796,26 +817,50 @@ function animation() {
     gFrames.abs2Psi.draw(
         GLSL_PROGRAMS.abs2, {tex: gFrames.psi1}
     );
-    gFrames.domainColorVolData.draw(
-        GLSL_PROGRAMS.domainColoring,
-        {tex: gFrames.psi1, brightness: 1.0}
-    );
-    /* gFrames.extra.draw(
-        GLSL_PROGRAMS.grayScale,
-        {
-            tex: gFrames.potential, brightness: 1.0,
-            offset: 0.0, maxBrightness: 0.5
-        }
-    );
-    gFrames.domainColorVolData2.draw(
-        GLSLPrograms.add2, 
-        {
-            tex1: gFrames.domainColorVolData, 
-            tex2: gFrames.extra
-        }
-    )
-    let view = gVolRender.view(gFrames.domainColorVolData2, gScale, gRotation);*/
-    let view = gVolRender.view(gFrames.domainColorVolData, gScale, gRotation);
+    let view;
+    // console.log('view mode: ', gViewMode);
+    switch(parseInt(gViewMode)) {
+        case VIEW_MODE.SHOW_PSI:
+            gFrames.domainColorVolData.draw(
+                GLSL_PROGRAMS.domainColoring,
+                {tex: gFrames.psi1, brightness: 1.0}
+            );
+            view = gVolRender.view(gFrames.domainColorVolData, gScale, gRotation);
+            break;
+        case VIEW_MODE.SHOW_V:
+            gFrames.extra.draw(
+                GLSL_PROGRAMS.grayScale,
+                {
+                    tex: gFrames.potential, brightness: 0.1,
+                    offset: 0.0, maxBrightness: 0.5
+                }
+            );
+            view = gVolRender.view(gFrames.extra, gScale, gRotation);
+            break;
+        default:
+            gFrames.domainColorVolData.draw(
+                GLSL_PROGRAMS.domainColoring,
+                {tex: gFrames.psi1, brightness: 1.0}
+            );
+            gFrames.extra.draw(
+                GLSL_PROGRAMS.grayScale,
+                {
+                    tex: gFrames.potential, brightness: 1.0,
+                    offset: 0.0, maxBrightness: 0.5
+                }
+            );
+            gFrames.domainColorVolData2.draw(
+                GLSL_PROGRAMS.add2, 
+                {
+                    tex1: gFrames.domainColorVolData, 
+                    tex2: gFrames.extra
+                }
+            )
+            view = gVolRender.view(gFrames.domainColorVolData2, gScale, gRotation);
+            break;
+    }
+    // let view = gVolRender.view(gFrames.domainColorVolData, gScale, gRotation);
+    // let view = gVolRender.view(gFrames.extra, gScale, gRotation);
     gFrames.target.draw(
         GLSL_PROGRAMS.scale, {tex: view, scale: 1.0},
         {viewport: [0.5*(gCanvas.width - gCanvas.height), 0, 

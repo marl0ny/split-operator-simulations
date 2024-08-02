@@ -1269,14 +1269,15 @@ export function get2DFrom3DDimensions(dimensions3D) {
     let height = dimensions3D.ind[1];
     let length = dimensions3D.ind[2];
     let d = decompose(length);
-    let maxTextureSize = 10000;
+    let maxTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+    // console.log('Max texture size: ', maxTextureSize);
     let texDimensions2D = new IVec2(0.0, 0.0);
-    if (d.ind[0]*width < maxTextureSize &&
-        d.ind[1]*height < maxTextureSize) {
+    if (d.ind[0]*width <= maxTextureSize &&
+        d.ind[1]*height <= maxTextureSize) {
         texDimensions2D.ind[0] = width*d.ind[0];
         texDimensions2D.ind[1] = height*d.ind[1];
-    } else if (d.ind[1]*width < maxTextureSize &&
-               d.ind[0]*height < maxTextureSize) {
+    } else if (d.ind[1]*width <= maxTextureSize &&
+               d.ind[0]*height <= maxTextureSize) {
         texDimensions2D.ind[0] = width*d.ind[1];
         texDimensions2D.ind[1] = height*d.ind[0];
     } else {
