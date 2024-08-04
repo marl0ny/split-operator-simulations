@@ -47,7 +47,7 @@ export function sumPowerOfTwo(t) {
         arr = sumSquarePowerOfTwo(t);
     } else if (t.width > t.height) {
         let prev = t;
-        for (let size = t.width/2; size > t.height; size /= 2) {
+        for (let size = t.width/2; size >= t.height; size /= 2) {
             let s = new Quad (
                 new TextureParams(
                     (size === 1)? gl.RGBA32F: t.format,
@@ -64,7 +64,7 @@ export function sumPowerOfTwo(t) {
         arr = sumSquarePowerOfTwo(prev);
     } else if (t.height > t.width) {
         let prev = t;
-        for (let size = t.height/2; size > t.width; size /= 2) {
+        for (let size = t.height/2; size >= t.width; size /= 2) {
             let s = new Quad (
                 new TextureParams(
                     (size === 1)? gl.RGBA32F: t.format,

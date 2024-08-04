@@ -13,6 +13,7 @@ import {
     UserEditableNonlinearProgramContainer, 
     UserEditable3DKEProgramContainer} from "./user-editable-program.js";
 import { sumPowerOfTwo } from "./sum.js";
+import { PlanarSlices } from "./planar-slice.js";
 
 gCanvas.width = gCanvas.height;
 
@@ -278,7 +279,13 @@ function changeGridSize(width, height, length) {
 let gVolRender = new VolumeRender(
     new IVec2(gCanvas.height, gCanvas.height),
     new IVec3(256, 256, 512)
-)
+);
+let gPlanarSlices = new PlanarSlices(
+    new TextureParams(
+        gl.RGBA32F, gCanvas.width, gCanvas.height, true,
+        gl.CLAMP_TO_EDGE, gl.CLAMP_TO_EDGE, gl.LINEAR, gl.LINEAR
+    )
+);
 
 let gFrames = new Frames();
 
@@ -369,7 +376,7 @@ function initialStep() {
         GLSL_PROGRAMS.wavePacket, 
         {
             amplitude: 1.0,
-            waveNumber: new Vec3(0.0, 10.0, 0.0),
+            waveNumber: new Vec3(10.0, 0.0, 0.0),
             texOffset: new Vec3(0.5, 0.5, 0.5),
             // sigma: new Vec3(0.25, 0.25, 0.25),
             sigma: new Vec3(0.05, 0.05, 0.05),
@@ -555,20 +562,48 @@ document.getElementById("potentialEntry").addEventListener(
 );
 
 const VIEW_MODE = {
-    SHOW_PSI: 1,
-    SHOW_V: 2,
-    SHOW_PSI_V: 3,
-
+    PLANAR_SLICES: 1,
+    VOLUME_RENDER: 2
 };
+
+let gShowWaveFunction = document.getElementById("showWavefunction").checked;
+document.getElementById("showWavefunction").addEventListener(
+    "input",
+    e => gShowWaveFunction = e.target.checked
+);
+let gShowPotential = document.getElementById("showPotential").checked;
+document.getElementById("showPotential").addEventListener(
+    "input",
+    e => gShowPotential = e.target.checked
+);
 
 let gViewMode = document.getElementById("viewMode").value;
 
 document.getElementById("viewMode").addEventListener(
     "change", e => {
         gViewMode = e.target.value;
-        console.log(`view mode switched ${e.target.value}`);
+        // console.log(`view mode switched ${e.target.value}`);
     }
 );
+
+function viewData(data, scale, rotation) {
+    let view;
+    switch(parseInt(gViewMode)) {
+        case VIEW_MODE.VOLUME_RENDER:
+            view = gVolRender.view(data, scale, rotation);
+            break;
+        case VIEW_MODE.PLANAR_SLICES:
+            view = gPlanarSlices.view(data, rotation, scale,
+                gSimParams.gridDimensions.ind[0]/2,
+                gSimParams.gridDimensions.ind[1]/2,
+                gSimParams.gridDimensions.ind[2]/2,
+            );
+            break;
+        default:
+            break;
+    }
+    return view;
+}
 
 
 let gClipPotential = true;
@@ -730,14 +765,18 @@ function computeNormSquared(probQuad, useCPU) {
     return sum;
 }
 
-function normalizeWaveFunction() {
+function computeNormalizationFactor() {
     gFrames.abs2Psi.draw(
         GLSL_PROGRAMS.abs2, {tex: gFrames.psi1});
     let sum = computeNormSquared(gFrames.abs2Psi, false);
     let width = gSimParams.gridDimensions.ind[0];
     let height = gSimParams.gridDimensions.ind[1];
     let length = gSimParams.gridDimensions.ind[2];
-    let normFactor = Math.sqrt((width*height*length)/sum);
+    return [Math.sqrt((width*height*length)/sum), sum];
+}
+
+function normalizeWaveFunction() {
+    let [normFactor, sum] = computeNormalizationFactor();
     // console.log(`Width and height: ${width}x${height}`);
     // console.log('Total sum: ', sum);
     // console.log('Normalization factor: ', normFactor);
@@ -812,55 +851,47 @@ function animation() {
             = [gFrames.psi2, gFrames.psi1];
         gSimParams.t.real += gSimParams.dt.real;
     }
+    // console.log('Normalization factor: ', computeNormalizationFactor());
     if (gNormalize)
         normalizeWaveFunction();
     gFrames.abs2Psi.draw(
         GLSL_PROGRAMS.abs2, {tex: gFrames.psi1}
     );
-    let view;
     // console.log('view mode: ', gViewMode);
-    switch(parseInt(gViewMode)) {
-        case VIEW_MODE.SHOW_PSI:
-            gFrames.domainColorVolData.draw(
-                GLSL_PROGRAMS.domainColoring,
-                {tex: gFrames.psi1, brightness: 1.0}
-            );
-            view = gVolRender.view(gFrames.domainColorVolData, gScale, gRotation);
-            break;
-        case VIEW_MODE.SHOW_V:
-            gFrames.extra.draw(
-                GLSL_PROGRAMS.grayScale,
-                {
-                    tex: gFrames.potential, brightness: 0.1,
-                    offset: 0.0, maxBrightness: 0.5
-                }
-            );
-            view = gVolRender.view(gFrames.extra, gScale, gRotation);
-            break;
-        default:
-            gFrames.domainColorVolData.draw(
-                GLSL_PROGRAMS.domainColoring,
-                {tex: gFrames.psi1, brightness: 1.0}
-            );
-            gFrames.extra.draw(
-                GLSL_PROGRAMS.grayScale,
-                {
-                    tex: gFrames.potential, brightness: 1.0,
-                    offset: 0.0, maxBrightness: 0.5
-                }
-            );
-            gFrames.domainColorVolData2.draw(
-                GLSL_PROGRAMS.add2, 
-                {
-                    tex1: gFrames.domainColorVolData, 
-                    tex2: gFrames.extra
-                }
-            )
-            view = gVolRender.view(gFrames.domainColorVolData2, gScale, gRotation);
-            break;
+
+    if (gShowWaveFunction) {
+        gFrames.domainColorVolData.draw(
+            GLSL_PROGRAMS.domainColoring,
+            {tex: gFrames.psi1, brightness: 1.0}
+        );
     }
-    // let view = gVolRender.view(gFrames.domainColorVolData, gScale, gRotation);
-    // let view = gVolRender.view(gFrames.extra, gScale, gRotation);
+    if (gShowPotential) {
+        gFrames.extra.draw(
+            GLSL_PROGRAMS.grayScale,
+            {
+                tex: gFrames.potential, brightness: 0.1,
+                offset: 0.0, maxBrightness: 0.5
+            }
+        );
+    }
+
+    let view
+    if (gShowWaveFunction && gShowPotential) {
+        gFrames.domainColorVolData2.draw(
+            GLSL_PROGRAMS.add2, 
+            {
+                tex1: gFrames.domainColorVolData, 
+                tex2: gFrames.extra
+            }
+        );
+        // console.log('This is reached.');
+        view = viewData(gFrames.domainColorVolData2, gScale, gRotation);
+    } else if (gShowPotential) {
+        view = viewData(gFrames.extra, gScale, gRotation);
+    } else if (gShowWaveFunction) {
+        view = viewData(gFrames.domainColorVolData, gScale, gRotation);
+    }
+
     gFrames.target.draw(
         GLSL_PROGRAMS.scale, {tex: view, scale: 1.0},
         {viewport: [0.5*(gCanvas.width - gCanvas.height), 0, 

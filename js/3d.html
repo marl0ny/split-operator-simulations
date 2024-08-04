@@ -24,12 +24,15 @@
                 <button type="button"
 					aria-pressed="true" id="newWaveFuncButton">New Ψ</button>
 				<br>
+                <input type="checkbox" id="showWavefunction" checked="true"></input>
+                <label for="showWavefunction">Show Ψ(<b>r</b>)</label><br>
+                <input type="checkbox" id="showPotential" checked="false"></input>
+                <label for="showPotential">Show V(<b>r</b>)</label><br>
                 <label id="viewModeLabel" for="viewMode">View type: 
                 </label>
                 <select id="viewMode">
-                    <option value=1>Ψ(<b>r</b>) only</option>
-                    <option value=2>V(<b>r</b>) only</option>
-                    <option value=3>Ψ(<b>r</b>) + V(<b>r</b>)</option>
+                    <option value=1>Planar slices</option>
+                    <option value=2>Volume render</option>
                 </select><br>
                 <label for="timeStepReal" id="timeStepRealLabel">Re(Δt)
                 </label>
@@ -63,7 +66,7 @@
                     <option value=64>64x64x64</option>
                     <option value=128>128x128x128</option>
                     <option value=256>256x256x256</option>
-                    <option value=512>512x512x512</option>
+                    <!--<option value=512>512x512x512</option>!-->
                 </select><br>
                 <hr/>
                 <label for="presetPotential">Preset V(x, y, z, t)<br>

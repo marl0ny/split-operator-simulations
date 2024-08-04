@@ -24,7 +24,8 @@ def refresh_shader_js():
     with open('shaders.js', 'w') as f:
         f.write('let shaders = {};\n')
         for k in contents:
-            f.write(f'shaders[`{k}`] = `{contents[k]}`;\n')
+            k2 = k.replace("\\", "/")
+            f.write(f'shaders[`{k2}`] = `{contents[k]}`;\n')
         f.write('const SHADERS = shaders;\n')
         f.write('export default SHADERS;\n')
         f.write('export const getShader = name => ' 
