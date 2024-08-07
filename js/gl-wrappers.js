@@ -880,6 +880,7 @@ export class Quad {
                 return;
             }
         }
+        console.log('Creating new frame');
         this._id = acquireNewFrame();
         this._params = textureParams;
         this._initTexture();
@@ -929,10 +930,10 @@ export class Quad {
             this._texture = gl.createTexture();
             gl.bindTexture(gl.TEXTURE_2D, this._texture);
             let params = this._params;
-            console.log(this._texture);
-            console.log(params.format, toBase(params.format),
-                        toType(params.format));
-            console.log(gl.RGBA32F, gl.RGBA, gl.FLOAT);
+            // console.log(this._texture);
+            // console.log(params.format, toBase(params.format),
+            //             toType(params.format));
+            // console.log(gl.RGBA32F, gl.RGBA, gl.FLOAT);
             gl.texImage2D(gl.TEXTURE_2D, 0, params.format, 
                 params.width, params.height, 0,
                 toBase(params.format), toType(params.format), null);
@@ -1024,19 +1025,19 @@ export class Quad {
             // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
             return;
         }
-        /* console.log(
+        console.log(
             "Number of texture units: ",
-            gl.getParameter(gl.COMBINED_TEXTURE_IMAGE_UNITS),
+            gl.getParameter(gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS),
             "Texture id: ",
             this._id
-        );*/
+        );
         gl.activeTexture(gl.TEXTURE0 + this._id);
         this._texture = gl.createTexture();
         gl.bindTexture(gl.TEXTURE_2D, this._texture);
         let params = this._params;
-        console.log(this._texture);
-        console.log(params.format, toBase(params.format), toType(params.format));
-        console.log(gl.RGBA32F, gl.RGBA, gl.FLOAT);
+        // console.log(this._texture);
+        // console.log(params.format, toBase(params.format), toType(params.format));
+        // console.log(gl.RGBA32F, gl.RGBA, gl.FLOAT);
         gl.texImage2D(gl.TEXTURE_2D, 0, params.format, 
             params.width, params.height, 0,
             toBase(params.format), toType(params.format), null);
@@ -1151,15 +1152,20 @@ export class Quad {
                     originalViewport[2], originalViewport[3]);
         unbind();
     }
-    asFloat32Array() {
+    asFloat32Array(viewport=null) {
         if (self.id !== 0)
             gl.bindFramebuffer(gl.FRAMEBUFFER, this._fbo);
         let pixelSize = this.channelCount();
         let size = pixelSize*this.width*this.height;
         let arr = new Float32Array(size);
-        gl.readPixels(
-            0, 0, this.width, this.height,
-            toBase(this._params.format), gl.FLOAT, arr);
+        if (viewport === null)
+            gl.readPixels(
+                0, 0, this.width, this.height,
+                toBase(this._params.format), gl.FLOAT, arr);
+        else
+            gl.readPixels(
+                viewport[0], viewport[1], viewport[2], viewport[3],
+                toBase(this._params.format), gl.FLOAT, arr);
         // gl.activeTexture(gl.TEXTURE0);
         // gl.bindTexture(gl.TEXTURE_2D, null);
         unbind();

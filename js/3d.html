@@ -11,48 +11,83 @@
 	<body style="background-color: rgb(255, 255, 255);">
         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr;">
             <div style="grid-column: 1;">
+                <!--max-width:55%;!-->
                 <label for="stepsPerFrame" id="stepsPerFrameLabel">Updates/frame</label>
                 <br>
                 <input type="range" id="stepsPerFrame" min="0" max="4.0" value="0.0"
                     style="width: 95%;">
                 <br>
                 <label id="fps">fps: </label>
-                <br>
+                <hr style="width: 95%; justify-self: right;"/>
                 <button type="button"
 					aria-pressed="true" id="rotateViewButton">Rotate view</button>
 				<br>
                 <button type="button"
 					aria-pressed="true" id="newWaveFuncButton">New Ψ</button>
 				<br>
-                <input type="checkbox" id="showWavefunction" checked="true"></input>
-                <label for="showWavefunction">Show Ψ(<b>r</b>)</label><br>
-                <input type="checkbox" id="showPotential" checked="false"></input>
-                <label for="showPotential">Show V(<b>r</b>)</label><br>
+                <label for="sketchWidth" id="sketchWidthLabel">Size</label>
+				<br>
+                <input type="range" id="sketchWidth" name="sketchWidth"
+                min="0" max="100" value="50"
+                style="width: 95%;"/>
+                <br>
+                <label for="sketchDepth" id="sketchDepthLabel">Depth</label>
+				<br>
+                <input type="range" id="sketchDepth" name="sketchDepth"
+                min="-40" max="40" value="0"
+                style="width: 95%;"/>
+                <br>
+                <hr style="width: 95%; justify-self: left;"/>
+                <div id="brightnessControls" style="border: 10px; border-color: black;">
+                    <!--<label>Brightness:</label><br>!-->
+                    <input type="checkbox" id="showWavefunction" checked="true"></input>
+                    <label for="showWavefunction">Show Ψ(<b>r</b>)</label><br>
+                    <input type="checkbox" id="showWavefunctionPhase" checked="true"></input>
+                    <label for="showWavefunctionPhase">Colour phase</label><br>
+                    <label for="wavefunctionBrightness">Ψ(<b>r</b>) brightness:</label>
+                    <br>
+                    <input type="range" id="wavefunctionBrightness"
+                        min="5" max="100" value="10"
+                    style="width: 95%;"/>
+                    <br>
+                    <input type="checkbox" id="showPotential" checked="false"></input>
+                    <label for="showPotential">Show V(<b>r</b>)</label><br>
+                    <label for="potentialBrightness">V(<b>r</b>)  brightness:</label>
+                    <br>
+                    <input type="range" id="potentialBrightness"
+                        min="0" max="100" value="10"
+                    style="width: 95%;"/>
+                    <br>
+                </div>
+                <hr style="width: 95%; justify-self: left;"/>
                 <label id="viewModeLabel" for="viewMode">View type: 
                 </label>
                 <select id="viewMode">
-                    <option value=1>Planar slices</option>
+                    <option value=1 selected>Planar slices</option>
                     <option value=2>Volume render</option>
                 </select><br>
-                <label for="timeStepReal" id="timeStepRealLabel">Re(Δt)
-                </label>
-                <br>
-                <input type="range" id="timeStepReal"
-                        name="timeStepReal"
-                        min="-80.0" max="80.0" value="64.0"
-                        style="width: 95%;"/>
-                <!--default value should be 64.-->
-                <br>
-                <label for="timeStepImag" id="timeStepImagLabel">Im(Δt)
-                </label>
-                <br>
-                <input type="range" id="timeStepImag"
-                        name="timeStepImag"
-                        min="-200.0" max="0.0" value="0.0"
-                        style="width: 95%;"/>
-                <br>
-                <input type="checkbox" id="normalizePsi"/>
-					<label for="normalizePsi">Normalize Ψ after each frame</label><br/>
+                <div id="planarSlicesControls">
+                    <label for="zIndex" id="zIndexLabel">xy slice - z offset:</label>
+                    <br>
+                    <input type="range" id="zIndex"
+                        min="0" max="255" value="127"
+                    style="width: 95%;"/>
+                    <br>
+                    <label for="xIndex" id="xIndexLabel">yz slice - x offset:</label>
+                    <br>
+                    <input type="range" id="xIndex"
+                        min="0" max="255" value="127"
+                    style="width: 95%;"/>
+                    <br>
+                    <label for="yIndex" id="yIndexLabel">zx slice - y offset:</label>
+                    <br>
+                    <input type="range" id="yIndex"
+                        min="0" max="255" value="127"
+                    style="width: 95%;"/>
+                    <br>
+                </div>
+                <div id="volumeRenderControls" hidden>
+                </div>
             </div>
             <div style="grid-column: 2">
                 <canvas style="touch-action: none; background-color: rgb(50.0, 50.0, 50.0);
@@ -90,7 +125,7 @@
                 <label for="potentialEntry">Enter V(x, y, z, t)<br>
                     <input type ="text" id="potentialEntry"
                     value="a*((x/width)^2+(y/height)^2+(z/depth)^2)"
-                    name="potentialEntry" size="23"
+                    name="potentialEntry" size="40"
                     />
                 <br>
                 <div id="potentialUserSliders"></div>
@@ -107,17 +142,37 @@
                 <br>
                 <label for="nonlinearEntry">Enter nonlinearity f(Ψ)<br>
                     <input type="text" id="nonlinearEntry"
-                        name="nonlinearEntry" size="23" value="">
+                        name="nonlinearEntry" size="40" value="">
                 </label>
                 <br>
-                <div id="nonlinearUserSliders"></div><br>
+                <div id="nonlinearUserSliders"></div>
                 <hr/>
                 <label for="kineticEnergyEntry">Kinetic energy-momentum<br>relation: KE(px, py, pz)<br>
                     <input type="text" id="kineticEnergyEntry"
-                        name="nonlinearEntry" size="23" value="(px^2+py^2+pz^2)/(2*m)">
+                        name="nonlinearEntry" size="40" value="(px^2+py^2+pz^2)/(2*m)">
                 </label>
                 <br>
                 <div id="kineticEnergyUserSliders"></div>
+                <hr/>
+                <label for="timeStepReal" id="timeStepRealLabel">Re(Δt)
+                </label>
+                <br>
+                <input type="range" id="timeStepReal"
+                        name="timeStepReal"
+                        min="-80.0" max="80.0" value="64.0"
+                        style="width: 95%;"/>
+                <!--default value should be 64.-->
+                <br>
+                <label for="timeStepImag" id="timeStepImagLabel">Im(Δt)
+                </label>
+                <br>
+                <input type="range" id="timeStepImag"
+                        name="timeStepImag"
+                        min="-200.0" max="0.0" value="0.0"
+                        style="width: 95%;"/>
+                <br>
+                <input type="checkbox" id="normalizePsi"/>
+					<label for="normalizePsi">Normalize Ψ after each frame</label><br/>
             </div>
         </div>
         <script type="module" src="./sim3d.js"></script>

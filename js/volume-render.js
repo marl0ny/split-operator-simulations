@@ -210,11 +210,11 @@ function gradient(dst, volumeData, boundaryMask,
         gradientProgram,
         {
             tex: volumeData,
-            orderOfAccuracy: orderOfAccuracy,
-            boundaryType: boundaryType,
+            orderOfAccuracy: new IScalar(orderOfAccuracy),
+            boundaryType: new IScalar(boundaryType),
             // boundaryMask: boundaryMask,
-            staggeredMode: staggeredMode,
-            index: index,
+            staggeredMode: new IScalar(staggeredMode),
+            index: new IScalar(index),
             texelDimensions2D: texelDimensions2D,
             texelDimensions3D: texelDimensions3D,
             dr: new Vec3(1.0, 1.0, 1.0),
@@ -358,10 +358,10 @@ export class VolumeRender {
             this.programs.copy, {tex: srcData}
         );*/
         gradient(this._frames.gradientDataHalfPrecision,
-                 this._frames.data, new IScalar(0),
-                 this.programs.gradient, new IScalar(2), 
+                 this._frames.data, 0,
+                 this.programs.gradient, 2, 
                  BOUNDARY_TYPE.USE_TEXTURE_WRAPPING,
-                 new IScalar(0), new IScalar(3),
+                 0, 3,
                  dataTexelDimensions3D, dataTexelDimensions2D);
         this._frames.volume.clear();
         this._frames.volumeGrad.clear();

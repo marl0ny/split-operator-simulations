@@ -18,6 +18,7 @@ precision highp float;
 
 #define quaternion vec4
 
+uniform vec3 offset;
 uniform float scale;
 uniform quaternion rotation;
 uniform ivec2 screenDimensions;
@@ -51,6 +52,7 @@ vec4 project(vec4 x) {
 
 void main() {
     UV = position.xy/2.0 + vec2(0.5, 0.5);
-    gl_Position = rotate(quaternion(scale*position, 1.0), rotation);
+    gl_Position = rotate(quaternion(scale*(position + offset), 1.0),
+                         rotation);
 }
 

@@ -125,10 +125,10 @@ const GLSL_PROGRAMS = new GLSLPrograms();
 
 let gSimParams = new SimulationParameters(
     1.0, 1.0, new Complex(0.64, 0.0),
-    // new Vec3(64.0, 64.0, 64.0),
-    // new IVec3(64, 64, 64),
-    new Vec3(128.0, 128.0, 128.0),
-    new IVec3(128, 128, 128)
+    new Vec3(64.0, 64.0, 64.0),
+    new IVec3(64, 64, 64),
+    // new Vec3(128.0, 128.0, 128.0),
+    // new IVec3(128, 128, 128)
 );
 
 function timeStepRealCallback(value) {
@@ -196,11 +196,11 @@ class Frames {
             [...gSimParams.gridDimensions.ind],
             {...TEX_PARAMS_SIM, format: gl.RGBA32F}
         );
-        this.domainColorVolData = new MultidimensionalDataQuad(
+        this.waveFuncVisual = new MultidimensionalDataQuad(
             [...gSimParams.gridDimensions.ind], 
             {...TEX_PARAMS_SIM, format: gl.RGBA32F}
         );
-        this.domainColorVolData2 = new MultidimensionalDataQuad(
+        this.waveFuncVisual2 = new MultidimensionalDataQuad(
             [...gSimParams.gridDimensions.ind], 
             {...TEX_PARAMS_SIM, format: gl.RGBA32F}
         );
@@ -215,6 +215,12 @@ class Frames {
     }
 }
 
+let gIndexOffset = new IVec3(
+    gSimParams.gridDimensions.ind[0]/2,
+    gSimParams.gridDimensions.ind[1]/2,
+    gSimParams.gridDimensions.ind[2]/2,
+);
+
 function changeGridSize(width, height, length) {
     if (width === gSimParams.dimensions.ind[0] &&
         height === gSimParams.dimensions.ind[1] &&
@@ -224,6 +230,11 @@ function changeGridSize(width, height, length) {
         gSimParams.gridDimensions.ind[0],
         gSimParams.gridDimensions.ind[1],
         gSimParams.gridDimensions.ind[2]
+    );
+    let oldPlanarFractionalOffset = new Vec3(
+        gIndexOffset.ind[0]/oldGridDimensions.ind[0],
+        gIndexOffset.ind[1]/oldGridDimensions.ind[1],
+        gIndexOffset.ind[2]/oldGridDimensions.ind[2],
     );
     gSimParams.dimensions.ind[0] = width;
     gSimParams.dimensions.ind[1] = height;
@@ -248,8 +259,8 @@ function changeGridSize(width, height, length) {
         'potential': newTexParams,
         'potential2': newTexParams,
         'kineticEnergy': newTexParams,
-        'domainColorVolData': {...newTexParams, format: gl.RGBA32F},
-        'domainColorVolData2': {...newTexParams, format: gl.RGBA32F},
+        'waveFuncVisual': {...newTexParams, format: gl.RGBA32F},
+        'waveFuncVisual2': {...newTexParams, format: gl.RGBA32F},
     };
     gFrames['extra'].reset(
         [...gSimParams.gridDimensions.ind], 
@@ -274,6 +285,12 @@ function changeGridSize(width, height, length) {
                 });
         }
     }
+    setPlanarOffset(0, oldPlanarFractionalOffset.ind[0]);
+    setPlanarOffsetLabel(0, oldPlanarFractionalOffset.ind[0]);
+    setPlanarOffset(1, oldPlanarFractionalOffset.ind[1]);
+    setPlanarOffsetLabel(1, oldPlanarFractionalOffset.ind[1]);
+    setPlanarOffset(2, oldPlanarFractionalOffset.ind[2]);
+    setPlanarOffsetLabel(2, oldPlanarFractionalOffset.ind[2]);
 }
 
 let gVolRender = new VolumeRender(
@@ -321,16 +338,23 @@ function scaleRotate(r) {
 }
 
 function drawNewWavePacket(x0, y0, x1, y1, addTo=false) {
-    let r0 = new Vec3(x0, y0, 0.0);
-    let r1 = new Vec3(x1, y1, 0.0);
+    let depth = waveFuncSketchDepth(gScale*gSketchDepth);
+    console.log(depth);
+    let r0 = new Vec3(x0, y0, depth);
+    let r1 = new Vec3(x1, y1, depth);
     let halfOffset = new Vec3(0.5, 0.5, 0.5);
     r0 = scaleRotate(r0);
     r1 = scaleRotate(r1);
+    // let rNorm = div(r0, r.length());
     let wavepacketUniforms = {
         amplitude: 1.0,
         waveNumber: getWaveNumber(r0, r1),
         texOffset: add(r0, halfOffset),
-        sigmaXY: new Vec3(0.05, 0.05, 0.05),
+        sigma: new Vec3(
+            waveFuncSketchWidth(gSketchWidth),
+            waveFuncSketchWidth(gSketchWidth),
+            waveFuncSketchWidth(gSketchWidth)
+        ),
         texelDimensions2D: 
             get2DFrom3DDimensions(gSimParams.gridDimensions),
         texelDimensions3D: gSimParams.gridDimensions}
@@ -502,6 +526,7 @@ function manageButtons() {
             gInputMode = INPUT_MODES.NEW_WAVE_FUNC;
             clearButtonStyles(buttons);
             applyDrawButtonPressedStyle(buttons);
+            refreshSketchSizeDisplay(gSketchWidth, gSketchDepth, gInputMode);
         }
     );
     rotateView.addEventListener(
@@ -509,6 +534,7 @@ function manageButtons() {
             gInputMode = INPUT_MODES.ROTATE_VIEW;
             clearButtonStyles(buttons);
             applyDrawButtonPressedStyle(buttons);
+            refreshSketchSizeDisplay(gSketchWidth, gSketchDepth, gInputMode);
         }
     )
 }
@@ -571,6 +597,12 @@ document.getElementById("showWavefunction").addEventListener(
     "input",
     e => gShowWaveFunction = e.target.checked
 );
+let gShowWavefunctionPhase
+     = document.getElementById("showWavefunctionPhase").checked;
+    document.getElementById("showWavefunctionPhase").addEventListener(
+    "input",
+    e => gShowWavefunctionPhase = e.target.checked
+);
 let gShowPotential = document.getElementById("showPotential").checked;
 document.getElementById("showPotential").addEventListener(
     "input",
@@ -591,13 +623,21 @@ function viewData(data, scale, rotation) {
     switch(parseInt(gViewMode)) {
         case VIEW_MODE.VOLUME_RENDER:
             view = gVolRender.view(data, scale, rotation);
+            document.getElementById(
+                "volumeRenderControls").removeAttribute("hidden");
+            document.getElementById(
+                "planarSlicesControls").setAttribute("hidden", "true");
             break;
         case VIEW_MODE.PLANAR_SLICES:
             view = gPlanarSlices.view(data, rotation, scale,
-                gSimParams.gridDimensions.ind[0]/2,
-                gSimParams.gridDimensions.ind[1]/2,
-                gSimParams.gridDimensions.ind[2]/2,
+                gIndexOffset.ind[0],
+                gIndexOffset.ind[1],
+                gIndexOffset.ind[2]
             );
+            document.getElementById(
+                "planarSlicesControls").removeAttribute("hidden");
+            document.getElementById(
+                "volumeRenderControls").setAttribute("hidden", "true");
             break;
         default:
             break;
@@ -611,6 +651,114 @@ let gClipPotential = true;
 let gNormalize = document.getElementById("normalizePsi").checked;
 document.getElementById("normalizePsi").addEventListener(
     "input", e => gNormalize = e.target.checked
+);
+
+let gWaveFunctionBrightness = 
+    document.getElementById("wavefunctionBrightness").value/100.0;
+document.getElementById("wavefunctionBrightness").addEventListener(
+    "input", e => gWaveFunctionBrightness = e.target.value/100.0 
+);
+let gPotentialBrightness =
+    document.getElementById("potentialBrightness").value/100.0;
+document.getElementById("potentialBrightness").addEventListener(
+    "input", e => gPotentialBrightness = e.target.value/100.0
+);
+
+let gSketchWidth = document.getElementById("sketchWidth").value;
+// const potentialSketchWidth 
+//     = sketchWidth => 0.02*sketchWidth/100.0;
+let gSketchDepth = document.getElementById("sketchDepth").value;
+
+const waveFuncSketchWidth
+    = sketchWidth => 0.05*sketchWidth/100.0 + 0.005;
+
+const waveFuncSketchDepth
+    = sketchDepth => sketchDepth/100.0;
+
+const refreshSketchSizeDisplay = (sketchWidth, sketchDepth, inputMode) => {
+    switch(inputMode) {
+        case INPUT_MODES.NEW_WAVE_FUNC:
+            document.getElementById("sketchWidthLabel").textContent
+                = `Size: ${
+                    (4.0*gSimParams.gridDimensions.ind[0]
+                        *waveFuncSketchWidth(sketchWidth)).toFixed(0)
+                }`;
+            document.getElementById("sketchDepthLabel").textContent
+                = `Depth: ${
+                    ((gSimParams.gridDimensions.ind[2])
+                        *waveFuncSketchDepth(sketchDepth)).toFixed(0)
+                }`;
+            break;
+        default:
+            break;
+    }
+}
+
+document.getElementById("sketchWidth").addEventListener(
+    "input",
+    e => {
+        gSketchWidth = e.target.value;
+        refreshSketchSizeDisplay(gSketchWidth, gSketchDepth, gInputMode);
+    }
+);
+
+document.getElementById("sketchDepth").addEventListener(
+    "input",
+    e => {
+        gSketchDepth = e.target.value;
+        refreshSketchSizeDisplay(gSketchWidth, gSketchDepth, gInputMode);
+    }
+);
+
+function setPlanarOffset(planarIndex, offset) {
+    let val = 
+    gIndexOffset.ind[planarIndex] 
+            = parseInt(offset*gSimParams.gridDimensions.ind[planarIndex]);
+}
+
+function setPlanarOffsetLabel(planarIndex, val) {
+    let planarIndicesIds = {
+        0: "zIndexLabel", 1: "xIndexLabel", 2: "yIndexLabel"};
+    let planarIndicesLabel = {
+        0: "xy slice - z offset:",
+        1: "yz slice - x offset:",
+        2: "zx slice - y offset:"
+    };
+    document.getElementById(planarIndicesIds[planarIndex]).textContent
+        = `${planarIndicesLabel[planarIndex]} `
+            + `${parseInt(val*gSimParams.dimensions.ind[planarIndex])}`;
+}
+setPlanarOffsetLabel(0, 0.5);
+setPlanarOffsetLabel(1, 0.5);
+setPlanarOffsetLabel(2, 0.5);
+
+document.getElementById("zIndex").addEventListener(
+    "input",
+    e => {
+        let val = parseFloat(e.target.value)/256.0;
+        setPlanarOffset(0, val);
+        setPlanarOffsetLabel(0, val);
+    }
+);
+
+
+document.getElementById("xIndex").addEventListener(
+    "input",
+    e => {
+        let val = parseFloat(e.target.value)/256.0;
+        setPlanarOffset(1, val);
+        setPlanarOffsetLabel(1, val);
+    }
+);
+
+
+document.getElementById("yIndex").addEventListener(
+    "input",
+    e => {
+        let val = parseFloat(e.target.value)/256.0;
+        setPlanarOffset(2, val);
+        setPlanarOffsetLabel(2, val);
+    }
 );
 
 function refreshPotential() {
@@ -860,16 +1008,26 @@ function animation() {
     // console.log('view mode: ', gViewMode);
 
     if (gShowWaveFunction) {
-        gFrames.domainColorVolData.draw(
-            GLSL_PROGRAMS.domainColoring,
-            {tex: gFrames.psi1, brightness: 1.0}
-        );
+        if (gShowWavefunctionPhase)
+            gFrames.waveFuncVisual.draw(
+                GLSL_PROGRAMS.domainColoring,
+                {tex: gFrames.psi1, brightness: gWaveFunctionBrightness}
+            );
+        else
+            gFrames.waveFuncVisual.draw(
+                GLSL_PROGRAMS.grayScale,
+                {
+                    tex: gFrames.abs2Psi,
+                    brightness: gWaveFunctionBrightness,
+                    offset: 0.0, maxBrightness: 0.5
+                }
+            );
     }
     if (gShowPotential) {
         gFrames.extra.draw(
             GLSL_PROGRAMS.grayScale,
             {
-                tex: gFrames.potential, brightness: 0.1,
+                tex: gFrames.potential, brightness: gPotentialBrightness,
                 offset: 0.0, maxBrightness: 0.5
             }
         );
@@ -877,19 +1035,19 @@ function animation() {
 
     let view
     if (gShowWaveFunction && gShowPotential) {
-        gFrames.domainColorVolData2.draw(
+        gFrames.waveFuncVisual2.draw(
             GLSL_PROGRAMS.add2, 
             {
-                tex1: gFrames.domainColorVolData, 
+                tex1: gFrames.waveFuncVisual, 
                 tex2: gFrames.extra
             }
         );
         // console.log('This is reached.');
-        view = viewData(gFrames.domainColorVolData2, gScale, gRotation);
+        view = viewData(gFrames.waveFuncVisual2, gScale, gRotation);
     } else if (gShowPotential) {
         view = viewData(gFrames.extra, gScale, gRotation);
     } else if (gShowWaveFunction) {
-        view = viewData(gFrames.domainColorVolData, gScale, gRotation);
+        view = viewData(gFrames.waveFuncVisual, gScale, gRotation);
     }
 
     gFrames.target.draw(

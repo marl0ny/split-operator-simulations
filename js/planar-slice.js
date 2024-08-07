@@ -2,7 +2,8 @@ import { gl, Attribute,
     TrianglesFrame, makeProgramFromSources, 
     RenderTarget, IScalar, IVec2, IVec3, Vec4, Quaternion, mul,
     MultidimensionalDataQuad, withConfig,
-    get2DFrom3DDimensions} from "./gl-wrappers.js";
+    get2DFrom3DDimensions,
+    Vec3} from "./gl-wrappers.js";
 import { getShader } from "./shaders.js";
 
 function getVerticesElements() {
@@ -13,6 +14,31 @@ function getVerticesElements() {
             new Int32Array([0, 1, 2, 0, 2, 3]):
             new Uint16Array([0, 1, 2, 0, 2, 3])];
 }
+
+/*
+const CUBE_OUTLINE_PROGRAM = makeProgramFromSources(
+    getShader("./shaders/vol-render/cube-outline.vert"),
+    getShader("./shaders/util/uniform-color.frag"),
+);
+
+function getCubeOutlineVerticesAndElements() {
+    let vertices = new Float32Array([
+        -1.0, -1.0, -1.0, // 0 - bottom left
+        1.0, -1.0, -1.0, // 1 - bottom right
+        1.0, 1.0, -1.0, // 2 - upper right
+        -1.0, 1.0, -1.0, // 3 - upper left
+        -1.0, -1.0, 1.0, // 4
+        1.0, -1.0, 1.0, // 5
+        1.0, 1.0, 1.0, // 6
+        -1.0, 1.0, 1.0, // 7
+    ]);
+    let elements = [0, 1, 1, 2, 2, 3, 3, 0,
+                    0, 4, 3, 7, 2, 6, 1, 5,
+                    4, 5, 5, 6, 6, 7, 7, 4];
+    return [vertices, 
+            (gl.version === 2)?
+            new Int32Array(elements): new Uint16Array(elements)];
+}*/
 
 export function getPlanarSlice() {
     let [vertices, elements] = getVerticesElements();
@@ -59,11 +85,14 @@ export class PlanarSlices {
             sourceTexelDimensions2D: get2DFrom3DDimensions(src.dimensions3D),
             sourceTexelDimensions3D: src.dimensions3D,
             tex: src,
-            color: new Vec4(1.0, 1.0, 1.0, 1.0),
+            showOutline: true,
             screenDimensions: 
             new IVec2(this.renderTarget.width, this.renderTarget.height)
 
         };
+        let offsetXY = 2.0*(sliceXY/src.dimensions3D.ind[0] - 0.5);
+        let offsetYZ = 2.0*(sliceYZ/src.dimensions3D.ind[1] - 0.5);
+        let offsetXZ = 2.0*(sliceXZ/src.dimensions3D.ind[2] - 0.5);
         withConfig(
             {enable: gl.DEPTH_TEST, depthFunc: gl.LESS,
              width: this.renderTarget.width,
@@ -75,7 +104,7 @@ export class PlanarSlices {
                         ...uniforms,
                         orientation: new IScalar(0),
                         scale: scale,
-                        color: new Vec4(1.0, 0.0, 0.0, 1.0),
+                        offset: new Vec3(0.0, 0.0, offsetXY),
                         rotation: rotation0, slice: new IScalar(sliceXY)
                     },
                     this.xySlice
@@ -85,7 +114,8 @@ export class PlanarSlices {
                     {
                         ...uniforms,
                         orientation: new IScalar(1),
-                        color: new Vec4(0.0, 1.0, 0.0, 1.0),
+                        // color: new Vec4(0.04, 0.04, 0.04, 0.0),
+                        offset: new Vec3(0.0, 0.0, -offsetYZ),
                         rotation: rotation1, slice: new IScalar(sliceYZ)
                     },
                     this.yzSlice
@@ -95,7 +125,8 @@ export class PlanarSlices {
                     {
                         ...uniforms,
                         orientation: new IScalar(2),
-                        color: new Vec4(0.0, 0.0, 1.0, 1.0),
+                        // color: new Vec4(0.08, 0.08, 0.08, 0.0),
+                        offset: new Vec3(0.0, 0.0, -offsetXZ),
                         rotation: rotation2, slice: new IScalar(sliceXZ)
                     },
                     this.zxSlice
