@@ -1,6 +1,6 @@
 import gCanvas from "./canvas.js";
 import {gl, gMainRenderWindow, TextureParams, Quad,
-    IVec2, Vec2, Vec3, IVec3, Quaternion, Complex,
+    IVec2, Vec2, Vec3, IVec3, Quaternion, Complex, IScalar,
     MultidimensionalDataQuad,
     get2DFrom3DDimensions,
     add, mul, sub, div,
@@ -46,6 +46,10 @@ class GLSLPrograms {
         this.uniformColor
             = Quad.makeProgramFromSource(
                 getShader("./shaders/util/uniform-color.frag")
+            );
+        this.uniformColorScale
+            = Quad.makeProgramFromSource(
+                getShader("./shaders/vol-render/uniform-color-scale.frag")
             );
         this.abs2
             = Quad.makeProgramFromSource(
@@ -125,10 +129,10 @@ const GLSL_PROGRAMS = new GLSLPrograms();
 
 let gSimParams = new SimulationParameters(
     1.0, 1.0, new Complex(0.64, 0.0),
-    new Vec3(64.0, 64.0, 64.0),
-    new IVec3(64, 64, 64),
-    // new Vec3(128.0, 128.0, 128.0),
-    // new IVec3(128, 128, 128)
+    // new Vec3(64.0, 64.0, 64.0),
+    // new IVec3(64, 64, 64),
+    new Vec3(128.0, 128.0, 128.0),
+    new IVec3(128, 128, 128)
 );
 
 function timeStepRealCallback(value) {
@@ -339,7 +343,7 @@ function scaleRotate(r) {
 
 function drawNewWavePacket(x0, y0, x1, y1, addTo=false) {
     let depth = waveFuncSketchDepth(gScale*gSketchDepth);
-    console.log(depth);
+    // console.log(depth);
     let r0 = new Vec3(x0, y0, depth);
     let r1 = new Vec3(x1, y1, depth);
     let halfOffset = new Vec3(0.5, 0.5, 0.5);
@@ -618,6 +622,18 @@ document.getElementById("viewMode").addEventListener(
     }
 );
 
+/* const WAVE_FUNC_BRIGHTNESS_MODE = {
+    ABS_VAL: 1, ABS_VAL_SQUARED: 2, INV_ABS_VAL: -1
+};*/
+
+let gWaveFunctionBrightnessMode
+     = document.getElementById("absPsiVisualization");
+document.getElementById("absPsiVisualization").addEventListener(
+    "change",
+    e => gWaveFunctionBrightnessMode = e.target.value
+)
+
+
 function viewData(data, scale, rotation) {
     let view;
     switch(parseInt(gViewMode)) {
@@ -795,12 +811,12 @@ function setPresetPotential(value) {
     const PRESETS = {
         FREE: 0, 
         HARMONIC: 1, 
-        // DOUBLE_SLIT: 2, 
+        DOUBLE_SLIT: 2, 
         // CIRCULAR: 3,
         REPULSIVE_COULOMB: 4,
         ATTRACTIVE_COULOMB: 5,
         AB: 6, 
-        // DOUBLE_SLIT_AB: 7,
+        DOUBLE_SLIT_AB: 7,
         REPULSIVE_COULOMB_AB: 8,
         ATTRACTIVE_COULOMB_AB: 9,
         MOVING_BUMP: 10, 
@@ -815,11 +831,11 @@ function setPresetPotential(value) {
         `-i*(exp(-${u}^2/0.001) + exp(-(${u}-1.0)^2/0.001)`
         + `+ exp(-${v}^2/0.001) + exp(-(${v}-1.0)^2/0.001)`
         + `+ exp(-${w}^2/0.001) + exp(-(${w}-1.0)^2/0.001))`;
-    /* let doubleSlit = `step(-abs(${v}-0.5) + 0.02) ` 
+    let doubleSlit = `step(-abs(${v}-0.5) + 0.02) ` 
                         + `- step(-abs(${v}-0.5) + 0.02)*(`
                             + `step(-abs(${u}-0.45) + 0.02)`
                             + `+ step(-abs(${u}-0.55) + 0.02))`;
-    let circular
+    /* let circular
         = `0.5*(tanh(75.0*(((x/width)^2 + (y/height)^2)^0.5 - 0.45))` 
             + ` + 1.0)`;*/
     let coulomb = `0.01/((${u}-0.5)^2 + (${v}-0.5)^2 + (${w}-0.5)^2)^0.5`;
@@ -833,10 +849,10 @@ function setPresetPotential(value) {
                 `2.0*abs(strength)*`
                 + `((${u}-0.5)^2 + (${v}-0.5)^2 + (${w}-0.5)^2)`);
             break;
-        /* case PRESETS.DOUBLE_SLIT:
+        case PRESETS.DOUBLE_SLIT:
             gTextEditPotential.newText(doubleSlit);
             break;
-        case PRESETS.CIRCULAR:
+        /* case PRESETS.CIRCULAR:
             gTextEditPotential.newText(circular);
             break;*/
         case PRESETS.REPULSIVE_COULOMB:
@@ -848,9 +864,9 @@ function setPresetPotential(value) {
         case PRESETS.AB:
             gTextEditPotential.newText(absorbingBoundary);
             break;
-        /* case PRESETS.DOUBLE_SLIT_AB:
+        case PRESETS.DOUBLE_SLIT_AB:
             gTextEditPotential.newText(absorbingBoundary + `+${doubleSlit}`);
-            break;*/
+            break;
         case PRESETS.REPULSIVE_COULOMB_AB:
             gTextEditPotential.newText(
                 absorbingBoundary + `+${coulomb}`);
@@ -1011,15 +1027,22 @@ function animation() {
         if (gShowWavefunctionPhase)
             gFrames.waveFuncVisual.draw(
                 GLSL_PROGRAMS.domainColoring,
-                {tex: gFrames.psi1, brightness: gWaveFunctionBrightness}
+                {tex: gFrames.psi1,
+                 brightness: gWaveFunctionBrightness,
+                 brightnessMode: 
+                    new IScalar(gWaveFunctionBrightnessMode),
+                 }
             );
         else
             gFrames.waveFuncVisual.draw(
-                GLSL_PROGRAMS.grayScale,
+                GLSL_PROGRAMS.uniformColorScale,
                 {
                     tex: gFrames.abs2Psi,
+                    color: new Vec4(0.5, 0.5, 1.0, 1.0),
                     brightness: gWaveFunctionBrightness,
-                    offset: 0.0, maxBrightness: 0.5
+                    brightnessMode:
+                        new IScalar(gWaveFunctionBrightnessMode),
+                    offset: 0.0, maxBrightness: 3.0
                 }
             );
     }

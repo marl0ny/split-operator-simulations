@@ -38,6 +38,11 @@ uniform sampler2D tex;
 uniform float brightness;
 uniform float phaseAdjust;
 
+uniform int brightnessMode;
+const int ABS_VAL = 1;
+const int ABS_VAL_SQUARED = 2;
+const int INV_ABS_VAL = -1;
+
 complex mul(complex w, complex z) {
     return complex(w.x*z.x - w.y*z.y, w.x*z.y + w.y*z.x);
 }
@@ -77,6 +82,13 @@ void main() {
     complex z2 = mul(phaseFactor, z1);
     vec3 color = argumentToColor(atan(z2.y, z2.x));
     fragColor = vec4(brightness*length(z2)*color, brightness*length(z2));
-    // float invAbs = 100.0/(length(z2) + 0.01);
-    // fragColor = vec4(brightness*invAbs*color, brightness*invAbs);
+    float brightness2;
+    if (brightnessMode == ABS_VAL_SQUARED) {
+        brightness2 = brightness*length(z2)*length(z2);
+    } else if (brightnessMode == INV_ABS_VAL) {
+        brightness2 = brightness/(length(z2)) - 1.0;
+    } else {
+        brightness2 = brightness*length(z2);
+    }
+    fragColor = vec4(brightness2*color, brightness2);
 }

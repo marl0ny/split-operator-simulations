@@ -44,12 +44,17 @@
                     <label for="showWavefunction">Show Ψ(<b>r</b>)</label><br>
                     <input type="checkbox" id="showWavefunctionPhase" checked="true"></input>
                     <label for="showWavefunctionPhase">Colour phase</label><br>
-                    <label for="wavefunctionBrightness">Ψ(<b>r</b>) brightness:</label>
-                    <br>
+                    <label for="wavefunctionBrightness">Ψ brightness:</label><br>
                     <input type="range" id="wavefunctionBrightness"
                         min="5" max="100" value="10"
-                    style="width: 95%;"/>
-                    <br>
+                        style="width: 95%;"/>
+                    <label for="absPsiVisualization">Map brightness from: </label>
+                    <select id="absPsiVisualization">
+                        <option value=1>|Ψ(<b>r</b>)|</option>
+                        <option value=2>|Ψ(<b>r</b>)|²</option>
+                        <option value=-1>1 / |Ψ(<b>r</b>)|</option>
+                        <!--<option value=512>512x512x512</option>!-->
+                    </select><br>
                     <input type="checkbox" id="showPotential" checked="false"></input>
                     <label for="showPotential">Show V(<b>r</b>)</label><br>
                     <label for="potentialBrightness">V(<b>r</b>)  brightness:</label>
@@ -63,8 +68,8 @@
                 <label id="viewModeLabel" for="viewMode">View type: 
                 </label>
                 <select id="viewMode">
-                    <option value=1 selected>Planar slices</option>
-                    <option value=2>Volume render</option>
+                    <option value=1>Planar slices</option>
+                    <option value=2 selected>Volume render</option>
                 </select><br>
                 <div id="planarSlicesControls">
                     <label for="zIndex" id="zIndexLabel">xy slice - z offset:</label>
@@ -106,16 +111,16 @@
                 <hr/>
                 <label for="presetPotential">Preset V(x, y, z, t)<br>
                     <select id="presetPotential">
-                        <option value=0 selected>Free (periodic)</option>
+                        <option value=0>Free (periodic)</option>
                         <option value=1>Harmonic</option>
-                        <!--<option value=2>Double slit</option>!-->
+                        <option value=2>Double slit</option>
                         <!--<option value=3>Circular well</option>!-->
-                        <option value=4>Spike</option>
-                        <option value=5>Upside down spike</option>
-                        <option value=6>Absorbing boundaries (A.B.)</option>
-                        <!--<option value=7>Double slit (A.B.)</option>!-->
-                        <option value=8>Spike (A.B.)</option>
-                        <option value=9>Upside down spike (A.B.)</option>
+                        <option value=4>Ball spike</option>
+                        <option value=5>Inverted ball spike</option>
+                        <option value=6 selected>Absorbing boundaries (A.B.)</option>
+                        <option value=7>Double slit (A.B.)</option>
+                        <option value=8>Ball spike (A.B.)</option>
+                        <option value=9>Inverted ball spike (A.B.)</option>
                         <option value=10>Moving Gaussian</option>
                         <!--<option value=11>Moving att. spike (A.B.)</option>!-->
                         <!--<option value=12>Upside down Gaussian</option>!-->

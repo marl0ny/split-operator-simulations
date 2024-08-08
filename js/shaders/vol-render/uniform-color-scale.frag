@@ -20,6 +20,7 @@ uniform sampler2D tex;
 uniform float brightness;
 uniform float offset;
 uniform float maxBrightness;
+uniform vec4 color;
 
 uniform int brightnessMode;
 const int ABS_VAL_SQUARED = 2;
@@ -35,9 +36,9 @@ void main() {
     } else {
         val = initVal + offset;
     }
-    vec3 color = vec3(val);
     fragColor 
-        = vec4(max(min(brightness*color, maxBrightness), -maxBrightness),
-               max(min(brightness*val, maxBrightness), -maxBrightness));
+        = vec4(max(min(brightness*color.rgb, maxBrightness), -maxBrightness),
+               max(min(brightness*val*color.a, maxBrightness), 
+               -maxBrightness));
 }
 
