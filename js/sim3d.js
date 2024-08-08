@@ -35,6 +35,10 @@ class GLSLPrograms {
             = Quad.makeProgramFromSource(
                 getShader("./shaders/init-wavepacket/gaussian3d.frag")
             );
+        this.sketchPotential
+            = Quad.makeProgramFromSource(
+                getShader("./shaders/sketch/potential3d.frag")
+            );
         this.domainColoring
             = Quad.makeProgramFromSource(
                 getShader("./shaders/vol-render/domain-coloring.frag")
@@ -341,8 +345,29 @@ function scaleRotate(r) {
     return new Vec3(q.i/gScale, q.j/gScale, q.k/gScale);
 }
 
+function sketchPotential(x0, y0, drawStrength) {
+    let depth = sketchDepthFunc(gScale*gSketchDepth);
+    let r0 = new Vec3(x0, y0, depth);
+    let halfOffset = new Vec3(0.5, 0.5, 0.5);
+    r0 = scaleRotate(r0);
+    let sketchSize = potentialSketchWidth(gSketchWidth);
+    gFrames.potential2.draw(
+        GLSL_PROGRAMS.sketchPotential,
+        {   
+            tex: gFrames.potential,
+            location: add(r0, halfOffset),
+            sigma: new Vec3(sketchSize, sketchSize, sketchSize),
+            amplitude: drawStrength,
+            texelDimensions2D: 
+                get2DFrom3DDimensions(gSimParams.gridDimensions),
+            texelDimensions3D: gSimParams.gridDimensions,
+        }
+    );
+    gFrames.potential.draw(GLSL_PROGRAMS.copy, {tex: gFrames.potential2});
+}
+
 function drawNewWavePacket(x0, y0, x1, y1, addTo=false) {
-    let depth = waveFuncSketchDepth(gScale*gSketchDepth);
+    let depth = sketchDepthFunc(gScale*gSketchDepth);
     // console.log(depth);
     let r0 = new Vec3(x0, y0, depth);
     let r1 = new Vec3(x1, y1, depth);
@@ -492,13 +517,16 @@ gCanvas.addEventListener("wheel", e => {
     scaleVolume(e.deltaY/400.0);
 });
 
-const INPUT_MODES = {NONE: 0, ROTATE_VIEW: 1, NEW_WAVE_FUNC: 2};
+const INPUT_MODES = {NONE: 0, ROTATE_VIEW: 1, NEW_WAVE_FUNC: 2,
+                     SKETCH_V: 3, ERASE_V: 4};
 let gInputMode = INPUT_MODES.ROTATE_VIEW;
 
 function getButtons() {
     let rotateView = document.getElementById("rotateViewButton");
     let newWaveFunc = document.getElementById("newWaveFuncButton");
-    return [rotateView, newWaveFunc];
+    let sketchV = document.getElementById("sketchVButton");
+    let eraseV = document.getElementById("eraseVButton");
+    return [rotateView, newWaveFunc, sketchV, eraseV];
 }
 
 function clearButtonStyles(buttons) {
@@ -507,7 +535,7 @@ function clearButtonStyles(buttons) {
 }
 
 function applyDrawButtonPressedStyle(drawButtons) {
-    let [rotateView, newWaveFunc] = drawButtons;
+    let [rotateView, newWaveFunc, sketchV, eraseV] = drawButtons;
     let style = `background-color: gray;`;
     switch (gInputMode) {
         case INPUT_MODES.ROTATE_VIEW:
@@ -516,6 +544,12 @@ function applyDrawButtonPressedStyle(drawButtons) {
         case INPUT_MODES.NEW_WAVE_FUNC:
             newWaveFunc.style = style;
             break;
+        case INPUT_MODES.SKETCH_V:
+            sketchV.style = style;
+            break;
+        case INPUT_MODES.ERASE_V:
+            eraseV.style = style;
+            break;
         default:
             break;
     }
@@ -523,8 +557,8 @@ function applyDrawButtonPressedStyle(drawButtons) {
 applyDrawButtonPressedStyle(getButtons());
 
 function manageButtons() {
-    let [rotateView, newWaveFunc] = getButtons();
-    let buttons = [rotateView, newWaveFunc];
+    let [rotateView, newWaveFunc, sketchV, eraseV] = getButtons();
+    let buttons = [rotateView, newWaveFunc, sketchV, eraseV];
     newWaveFunc.addEventListener(
         "click", () => {
             gInputMode = INPUT_MODES.NEW_WAVE_FUNC;
@@ -540,7 +574,23 @@ function manageButtons() {
             applyDrawButtonPressedStyle(buttons);
             refreshSketchSizeDisplay(gSketchWidth, gSketchDepth, gInputMode);
         }
-    )
+    );
+    sketchV.addEventListener(
+        "click", () => {
+            gInputMode = INPUT_MODES.SKETCH_V;
+            clearButtonStyles(buttons);
+            applyDrawButtonPressedStyle(buttons);
+            refreshSketchSizeDisplay(gSketchWidth, gSketchDepth, gInputMode);
+        }
+    );
+    eraseV.addEventListener(
+        "click", () => {
+            gInputMode = INPUT_MODES.ERASE_V;
+            clearButtonStyles(buttons);
+            applyDrawButtonPressedStyle(buttons);
+            refreshSketchSizeDisplay(gSketchWidth, gSketchDepth, gInputMode);
+        }
+    );
 }
 manageButtons();
 
@@ -573,6 +623,20 @@ function mouseInputFunc(e) {
             let [x0, y0] = gMousePosition;
             // displayInitialMomentum(x0, y0, x1, y1);
             drawNewWavePacket(x0, y0, x1, y1);
+        }
+        else if (gInputMode === INPUT_MODES.SKETCH_V) {
+            let [x1, y1] = equalizeXYScaling(getMouseXY(e));
+            if (gMousePosition.length === 0) {
+                gMousePosition = [x1, y1];
+            }
+            sketchPotential(x1, y1, 0.3);
+        }
+        else if (gInputMode === INPUT_MODES.ERASE_V) {
+            let [x1, y1] = equalizeXYScaling(getMouseXY(e));
+            if (gMousePosition.length === 0) {
+                gMousePosition = [x1, y1];
+            }
+            sketchPotential(x1, y1, -0.3);
         }
     }
 }
@@ -681,14 +745,14 @@ document.getElementById("potentialBrightness").addEventListener(
 );
 
 let gSketchWidth = document.getElementById("sketchWidth").value;
-// const potentialSketchWidth 
-//     = sketchWidth => 0.02*sketchWidth/100.0;
+const potentialSketchWidth 
+    = sketchWidth => 0.02*sketchWidth/100.0;
 let gSketchDepth = document.getElementById("sketchDepth").value;
 
 const waveFuncSketchWidth
     = sketchWidth => 0.05*sketchWidth/100.0 + 0.005;
 
-const waveFuncSketchDepth
+const sketchDepthFunc
     = sketchDepth => sketchDepth/100.0;
 
 const refreshSketchSizeDisplay = (sketchWidth, sketchDepth, inputMode) => {
@@ -702,7 +766,19 @@ const refreshSketchSizeDisplay = (sketchWidth, sketchDepth, inputMode) => {
             document.getElementById("sketchDepthLabel").textContent
                 = `Depth: ${
                     ((gSimParams.gridDimensions.ind[2])
-                        *waveFuncSketchDepth(sketchDepth)).toFixed(0)
+                        *sketchDepthFunc(sketchDepth)).toFixed(0)
+                }`;
+            break;
+        case INPUT_MODES.SKETCH_V: case INPUT_MODES.ERASE_V:
+            document.getElementById("sketchWidthLabel").textContent
+                = `Size: ${
+                    (4.0*gSimParams.gridDimensions.ind[0]
+                        *potentialSketchWidth(sketchWidth)).toFixed(0)
+                }`;
+            document.getElementById("sketchDepthLabel").textContent
+                = `Depth: ${
+                    ((gSimParams.gridDimensions.ind[2])
+                        *sketchDepthFunc(sketchDepth)).toFixed(0)
                 }`;
             break;
         default:
@@ -812,7 +888,7 @@ function setPresetPotential(value) {
         FREE: 0, 
         HARMONIC: 1, 
         DOUBLE_SLIT: 2, 
-        // CIRCULAR: 3,
+        SPHERICAL: 3,
         REPULSIVE_COULOMB: 4,
         ATTRACTIVE_COULOMB: 5,
         AB: 6, 
@@ -835,9 +911,9 @@ function setPresetPotential(value) {
                         + `- step(-abs(${v}-0.5) + 0.02)*(`
                             + `step(-abs(${u}-0.45) + 0.02)`
                             + `+ step(-abs(${u}-0.55) + 0.02))`;
-    /* let circular
-        = `0.5*(tanh(75.0*(((x/width)^2 + (y/height)^2)^0.5 - 0.45))` 
-            + ` + 1.0)`;*/
+    let spherical
+        = `0.5*(tanh(75.0*(((x/width)^2 + (y/height)^2 + (z/depth)^2)^0.5 - 0.45))` 
+            + ` + 1.0)`;
     let coulomb = `0.01/((${u}-0.5)^2 + (${v}-0.5)^2 + (${w}-0.5)^2)^0.5`;
     gClipPotential = false;
     switch(parseInt(value)) {
@@ -852,9 +928,9 @@ function setPresetPotential(value) {
         case PRESETS.DOUBLE_SLIT:
             gTextEditPotential.newText(doubleSlit);
             break;
-        /* case PRESETS.CIRCULAR:
-            gTextEditPotential.newText(circular);
-            break;*/
+        case PRESETS.SPHERICAL:
+            gTextEditPotential.newText(spherical);
+            break;
         case PRESETS.REPULSIVE_COULOMB:
             gTextEditPotential.newText(coulomb);
             break;
@@ -1038,7 +1114,7 @@ function animation() {
                 GLSL_PROGRAMS.uniformColorScale,
                 {
                     tex: gFrames.abs2Psi,
-                    color: new Vec4(0.5, 0.5, 1.0, 1.0),
+                    color: new Vec4(0.5, 0.5, 0.5, 1.0),
                     brightness: gWaveFunctionBrightness,
                     brightnessMode:
                         new IScalar(gWaveFunctionBrightnessMode),
