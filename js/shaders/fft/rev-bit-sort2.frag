@@ -35,71 +35,49 @@ bool revBitSort2SingleIter(inout int rev, inout int i,
 }
 
 /* Older versions of GLSL do not support for loops.
- This very long function reverse bit sorts a finite-sized
+ This very long function is used to reverse bit sort a finite-sized
  input texture with power of two dimensions without using any for loops.
  For more modern versions of GLSL a different implementation of reverse
  bit sorting which includes for loops is used instead.
 */
+float revBitSort2SingleDimension(int index, int size) {
+    int rev = 0, i = index;
+    int asc = 1, des = size/2;
+    float retVal;
+    if (!revBitSort2SingleIter(rev, i, asc, des, size/2))
+        retVal = (float(rev) + 0.5)/float(size);
+    if (!revBitSort2SingleIter(rev, i, asc, des, size/2))
+        retVal = (float(rev) + 0.5)/float(size);
+    if (!revBitSort2SingleIter(rev, i, asc, des, size/2))
+        retVal = (float(rev) + 0.5)/float(size);
+    if (!revBitSort2SingleIter(rev, i, asc, des, size/2))
+        retVal = (float(rev) + 0.5)/float(size);
+    if (!revBitSort2SingleIter(rev, i, asc, des, size/2))
+        retVal = (float(rev) + 0.5)/float(size);
+    if (!revBitSort2SingleIter(rev, i, asc, des, size/2))
+        retVal = (float(rev) + 0.5)/float(size);
+    if (!revBitSort2SingleIter(rev, i, asc, des, size/2))
+        retVal = (float(rev) + 0.5)/float(size);
+    if (!revBitSort2SingleIter(rev, i, asc, des, size/2))
+        retVal = (float(rev) + 0.5)/float(size);
+    if (!revBitSort2SingleIter(rev, i, asc, des, size/2))
+        retVal = (float(rev) + 0.5)/float(size);
+    if (!revBitSort2SingleIter(rev, i, asc, des, size/2))
+        retVal = (float(rev) + 0.5)/float(size);
+    if (!revBitSort2SingleIter(rev, i, asc, des, size/2))
+        retVal = (float(rev) + 0.5)/float(size);
+    if (!revBitSort2SingleIter(rev, i, asc, des, size/2))
+        retVal = (float(rev) + 0.5)/float(size);
+    return retVal;
+}
+
 vec2 revBitSort2NoForLoop(vec2 uv) {
-    vec2 uv2 = vec2(0.0, 0.0);
     int indexU = int(floor(uv[0]*float(width)));
     int indexV = int(floor(uv[1]*float(height)));
- 
-    int rev = 0, i = indexU;
-    int asc = 1, des = width/2;
-    if (!revBitSort2SingleIter(rev, i, asc, des, width/2))
-        uv2[0] = (float(rev) + 0.5)/float(width);
-    if (!revBitSort2SingleIter(rev, i, asc, des, width/2))
-        uv2[0] = (float(rev) + 0.5)/float(width);
-    if (!revBitSort2SingleIter(rev, i, asc, des, width/2))
-        uv2[0] = (float(rev) + 0.5)/float(width);
-    if (!revBitSort2SingleIter(rev, i, asc, des, width/2))
-        uv2[0] = (float(rev) + 0.5)/float(width);
-    if (!revBitSort2SingleIter(rev, i, asc, des, width/2))
-        uv2[0] = (float(rev) + 0.5)/float(width);
-    if (!revBitSort2SingleIter(rev, i, asc, des, width/2))
-        uv2[0] = (float(rev) + 0.5)/float(width);
-    if (!revBitSort2SingleIter(rev, i, asc, des, width/2))
-        uv2[0] = (float(rev) + 0.5)/float(width);
-    if (!revBitSort2SingleIter(rev, i, asc, des, width/2))
-        uv2[0] = (float(rev) + 0.5)/float(width);
-    if (!revBitSort2SingleIter(rev, i, asc, des, width/2))
-        uv2[0] = (float(rev) + 0.5)/float(width);
-    if (!revBitSort2SingleIter(rev, i, asc, des, width/2))
-        uv2[0] = (float(rev) + 0.5)/float(width);
-    if (!revBitSort2SingleIter(rev, i, asc, des, width/2))
-        uv2[0] = (float(rev) + 0.5)/float(width);
-    if (!revBitSort2SingleIter(rev, i, asc, des, width/2))
-        uv2[0] = (float(rev) + 0.5)/float(width);
-
-    rev = 0, i = indexV;
-    asc = 1, des = height/2;
-    if (!revBitSort2SingleIter(rev, i, asc, des, height/2))
-        uv2[1] = (float(rev) + 0.5)/float(height);
-    if (!revBitSort2SingleIter(rev, i, asc, des, height/2))
-        uv2[1] = (float(rev) + 0.5)/float(height);
-    if (!revBitSort2SingleIter(rev, i, asc, des, height/2))
-        uv2[1] = (float(rev) + 0.5)/float(height);
-    if (!revBitSort2SingleIter(rev, i, asc, des, height/2))
-        uv2[1] = (float(rev) + 0.5)/float(height);
-    if (!revBitSort2SingleIter(rev, i, asc, des, height/2))
-        uv2[1] = (float(rev) + 0.5)/float(height);
-    if (!revBitSort2SingleIter(rev, i, asc, des, height/2))
-        uv2[1] = (float(rev) + 0.5)/float(height);
-    if (!revBitSort2SingleIter(rev, i, asc, des, height/2))
-        uv2[1] = (float(rev) + 0.5)/float(height);
-    if (!revBitSort2SingleIter(rev, i, asc, des, height/2))
-        uv2[1] = (float(rev) + 0.5)/float(height);
-    if (!revBitSort2SingleIter(rev, i, asc, des, height/2))
-        uv2[1] = (float(rev) + 0.5)/float(height);
-    if (!revBitSort2SingleIter(rev, i, asc, des, height/2))
-        uv2[1] = (float(rev) + 0.5)/float(height);
-    if (!revBitSort2SingleIter(rev, i, asc, des, height/2))
-        uv2[1] = (float(rev) + 0.5)/float(height);
-    if (!revBitSort2SingleIter(rev, i, asc, des, height/2))
-        uv2[1] = (float(rev) + 0.5)/float(height);
-
-    return uv2;
+    return vec2(
+        revBitSort2SingleDimension(indexU, width),
+        revBitSort2SingleDimension(indexV, height)
+    );
 }
 
 vec2 revBitSort2(vec2 uv) {

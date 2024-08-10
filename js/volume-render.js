@@ -167,10 +167,21 @@ class Frames {
             gl.CLAMP_TO_EDGE, gl.CLAMP_TO_EDGE,
             gl.LINEAR, gl.LINEAR
         );
-        this.data = new Quad(TEX_PARAMS_DATA_F32);
-        this.gradientData = new Quad(TEX_PARAMS_DATA_F32);
-        this.dataHalfPrecision = new Quad(TEX_PARAMS_DATA_F16);
-        this.gradientDataHalfPrecision = new Quad(TEX_PARAMS_DATA_F16);
+        if (this.data === null || 
+            this.gradientData === null || 
+            this.dataHalfPrecision === null || 
+            this.gradientDataHalfPrecision === null) {
+            this.data = new Quad(TEX_PARAMS_DATA_F32);
+            this.gradientData = new Quad(TEX_PARAMS_DATA_F32);
+            this.dataHalfPrecision = new Quad(TEX_PARAMS_DATA_F16);
+            this.gradientDataHalfPrecision = new Quad(TEX_PARAMS_DATA_F16);
+            return;
+        }
+        // let texelDimensions3D = get2DFrom3DDimensions(dataTexelDimensions2D);
+        this.data.reset(TEX_PARAMS_DATA_F32);
+        this.gradientData.reset(TEX_PARAMS_DATA_F32);
+        this.dataHalfPrecision.reset(TEX_PARAMS_DATA_F16);
+        this.gradientDataHalfPrecision.reset(TEX_PARAMS_DATA_F16);
     }
     createView(viewDimensions) {
         const TEX_PARAMS_VIEW_F16_MIPMAP_FILTER = new TextureParams(
@@ -327,7 +338,7 @@ export class VolumeRender {
             );
     }
 
-    view(srcData, scale, rotation) {
+    view(srcData, scale, rotation, additionalUniforms=null) {
         if (!(srcData instanceof MultidimensionalDataQuad)) {
             console.error('Input for VolumeRender method view '
                             + 'must be a MultidimensionalDataQuad.');
@@ -396,8 +407,11 @@ export class VolumeRender {
                 this.cubeOutline
             );
         });
+        let viewUniforms = (additionalUniforms === null)?
+            {colorBrightness: 1.0, alphaBrightness: 1.0}: additionalUniforms
         displayVolume(this._frames.view,
             this.programs.showVolume, {
+                ...viewUniforms,
                 rotation: rotation,
                 gradientTex: this._frames.volumeGrad,
                 densityTex: this._frames.volume,

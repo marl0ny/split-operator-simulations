@@ -9,6 +9,17 @@
         </style>
     </head>
 	<body style="background-color: rgb(255, 255, 255);">
+        <!--
+			How to get floating divs to work:
+			https://stackoverflow.com/q/2006134 by eric-d-bari
+			https://stackoverflow.com/a/2006162 by marcgg
+		!-->
+        <!--<div id="hoveringElements" style="position: relative; z-index: 10;">
+            <div id="stats" style="position: absolute; top: 10px; right: 10px">
+                <label id="hoveringStats" 
+                    style="color: white;", hidden: true>This is some text.</label>
+            </div>
+        !-->
         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr;">
             <div style="grid-column: 1;">
                 <!--max-width:55%;!-->
@@ -97,6 +108,13 @@
                     <br>
                 </div>
                 <div id="volumeRenderControls" hidden>
+                    <label for="volumeRenderColorBrightness">Color brightness</label>
+                    <input type="range" 
+                    id="volumeRenderColorBrightness" min="0" max="100" value="10" style="width: 95%;"/>
+                    <br>
+                    <label for="volumeRenderAlphaBrightness">Alpha brightness</label>
+                    <input type="range" id="volumeRenderAlphaBrightness" 
+                    min="0" max="100" value="10" style="width: 95%;"/>
                 </div>
             </div>
             <div style="grid-column: 2">

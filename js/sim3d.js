@@ -699,10 +699,14 @@ document.getElementById("absPsiVisualization").addEventListener(
 
 
 function viewData(data, scale, rotation) {
+    let extraUniforms = {
+        colorBrightness: gVolRenderColorBrightness,
+        alphaBrightness: gVolRenderAlphaBrightness
+    };
     let view;
     switch(parseInt(gViewMode)) {
         case VIEW_MODE.VOLUME_RENDER:
-            view = gVolRender.view(data, scale, rotation);
+            view = gVolRender.view(data, scale, rotation, extraUniforms);
             document.getElementById(
                 "volumeRenderControls").removeAttribute("hidden");
             document.getElementById(
@@ -759,24 +763,24 @@ const refreshSketchSizeDisplay = (sketchWidth, sketchDepth, inputMode) => {
     switch(inputMode) {
         case INPUT_MODES.NEW_WAVE_FUNC:
             document.getElementById("sketchWidthLabel").textContent
-                = `Size: ${
+                = `Sketch size: ${
                     (4.0*gSimParams.gridDimensions.ind[0]
                         *waveFuncSketchWidth(sketchWidth)).toFixed(0)
                 }`;
             document.getElementById("sketchDepthLabel").textContent
-                = `Depth: ${
+                = `Sketch depth: ${
                     ((gSimParams.gridDimensions.ind[2])
                         *sketchDepthFunc(sketchDepth)).toFixed(0)
                 }`;
             break;
         case INPUT_MODES.SKETCH_V: case INPUT_MODES.ERASE_V:
             document.getElementById("sketchWidthLabel").textContent
-                = `Size: ${
+                = `Sketch size: ${
                     (4.0*gSimParams.gridDimensions.ind[0]
                         *potentialSketchWidth(sketchWidth)).toFixed(0)
                 }`;
             document.getElementById("sketchDepthLabel").textContent
-                = `Depth: ${
+                = `Sketch depth: ${
                     ((gSimParams.gridDimensions.ind[2])
                         *sketchDepthFunc(sketchDepth)).toFixed(0)
                 }`;
@@ -799,6 +803,23 @@ document.getElementById("sketchDepth").addEventListener(
     e => {
         gSketchDepth = e.target.value;
         refreshSketchSizeDisplay(gSketchWidth, gSketchDepth, gInputMode);
+    }
+);
+
+let gVolRenderColorBrightness
+     = parseFloat(document.getElementById(
+        "volumeRenderColorBrightness").value)/10.0;
+document.getElementById("volumeRenderColorBrightness").addEventListener(
+    "input", e => {
+        gVolRenderColorBrightness = parseFloat(e.target.value)/10.0;
+    }
+);
+let gVolRenderAlphaBrightness
+     = parseFloat(document.getElementById(
+        "volumeRenderAlphaBrightness").value)/10.0;
+document.getElementById("volumeRenderAlphaBrightness").addEventListener(
+    "input", e => {
+        gVolRenderAlphaBrightness = parseFloat(e.target.value)/10.0;
     }
 );
 
@@ -1091,13 +1112,11 @@ function animation() {
             = [gFrames.psi2, gFrames.psi1];
         gSimParams.t.real += gSimParams.dt.real;
     }
-    // console.log('Normalization factor: ', computeNormalizationFactor());
     if (gNormalize)
         normalizeWaveFunction();
     gFrames.abs2Psi.draw(
         GLSL_PROGRAMS.abs2, {tex: gFrames.psi1}
     );
-    // console.log('view mode: ', gViewMode);
 
     if (gShowWaveFunction) {
         if (gShowWavefunctionPhase)
@@ -1114,7 +1133,7 @@ function animation() {
                 GLSL_PROGRAMS.uniformColorScale,
                 {
                     tex: gFrames.abs2Psi,
-                    color: new Vec4(0.5, 0.5, 0.5, 1.0),
+                    color: new Vec4(0.5, 0.5, 1.0, 1.0),
                     brightness: gWaveFunctionBrightness,
                     brightnessMode:
                         new IScalar(gWaveFunctionBrightnessMode),
@@ -1124,10 +1143,12 @@ function animation() {
     }
     if (gShowPotential) {
         gFrames.extra.draw(
-            GLSL_PROGRAMS.grayScale,
+            GLSL_PROGRAMS.uniformColorScale,
             {
                 tex: gFrames.potential, brightness: gPotentialBrightness,
-                offset: 0.0, maxBrightness: 0.5
+                offset: 0.0, maxBrightness: 0.5,
+                color: new Vec4(1.0, 1.0, 1.0, 1.0)
+
             }
         );
     }
@@ -1142,11 +1163,14 @@ function animation() {
             }
         );
         // console.log('This is reached.');
-        view = viewData(gFrames.waveFuncVisual2, gScale, gRotation);
+        view = viewData(gFrames.waveFuncVisual2, 
+            gScale, gRotation);
     } else if (gShowPotential) {
-        view = viewData(gFrames.extra, gScale, gRotation);
+        view = viewData(gFrames.extra, gScale, gRotation,
+            );
     } else if (gShowWaveFunction) {
-        view = viewData(gFrames.waveFuncVisual, gScale, gRotation);
+        view = viewData(gFrames.waveFuncVisual, 
+            gScale, gRotation);
     }
 
     gFrames.target.draw(

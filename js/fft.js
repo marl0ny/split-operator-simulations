@@ -19,6 +19,8 @@ import SHADERS, { getShader } from "./shaders.js";
 let gPrograms = {
     fftIter: Quad.makeProgramFromSource(
         SHADERS['./shaders/fft/fft-iter.frag']),
+    fftIterSquare: Quad.makeProgramFromSource(
+        SHADERS['./shaders/fft/fft-iter-square.frag']),
     revBitSort2: 
         Quad.makeProgramFromSource(
             SHADERS['./shaders/fft/rev-bit-sort2.frag']),
@@ -93,6 +95,29 @@ function refreshCosTable(n) {
     }
 }
 
+function fftIterSquare(iterQuads, isInverse) {
+    let size = iterQuads[0].width;
+    refreshCosTable(size);
+    for (let blockSize = 2; blockSize <= size; blockSize *= 2) {
+        iterQuads[1].draw(
+            gPrograms.fftIterSquare,
+            {
+                tex: iterQuads[0],
+                blockSize: blockSize/size,
+                angleSign: (isInverse)? 1.0: -1.0,
+                scale: (isInverse && blockSize === size)? 1.0/size: 1.0,
+                size: size,
+                useCosTable: true,
+                cosTableTex: gCosTable.quad,
+            }
+        );
+        let tmp = iterQuads[0];
+        iterQuads[0] = iterQuads[1];
+        iterQuads[1] = tmp;
+    }
+    return iterQuads;
+}
+
 function fftIter(iterQuads, isVertical, isInverse) {
     let width = iterQuads[0].width, height = iterQuads[0].height;
     let size = (isVertical)? height: width;
@@ -154,6 +179,11 @@ export function fft2D(dst, src) {
     refreshIterQuads(src.format, src.width, src.height);
     let iterQuads1 = [gIterQuads[0], gIterQuads[1]];
     revBitSort2(iterQuads1[0], src);
+    /* if (src.width === src.height) {
+        let iterQuads2 = fftIterSquare(iterQuads1, false);
+        dst.draw(gPrograms.copy, {tex: iterQuads2[0]});
+        return;
+    }*/
     let iterQuads2 = fftIter(iterQuads1, false, false);
     let iterQuads3 = fftIter(iterQuads2, true , false);
     dst.draw(gPrograms.copy, {tex: iterQuads3[0]});
@@ -164,6 +194,11 @@ export function ifft2D(dst, src) {
     refreshIterQuads(src.format, src.width, src.height);
     let iterQuads1 = [gIterQuads[0], gIterQuads[1]];
     revBitSort2(iterQuads1[0], src);
+    /* if (src.width === src.height) {
+        let iterQuads2 = fftIterSquare(iterQuads1, true);
+        dst.draw(gPrograms.copy, {tex: iterQuads2[0]});
+        return;
+    }*/
     let iterQuads2 = fftIter(iterQuads1, false, true);
     let iterQuads3 = fftIter(iterQuads2, true , true);
     dst.draw(gPrograms.copy, {tex: iterQuads3[0]});

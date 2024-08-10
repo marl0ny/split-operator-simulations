@@ -53,7 +53,68 @@ vec3 to3DTextureCoordinates(vec2 uv) {
     return vec3(u, v, w);
 }
 
+bool revBitSort2SingleIter(inout int rev, inout int i,
+                           inout int asc, inout int des, int stop) {
+    if (i/des > 0) {
+        rev += asc;
+	i -= des;
+    }
+    des /= 2, asc *= 2;
+    if (asc == 2*stop)
+        return false;
+    return true;
+}
+
+/* Older versions of GLSL do not support for loops.
+ This very long function is used to reverse bit sort a finite-sized
+ input texture with power of two dimensions without using any for loops.
+ For more modern versions of GLSL a different implementation of reverse
+ bit sorting which includes for loops is used instead.
+*/
+float revBitSort2SingleDimension(int index, int size) {
+    int rev = 0, i = index;
+    int asc = 1, des = size/2;
+    float retVal;
+    if (!revBitSort2SingleIter(rev, i, asc, des, size/2))
+        retVal = (float(rev) + 0.5)/float(size);
+    if (!revBitSort2SingleIter(rev, i, asc, des, size/2))
+        retVal = (float(rev) + 0.5)/float(size);
+    if (!revBitSort2SingleIter(rev, i, asc, des, size/2))
+        retVal = (float(rev) + 0.5)/float(size);
+    if (!revBitSort2SingleIter(rev, i, asc, des, size/2))
+        retVal = (float(rev) + 0.5)/float(size);
+    if (!revBitSort2SingleIter(rev, i, asc, des, size/2))
+        retVal = (float(rev) + 0.5)/float(size);
+    if (!revBitSort2SingleIter(rev, i, asc, des, size/2))
+        retVal = (float(rev) + 0.5)/float(size);
+    if (!revBitSort2SingleIter(rev, i, asc, des, size/2))
+        retVal = (float(rev) + 0.5)/float(size);
+    if (!revBitSort2SingleIter(rev, i, asc, des, size/2))
+        retVal = (float(rev) + 0.5)/float(size);
+    if (!revBitSort2SingleIter(rev, i, asc, des, size/2))
+        retVal = (float(rev) + 0.5)/float(size);
+    if (!revBitSort2SingleIter(rev, i, asc, des, size/2))
+        retVal = (float(rev) + 0.5)/float(size);
+    if (!revBitSort2SingleIter(rev, i, asc, des, size/2))
+        retVal = (float(rev) + 0.5)/float(size);
+    if (!revBitSort2SingleIter(rev, i, asc, des, size/2))
+        retVal = (float(rev) + 0.5)/float(size);
+    return retVal;
+}
+
+vec3 revBitSort2NoForLoop(vec3 uvw) {
+    int indexU = int(floor(uvw[0]*float(texelDimensions3D[0])));
+    int indexV = int(floor(uvw[1]*float(texelDimensions3D[1])));
+    int indexW = int(floor(uvw[2]*float(texelDimensions3D[2])));
+    return vec3(
+        revBitSort2SingleDimension(indexU, texelDimensions3D[0]),
+        revBitSort2SingleDimension(indexV, texelDimensions3D[1]),
+        revBitSort2SingleDimension(indexW, texelDimensions3D[2])
+    );
+}
+
 vec3 revBitSort2(vec3 uvw) {
+    #if (!defined(GL_ES) && __VERSION__ >= 120) || (defined(GL_ES) && __VERSION__ > 300)
     vec3 uvw2 = vec3(0.0, 0.0, 0.0);
     int indexU = int(floor(uvw[0]*float(texelDimensions3D[0])));
     int indexV = int(floor(uvw[1]*float(texelDimensions3D[1])));
@@ -89,6 +150,9 @@ vec3 revBitSort2(vec3 uvw) {
     }
     uvw2[2] = (float(rev) + 0.5)/float(texelDimensions3D[2]);
     return uvw2;
+    #else
+    return revBitSort2NoForLoop(uvw);
+    #endif
 }
 
 

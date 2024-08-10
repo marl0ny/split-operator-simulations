@@ -24,6 +24,8 @@ uniform sampler2D densityTex;
 
 uniform ivec3 fragmentTexelDimensions3D;
 uniform ivec2 fragmentTexelDimensions2D;
+uniform float alphaBrightness;
+uniform float colorBrightness;
 
 /* The variable UV from the previous shader contains 
 the 2D texture coordinate representation of the volume render.
@@ -180,8 +182,15 @@ void main() {
     // fragColor = 4.0*pix;
     float a = dot(normal, normalize(grad));
     if (a <= 0.0) discard;
+    
     // fragColor = vec4(1.0*normalize(density.rgb), a*a);
-    fragColor = vec4(normalize(density.rgb), 3.0*a*a);
+    
+    // float densityLength = length(density.rgb);
+    // if (densityLength == 0.0) discard;
+    // fragColor = vec4(density.rgb/densityLength, a);
+    
+    fragColor = vec4(normalize(density.rgb)*colorBrightness, 3.0*a*alphaBrightness);
+    
     // fragColor = vec4(4.0*normalize(density.rgb), 0.1*a);
     // fragColor = vec4(1.0);
 }

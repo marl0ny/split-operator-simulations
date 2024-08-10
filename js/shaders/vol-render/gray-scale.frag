@@ -29,7 +29,7 @@ void main() {
     float initVal = texture2D(tex, UV)[0];
     float val;
     if (brightnessMode == INV_ABS_VAL) {
-        val = 1.0/initVal + offset;
+        val = 1.0/abs(initVal) + offset - 1.0;
     } else if (brightnessMode == ABS_VAL_SQUARED) {
         val = abs(initVal)*abs(initVal) + offset;
     } else {

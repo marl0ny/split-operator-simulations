@@ -147,6 +147,7 @@ function refreshIterQuads(format, texDimensions3D) {
             dimensions2D.ind[0], dimensions2D.ind[1], true, 
             gl.REPEAT, gl.REPEAT, gl.LINEAR, gl.LINEAR);
         if (gIterQuads.length !== 0) {
+            // console.log('Resetting dimensions of fft iteration quads');
             gIterQuads[0].reset([...texDimensions3D.ind], texParams);
             gIterQuads[1].reset([...texDimensions3D.ind], texParams);
             return;

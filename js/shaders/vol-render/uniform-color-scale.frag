@@ -30,15 +30,16 @@ void main() {
     float initVal = texture2D(tex, UV)[0];
     float val;
     if (brightnessMode == INV_ABS_VAL) {
-        val = 1.0/initVal + offset;
+        val = brightness/initVal + brightness*offset - 1.0;
     } else if (brightnessMode == ABS_VAL_SQUARED) {
-        val = abs(initVal)*abs(initVal) + offset;
+        val = brightness*(abs(initVal)*abs(initVal) + offset);
     } else {
-        val = initVal + offset;
+        val = brightness*(initVal + offset);
     }
     fragColor 
-        = vec4(max(min(brightness*color.rgb, maxBrightness), -maxBrightness),
-               max(min(brightness*val*color.a, maxBrightness), 
+        = vec4(max(min(val*color.rgb, maxBrightness),
+                 -maxBrightness),
+               max(min(val*color.a, maxBrightness), 
                -maxBrightness));
 }
 
