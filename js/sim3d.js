@@ -301,9 +301,21 @@ function changeGridSize(width, height, length) {
     setPlanarOffsetLabel(2, oldPlanarFractionalOffset.ind[2]);
 }
 
+let gVolRenderNumberOfSlices
+    = parseInt(document.getElementById(
+        "numberOfSlices"
+    ).value);
+let gVolRenderSliceWidth
+    = parseInt(document.getElementById(
+        "sliceSideWidth"
+    ).value);
 let gVolRender = new VolumeRender(
     new IVec2(gCanvas.height, gCanvas.height),
-    new IVec3(256, 256, 512)
+    // new IVec3(128, 128, 512)
+    // new IVec3(256, 256, 256),
+    // new IVec3(256, 256, 512)
+    new IVec3(gVolRenderSliceWidth, gVolRenderSliceWidth,
+              gVolRenderNumberOfSlices)
 );
 let gPlanarSlices = new PlanarSlices(
     new TextureParams(
@@ -515,6 +527,8 @@ function scaleVolume(scaleVal) {
 
 gCanvas.addEventListener("wheel", e => {
     scaleVolume(e.deltaY/400.0);
+    let [x, y] = equalizeXYScaling(getMouseXY(e));
+    updateTextPosition(x, y);
 });
 
 const INPUT_MODES = {NONE: 0, ROTATE_VIEW: 1, NEW_WAVE_FUNC: 2,
@@ -621,6 +635,7 @@ function mouseInputFunc(e) {
                 return;
             }
             let [x0, y0] = gMousePosition;
+            updateTextPosition(x0, y0);
             // displayInitialMomentum(x0, y0, x1, y1);
             drawNewWavePacket(x0, y0, x1, y1);
         }
@@ -641,7 +656,11 @@ function mouseInputFunc(e) {
     }
 }
 
-gCanvas.addEventListener("mousemove", e => mouseInputFunc(e));
+gCanvas.addEventListener("mousemove", e => {
+    let [x, y] = equalizeXYScaling(getMouseXY(e));
+    updateTextPosition(x, y);
+    mouseInputFunc(e);
+});
 gCanvas.addEventListener("mousedown", e => mouseInputFunc(e));
 
 gCanvas.addEventListener("mouseup", () => {
@@ -654,6 +673,10 @@ document.getElementById("potentialEntry").addEventListener(
         gTextEditPotential.newText(e.target.value);
     }
 );
+
+document.getElementById("aLink").href 
+    = "https://github.com/marl0ny/"
+    + "split-operator-simulations/tree/new-web-version/js";
 
 const VIEW_MODE = {
     PLANAR_SLICES: 1,
@@ -695,8 +718,21 @@ let gWaveFunctionBrightnessMode
 document.getElementById("absPsiVisualization").addEventListener(
     "change",
     e => gWaveFunctionBrightnessMode = e.target.value
-)
+);
 
+function updateTextPosition(x, y) {
+    let position0 = new Vec3(x, y, sketchDepthFunc(gScale*gSketchDepth));
+    let position = scaleRotate(position0);
+    let hoveringElement = document.getElementById("hoveringElements");
+    hoveringElement.style = `opacity: 1; `
+        + `position: absolute; top: ${parseInt(gCanvas.offsetTop + 0.95*gCanvas.height)}px; `
+        + `left: ${gCanvas.offsetLeft + 210}px`;
+    let hoveringStats = document.getElementById("hoveringStats");
+    hoveringStats.textContent = 
+        `x: ${parseInt((position.x)*gSimParams.dimensions.x)}, `
+        + `y: ${parseInt((position.y)*gSimParams.dimensions.y)}, `
+        + `z: ${parseInt((position.z)*gSimParams.dimensions.z)}`;
+}
 
 function viewData(data, scale, rotation) {
     let extraUniforms = {
@@ -822,6 +858,55 @@ document.getElementById("volumeRenderAlphaBrightness").addEventListener(
         gVolRenderAlphaBrightness = parseFloat(e.target.value)/10.0;
     }
 );
+
+
+document.getElementById("numberOfSlicesLabel").textContent
+    = `Number of slices: ${gVolRenderNumberOfSlices}`;
+document.getElementById("numberOfSlices").addEventListener(
+    "input", e => {
+        let numberOfSlices = parseInt(e.target.value);
+        let newDimensions = new IVec3(
+            gVolRenderSliceWidth, gVolRenderSliceWidth,
+            numberOfSlices);
+        try {
+            let _ = get2DFrom3DDimensions(newDimensions);
+        } catch(e) {
+            console.log(e);
+            return;
+        }
+        gVolRenderNumberOfSlices = numberOfSlices;
+        document.getElementById("numberOfSlicesLabel").textContent
+            = `Number of slices: ${gVolRenderNumberOfSlices}`;
+        document.getElementById("sliceSideWidthLabel").textContent
+            = `Slice width: ${gVolRenderSliceWidth}`;
+        gVolRender.resetVolumeDimensions(newDimensions);
+    }
+);
+
+document.getElementById("sliceSideWidthLabel").textContent
+    = `Slice width: ${gVolRenderSliceWidth}`;
+document.getElementById("sliceSideWidth").addEventListener(
+    "input", e => {
+        let volRenderSliceWidth = parseInt(e.target.value);
+        let newDimensions = new IVec3(
+            volRenderSliceWidth, volRenderSliceWidth,
+            gVolRenderNumberOfSlices
+        );
+        try {
+            let _ = get2DFrom3DDimensions(newDimensions);
+        } catch(e) {
+            console.log(e);
+            return;
+        }
+        gVolRenderSliceWidth = volRenderSliceWidth;
+        document.getElementById("numberOfSlicesLabel").textContent
+            = `Number of slices: ${gVolRenderNumberOfSlices}`;
+        document.getElementById("sliceSideWidthLabel").textContent
+            = `Slice width: ${gVolRenderSliceWidth}`;
+        gVolRender.resetVolumeDimensions(newDimensions);
+    }
+);
+
 
 function setPlanarOffset(planarIndex, offset) {
     let val = 

@@ -55,7 +55,7 @@ quaternion rotate(quaternion x, quaternion r) {
 }
 
 vec4 project(vec4 x) {
-    return vec4(x.x, x.y, x.z, 1.0);
+    return vec4(x.x, x.y, 0.0, 1.0);
     /* vec4 y;
     y[0] = x[0]*5.0/(x[2] + 5.0);
     y[1] = x[1]*5.0/(x[2] + 5.0);

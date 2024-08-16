@@ -36,7 +36,6 @@ out vec4 fragColor;
 
 uniform sampler2D tex;
 uniform float blockSize;
-uniform int orientation;
 uniform float angleSign;
 uniform float size;
 uniform float scale;
@@ -51,10 +50,6 @@ uniform ivec3 texelDimensions3D;
 #define complex2 vec4
 
 const float PI = 3.141592653589793;
-
-const int ORIENTATION_0 = 0;
-const int ORIENTATION_1 = 1;
-const int ORIENTATION_2 = 2;
 
 
 float getValueFromCosTable(float angle) {
@@ -110,56 +105,49 @@ vec3 to3DTextureCoordinates(vec2 uv) {
     return vec3(u, v, w);
 }
 
-vec4 getOdd1(vec3 uvw) {
-    if (orientation == ORIENTATION_0) {
-        vec3 uvw2 = vec3(uvw[0] + 0.5*blockSize, uvw[1], uvw[2]);
-        return texture2D(tex, to2DTextureCoordinates(uvw2));
-    } else if (orientation == ORIENTATION_1) {
-        vec3 uvw2 = vec3(uvw[0], uvw[1] + 0.5*blockSize, uvw[2]);
-        return texture2D(tex, to2DTextureCoordinates(uvw2));
-    } else if (orientation == ORIENTATION_2) {
-        vec3 uvw2 = vec3(uvw[0], uvw[1], uvw[2] + 0.5*blockSize);
-        return texture2D(tex, to2DTextureCoordinates(uvw2));
-    }
-}
-
-vec4 getEven2(vec3 uvw) {
-    if (orientation == ORIENTATION_0) {
-        vec3 uvw2 = vec3(uvw[0] - 0.5*blockSize, uvw[1], uvw[2]);
-        return texture2D(tex, to2DTextureCoordinates(uvw2));
-    } else if (orientation == ORIENTATION_1) {
-        vec3 uvw2 = vec3(uvw[0], uvw[1] - 0.5*blockSize, uvw[2]);
-        return texture2D(tex, to2DTextureCoordinates(uvw2));
-    } else if (orientation == ORIENTATION_2) {
-        vec3 uvw2 = vec3(uvw[0], uvw[1], uvw[2] - 0.5*blockSize);
-        return texture2D(tex, to2DTextureCoordinates(uvw2));
-    }
-}
-
 void main() {
     vec3 uvw = to3DTextureCoordinates(UV);
-    float val = 0.0;
-    if (orientation == ORIENTATION_0) {
-        val = mod(uvw[0], blockSize);
-    } else if (orientation == ORIENTATION_1) {
-        val = mod(uvw[1], blockSize);
-    } else if (orientation == ORIENTATION_2) {
-        val = mod(uvw[2], blockSize);
-    }
-    vec4 texVal = texture2D(tex, UV);
-
-    // Even lower half
-    vec4 even1 = texVal;
-    vec4 odd1 = getOdd1(uvw);
-    float angle1 = angleSign*2.0*PI*(val - 0.5/size)/blockSize;
-    complex2 out1 = scale*(even1 + c2C1(odd1, expI(angle1)));
-
-    // Odd upper half
-    complex2 even2 = getEven2(uvw);
-    complex2 odd2 = texVal;
-    float angle2 = angleSign*2.0*PI
-        *((val - 0.5/size) - blockSize/2.0)/blockSize;
-    complex2 out2 = scale*(even2 - c2C1(odd2, expI(angle2)));
-
-    fragColor = (val <= blockSize/2.0)? out1: out2;
+    vec3 blockPosition = vec3(
+        mod(uvw[0], blockSize),
+        mod(uvw[1], blockSize),
+        mod(uvw[2], blockSize));
+    float h = blockSize/2.0;
+    vec3 signFactor = vec3((blockPosition.x <= h)? 1.0: -1.0,
+                           (blockPosition.y <= h)? 1.0: -1.0,
+                           (blockPosition.z <= h)? 1.0: -1.0);
+    vec3 offset = vec3((blockPosition.x <= h)? 0.0: -1.0,
+                       (blockPosition.y <= h)? 0.0: -1.0,
+                       (blockPosition.z <= h)? 0.0: -1.0);
+    complex2 eee = texture2D(
+        tex, to2DTextureCoordinates(uvw + h*offset));
+    complex2 oee = texture2D(
+        tex, to2DTextureCoordinates(uvw + h*(vec3(1.0, 0.0, 0.0) + offset)));
+    complex2 eoe = texture2D(
+        tex, to2DTextureCoordinates(uvw + h*(vec3(0.0, 1.0, 0.0) + offset)));
+    complex2 ooe = texture2D(
+        tex, to2DTextureCoordinates(uvw + h*(vec3(1.0, 1.0, 0.0) + offset)));
+    complex2 eeo = texture2D(
+        tex, to2DTextureCoordinates(uvw + h*(vec3(0.0, 0.0, 1.0) + offset)));
+    complex2 oeo = texture2D(
+        tex, to2DTextureCoordinates(uvw + h*(vec3(1.0, 0.0, 1.0) + offset)));
+    complex2 eoo = texture2D(
+        tex, to2DTextureCoordinates(uvw + h*(vec3(0.0, 1.0, 1.0) + offset)));
+    complex2 ooo = texture2D(
+        tex, to2DTextureCoordinates(uvw + h*(vec3(1.0, 1.0, 1.0) + offset)));
+    vec3 angle = angleSign*2.0*PI*(
+        blockPosition - vec3(0.5/size) + h*offset)/blockSize;
+    complex eIAngleX = expI(angle.x);
+    complex eIAngleY = expI(angle.y);
+    complex eIAngleZ = expI(angle.z);
+    fragColor = scale*scale*scale*(
+        eee
+         + signFactor.x*c2C1(oee, eIAngleX)
+         + signFactor.y*c2C1(eoe, eIAngleY)
+         + signFactor.z*c2C1(eeo, eIAngleZ)
+         + signFactor.x*signFactor.y*c2C1(ooe, mul(eIAngleX, eIAngleY))
+         + signFactor.z*signFactor.x*c2C1(oeo, mul(eIAngleZ, eIAngleX))
+         + signFactor.y*signFactor.z*c2C1(eoo, mul(eIAngleY, eIAngleZ))
+         + signFactor.x*signFactor.y*signFactor.z
+            *c2C1(ooo, mul(mul(eIAngleX, eIAngleY), eIAngleZ))
+    );
 }

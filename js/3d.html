@@ -14,15 +14,16 @@
 			https://stackoverflow.com/q/2006134 by eric-d-bari
 			https://stackoverflow.com/a/2006162 by marcgg
 		!-->
-        <!--<div id="hoveringElements" style="position: relative; z-index: 10;">
-            <div id="stats" style="position: absolute; top: 10px; right: 10px">
+        <div id="hoveringElements" style="position: relative; z-index: 10;">
+            <div id="stats" style="position: absolute; top: 0px; right: 0px; width: 200px;">
                 <label id="hoveringStats" 
-                    style="color: white;", hidden: true>This is some text.</label>
+                    style="color: white;">This is some text.</label>
             </div>
-        !-->
+        </div>
         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr;">
             <div style="grid-column: 1;">
                 <!--max-width:55%;!-->
+                <label><a id="aLink" style="color: rgb(100, 100, 100); text-decoration-line: none;">Source</a></label><br>
                 <label for="stepsPerFrame" id="stepsPerFrameLabel">Updates/frame</label>
                 <br>
                 <input type="range" id="stepsPerFrame" min="0" max="4.0" value="0.0"
@@ -114,13 +115,23 @@
                     <br>
                     <label for="volumeRenderAlphaBrightness">Alpha brightness</label>
                     <input type="range" id="volumeRenderAlphaBrightness" 
-                    min="0" max="100" value="10" style="width: 95%;"/>
+                    min="0" max="100" value="20" style="width: 95%;"/><br>
+                    <label for="numberOfSlices" id="numberOfSlicesLabel">Number of slices</label>
+                    <input type="range" 
+                    id="numberOfSlices" min="64" max="2048" value="512" step="64" style="width: 95%;"/>
+                    <br>
+                    <label for="sliceSideWidth" id="sliceSideWidthLabel">Slice width</label>
+                    <input type="range" 
+                    id="sliceSideWidth" min="64" max="2048" value="256" step="64" style="width: 95%;"/>
+                    <br>
                 </div>
             </div>
             <div style="grid-column: 2">
                 <canvas style="touch-action: none; background-color: rgb(50.0, 50.0, 50.0);
                                text-align: center;"
-                    id="sketchCanvas"></canvas>
+                    id="sketchCanvas">
+                    <div style="color: white; position: absolute; z-index: 10">This is some text</div>
+                </canvas>
             </div>
             <div style="grid-column: 3; padding: 10px;">
                 <label id="changeGridLabel" for="changeGrid">Grid size

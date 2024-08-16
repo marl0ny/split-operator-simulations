@@ -231,6 +231,10 @@ initialStep();
 gFrames.heightMap1.draw(GLSL_PROGRAMS.abs, {tex: gFrames.psi1});
 gFrames.heightMap2.draw(GLSL_PROGRAMS.abs, {tex: gFrames.psi2});
 
+document.getElementById("aLink").href 
+    = "https://github.com/marl0ny/"
+    + "split-operator-simulations/tree/new-web-version/js";
+
 
 function getMouseXY(e) {
     let x = (e.clientX - gCanvas.offsetLeft)/gCanvas.width;
@@ -286,7 +290,7 @@ document.getElementById("timeStepReal").addEventListener(
 
 document.getElementById("potentialClippedMessage").innerHTML
     = "To reduce numerical error,<br\> "
-    + " V will be bounded so that<br\> "
+    + " V will be clipped so that<br\> "
     + " |V(x, y, t)| \u2264 2"
 
 let gNormalize = document.getElementById("normalizePsi").checked;

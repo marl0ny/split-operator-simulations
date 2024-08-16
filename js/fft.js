@@ -132,7 +132,7 @@ function fftIter(iterQuads, isVertical, isInverse) {
                 angleSign: (isInverse)? 1.0: -1.0,
                 scale: (isInverse && blockSize === size)? 1.0/size: 1.0,
                 size: size,
-                useCosTable: true,
+                useCosTable: false,
                 cosTableTex: gCosTable.quad,
             }
         );
@@ -179,11 +179,12 @@ export function fft2D(dst, src) {
     refreshIterQuads(src.format, src.width, src.height);
     let iterQuads1 = [gIterQuads[0], gIterQuads[1]];
     revBitSort2(iterQuads1[0], src);
-    /* if (src.width === src.height) {
+    if (src.width === src.height) {
+        console.log('Using square fft.');
         let iterQuads2 = fftIterSquare(iterQuads1, false);
         dst.draw(gPrograms.copy, {tex: iterQuads2[0]});
         return;
-    }*/
+    }
     let iterQuads2 = fftIter(iterQuads1, false, false);
     let iterQuads3 = fftIter(iterQuads2, true , false);
     dst.draw(gPrograms.copy, {tex: iterQuads3[0]});
@@ -194,11 +195,11 @@ export function ifft2D(dst, src) {
     refreshIterQuads(src.format, src.width, src.height);
     let iterQuads1 = [gIterQuads[0], gIterQuads[1]];
     revBitSort2(iterQuads1[0], src);
-    /* if (src.width === src.height) {
+    if (src.width === src.height) {
         let iterQuads2 = fftIterSquare(iterQuads1, true);
         dst.draw(gPrograms.copy, {tex: iterQuads2[0]});
         return;
-    }*/
+    }
     let iterQuads2 = fftIter(iterQuads1, false, true);
     let iterQuads3 = fftIter(iterQuads2, true , true);
     dst.draw(gPrograms.copy, {tex: iterQuads3[0]});

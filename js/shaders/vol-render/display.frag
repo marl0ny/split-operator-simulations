@@ -148,33 +148,179 @@ vec4 sample2DTextureAs3D(sampler2D tex, vec3 position) {
     return mix(f0, f1, (dz == 0.0)? 0.0: (r.z - z0)/dz);
 }
 
+vec4 averageOutZSlice(sampler2D tex, vec3 r, vec3 dz) {
+    ivec3 texelDimensions3D = fragmentTexelDimensions3D;
+    vec3 dx = vec3(1.0/float(texelDimensions3D[0]), 0.0, 0.0);
+    vec3 dy = vec3(0.0, 1.0/float(texelDimensions3D[1]), 0.0);
+    vec4 vCC = texture2D(tex, to2DTextureCoordinates(r + dz));
+    vec4 vRC = texture2D(tex, to2DTextureCoordinates(r + dx + dz));
+    vec4 vRU = texture2D(tex, 
+        to2DTextureCoordinates(r + dx + dy + dz));
+    vec4 vCU = texture2D(tex, to2DTextureCoordinates(r + dy + dz));
+    vec4 vLU = texture2D(tex,
+        to2DTextureCoordinates(r - dx + dy + dz));
+    vec4 vLC = texture2D(tex, to2DTextureCoordinates(r - dx + dz));
+    vec4 vLD = texture2D(tex,
+        to2DTextureCoordinates(r - dx - dy + dz));
+    vec4 vCD = texture2D(tex, to2DTextureCoordinates(r - dy + dz));
+    vec4 vRD = texture2D(tex,
+        to2DTextureCoordinates(r + dx - dy + dz));
+    return (vCC + vRC + vRU + vCU + vLU + vLC + vLD + vCD + vRD)/9.0;
+}
+
+vec4 averageOut(sampler2D tex, vec3 r) {
+    ivec3 texelDimensions3D = fragmentTexelDimensions3D;
+    vec3 dz = vec3(0.0, 0.0, 1.0/float(texelDimensions3D[2]));
+    vec4 vC = averageOutZSlice(tex, r, vec3(0.0));
+    vec4 vF = averageOutZSlice(tex, r, dz);
+    vec4 vB = averageOutZSlice(tex, r, -dz);
+    return (vC + vF + vB)/3.0;
+}
+
+vec4 gaussianFilter3x3x3(sampler2D tex, vec3 r)
+{
+    ivec3 texelDimensions3D = fragmentTexelDimensions3D;
+    vec3 dx = vec3(1.0/float(texelDimensions3D[0]), 0.0, 0.0);
+    vec3 dy = vec3(0.0, 1.0/float(texelDimensions3D[1]), 0.0);
+    vec3 dz = vec3(0.0, 0.0, 1.0/float(texelDimensions3D[2]));
+    vec4 g = vec4(0.0);
+    g += 0.009658879892818452*texture2D(tex, 
+        to2DTextureCoordinates(r + (-1.0)*dx + (-1.0)*dy + (-1.0)*dz));
+    g += 0.012062481229969411*texture2D(tex, 
+        to2DTextureCoordinates(r + (0.0)*dx + (-1.0)*dy + (-1.0)*dz));
+    g += 0.009658879892818452*texture2D(tex, 
+        to2DTextureCoordinates(r + (1.0)*dx + (-1.0)*dy + (-1.0)*dz));
+    g += 0.012062481229969411*texture2D(tex, 
+        to2DTextureCoordinates(r + (-1.0)*dx + (0.0)*dy + (-1.0)*dz));
+    g += 0.015064216041401318*texture2D(tex, 
+        to2DTextureCoordinates(r + (0.0)*dx + (0.0)*dy + (-1.0)*dz));
+    g += 0.012062481229969411*texture2D(tex, 
+        to2DTextureCoordinates(r + (1.0)*dx + (0.0)*dy + (-1.0)*dz));
+    g += 0.009658879892818452*texture2D(tex, 
+        to2DTextureCoordinates(r + (-1.0)*dx + (1.0)*dy + (-1.0)*dz));
+    g += 0.012062481229969411*texture2D(tex, 
+        to2DTextureCoordinates(r + (0.0)*dx + (1.0)*dy + (-1.0)*dz));
+    g += 0.009658879892818452*texture2D(tex, 
+        to2DTextureCoordinates(r + (1.0)*dx + (1.0)*dy + (-1.0)*dz));
+    g += 0.012062481229969411*texture2D(tex, 
+        to2DTextureCoordinates(r + (-1.0)*dx + (-1.0)*dy + (0.0)*dz));
+    g += 0.015064216041401318*texture2D(tex, 
+        to2DTextureCoordinates(r + (0.0)*dx + (-1.0)*dy + (0.0)*dz));
+    g += 0.012062481229969411*texture2D(tex, 
+        to2DTextureCoordinates(r + (1.0)*dx + (-1.0)*dy + (0.0)*dz));
+    g += 0.01506421604140132*texture2D(tex, 
+        to2DTextureCoordinates(r + (-1.0)*dx + (0.0)*dy + (0.0)*dz));
+    g += 0.018812929165701035*texture2D(tex, 
+        to2DTextureCoordinates(r + (0.0)*dx + (0.0)*dy + (0.0)*dz));
+    g += 0.01506421604140132*texture2D(tex, 
+        to2DTextureCoordinates(r + (1.0)*dx + (0.0)*dy + (0.0)*dz));
+    g += 0.012062481229969411*texture2D(tex, 
+        to2DTextureCoordinates(r + (-1.0)*dx + (1.0)*dy + (0.0)*dz));
+    g += 0.015064216041401318*texture2D(tex, 
+        to2DTextureCoordinates(r + (0.0)*dx + (1.0)*dy + (0.0)*dz));
+    g += 0.012062481229969411*texture2D(tex, 
+        to2DTextureCoordinates(r + (1.0)*dx + (1.0)*dy + (0.0)*dz));
+    g += 0.009658879892818452*texture2D(tex, 
+        to2DTextureCoordinates(r + (-1.0)*dx + (-1.0)*dy + (1.0)*dz));
+    g += 0.012062481229969411*texture2D(tex, 
+        to2DTextureCoordinates(r + (0.0)*dx + (-1.0)*dy + (1.0)*dz));
+    g += 0.009658879892818452*texture2D(tex, 
+        to2DTextureCoordinates(r + (1.0)*dx + (-1.0)*dy + (1.0)*dz));
+    g += 0.012062481229969411*texture2D(tex, 
+        to2DTextureCoordinates(r + (-1.0)*dx + (0.0)*dy + (1.0)*dz));
+    g += 0.015064216041401318*texture2D(tex, 
+        to2DTextureCoordinates(r + (0.0)*dx + (0.0)*dy + (1.0)*dz));
+    g += 0.012062481229969411*texture2D(tex, 
+        to2DTextureCoordinates(r + (1.0)*dx + (0.0)*dy + (1.0)*dz));
+    g += 0.009658879892818452*texture2D(tex, 
+        to2DTextureCoordinates(r + (-1.0)*dx + (1.0)*dy + (1.0)*dz));
+    g += 0.012062481229969411*texture2D(tex, 
+        to2DTextureCoordinates(r + (0.0)*dx + (1.0)*dy + (1.0)*dz));
+    g += 0.009658879892818452*texture2D(tex, 
+        to2DTextureCoordinates(r + (1.0)*dx + (1.0)*dy + (1.0)*dz));
+    return g;
+}
+
+vec4 averageOutZDir(sampler2D tex, vec3 r) {
+    ivec3 texelDimensions3D = fragmentTexelDimensions3D;
+    vec3 dz = vec3(0.0, 0.0, 1.0/float(texelDimensions3D[2]));
+    vec4 vB4 = texture2D(tex, to2DTextureCoordinates(r - 4.0*dz));
+    vec4 vB3 = texture2D(tex, to2DTextureCoordinates(r - 3.0*dz));
+    vec4 vB2 = texture2D(tex, to2DTextureCoordinates(r - 2.0*dz));
+    vec4 vB1 = texture2D(tex, to2DTextureCoordinates(r - dz));
+    vec4 vF0 = texture2D(tex, to2DTextureCoordinates(r));
+    vec4 vF1 = texture2D(tex, to2DTextureCoordinates(r + dz));
+    vec4 vF2 = texture2D(tex, to2DTextureCoordinates(r + 2.0*dz));
+    vec4 vF3 = texture2D(tex, to2DTextureCoordinates(r + 3.0*dz));
+    vec4 vF4 = texture2D(tex, to2DTextureCoordinates(r + 4.0*dz));
+    return (vF4 + vF3 + vF2 + vF1 + vF0 + vB1 + vB2 + vB3 + vB4)/9.0;
+}
+
+vec4 gaussianZDir(sampler2D tex, vec3 r) {
+    ivec3 texelDimensions3D = fragmentTexelDimensions3D;
+    vec3 dz = vec3(0.0, 0.0, 1.0/float(texelDimensions3D[2]));
+    // vec4 vB4 = texture2D(tex, to2DTextureCoordinates(r - 4.0*dz));
+    vec4 vB3 = texture2D(tex, to2DTextureCoordinates(r - 3.0*dz));
+    vec4 vB2 = texture2D(tex, to2DTextureCoordinates(r - 2.0*dz));
+    vec4 vB1 = texture2D(tex, to2DTextureCoordinates(r - dz));
+    vec4 vF0 = texture2D(tex, to2DTextureCoordinates(r));
+    vec4 vF1 = texture2D(tex, to2DTextureCoordinates(r + dz));
+    vec4 vF2 = texture2D(tex, to2DTextureCoordinates(r + 2.0*dz));
+    vec4 vF3 = texture2D(tex, to2DTextureCoordinates(r + 3.0*dz));
+    // vec4 vF4 = texture2D(tex, to2DTextureCoordinates(r + 4.0*dz));
+    float wF0 = 0.26596152, wF1 = 0.21296534;
+    float wF2 = 0.10934005, wF3 = 0.03599398;
+    return (wF3*vF3 + wF2*vF2 + wF1*vF1 + wF0*vF0 
+            + wF1*vB1 + wF2*vB2 + wF3*vB3);
+}
+
+vec4 laplacian(sampler2D tex, vec4 vc, vec3 r) {
+    ivec3 texelDimensions3D = fragmentTexelDimensions3D;
+    vec3 dx = vec3(1.0/float(texelDimensions3D[0]), 0.0, 0.0);
+    vec3 dy = vec3(0.0, 1.0/float(texelDimensions3D[1]), 0.0);
+    vec3 dz = vec3(0.0, 0.0, 1.0/float(texelDimensions3D[2]));
+    vec2 zF = to2DTextureCoordinates(r + dz);
+    vec2 zB = to2DTextureCoordinates(r - dz);
+    vec2 xF = to2DTextureCoordinates(r + dx);
+    vec2 xB = to2DTextureCoordinates(r - dx);
+    vec2 yF = to2DTextureCoordinates(r + dy);
+    vec2 yB = to2DTextureCoordinates(r - dy);
+    vec4 vzF = texture2D(tex, zF);
+    vec4 vzB = texture2D(tex, zB);
+    vec4 vxF = texture2D(tex, xF);
+    vec4 vxB = texture2D(tex, xB);
+    vec4 vyF = texture2D(tex, yF);
+    vec4 vyB = texture2D(tex, yB);
+    return (vzF + vzB - 2.0*vc)/(dx[0]*dx[0]) 
+            + (vyF + vyB - 2.0*vc)/(dy[1]*dy[1]) 
+            + (vxF + vxB - 2.0*vc)/(dz[2]*dz[2]);
+}
+
 void main() {
     vec3 r = to3DTextureCoordinates(UV);
     vec2 uv2 = to2DTextureCoordinates(r);
+    
     vec3 grad = texture2D(gradientTex, uv2).xyz;
     vec4 density = texture2D(densityTex, uv2);
+    // density += 0.00001*laplacian(densityTex, density, r);
+
+    // vec4 density = averageOutZSlice(densityTex, r, vec3(0.0, 0.0, 0.0));
+
+    // vec4 density = gaussianFilter3x3x3(densityTex, r);
+    // vec4 density = gaussianZDir(densityTex, r);
+
+    // vec3 grad = averageOutZDir(gradientTex, r).xyz;
+    // vec4 density = averageOutZDir(densityTex, r);
+
+    // vec3 grad = averageOut(gradientTex, r).xyz;
+    // vec4 density = averageOut(densityTex, r);
+
     // vec3 grad = sample2DTextureAs3D(gradientTex, r).xyz;
     // vec4 density = sample2DTextureAs3D(densityTex, r);
     vec3 normal = rotate(quaternion(0.0, 0.0, 1.0, 1.0),
                          conj(rotation)).xyz;
     vec4 pix = density;
-    ivec3 texelDimensions3D = fragmentTexelDimensions3D;
-    float dx = 1.0/float(texelDimensions3D[0]);
-    float dy = 1.0/float(texelDimensions3D[1]);
-    float dz = 1.0/float(texelDimensions3D[2]);
-    /* vec2 zF = to2DTextureCoordinates(vec3(r.x, r.y, r.z + dz));
-    vec2 zB = to2DTextureCoordinates(vec3(r.x, r.y, r.z - dz));
-    vec2 xF = to2DTextureCoordinates(vec3(r.x + dx, r.y, r.z));
-    vec2 xB = to2DTextureCoordinates(vec3(r.x - dx, r.y, r.z));
-    vec2 yF = to2DTextureCoordinates(vec3(r.x, r.y + dy, r.z));
-    vec2 yB = to2DTextureCoordinates(vec3(r.x, r.y - dy, r.z));
-    density = (texture2D(densityTex, zF)
-                 + texture2D(densityTex, zB)
-                 + texture2D(densityTex, xF)
-                 + texture2D(densityTex, xB)
-                + texture2D(densityTex, yF)
-                + texture2D(densityTex, yB)
-                 + density);*/
+    
     // pix.a = pix.b;
     // lf (length(grad) < 0.0000001) discard;
     if (pix.a < 0.05) discard;
@@ -189,7 +335,7 @@ void main() {
     // if (densityLength == 0.0) discard;
     // fragColor = vec4(density.rgb/densityLength, a);
     
-    fragColor = vec4(normalize(density.rgb)*colorBrightness, 3.0*a*alphaBrightness);
+    fragColor = vec4(normalize(density.rgb)*colorBrightness, a*alphaBrightness);
     
     // fragColor = vec4(4.0*normalize(density.rgb), 0.1*a);
     // fragColor = vec4(1.0);

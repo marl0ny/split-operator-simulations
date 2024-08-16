@@ -22,6 +22,10 @@ let gPrograms = {
     fftIter: 
         MultidimensionalDataQuad.makeProgramFromSource(
             SHADERS['./shaders/fft/fft-iter3d.frag']),
+    fftIterCube:
+        MultidimensionalDataQuad.makeProgramFromSource(
+            SHADERS['./shaders/fft/fft-iter-cube.frag']
+        ),
     revBitSort2: 
         MultidimensionalDataQuad.makeProgramFromSource(
             SHADERS['./shaders/fft/rev-bit-sort2-3d.frag']),
@@ -98,6 +102,33 @@ function refreshCosTable(n) {
     }
 }
 
+function fftIterCube(iterQuads, isInverse) {
+    let texDimensions2D = iterQuads[1].textureDimensions;
+    let texDimensions3D = iterQuads[1].dimensions3D;
+    let size = texDimensions3D.ind[0];
+    refreshCosTable(size);
+    for (let blockSize = 2; blockSize <= size; blockSize *= 2) {
+        iterQuads[1].draw(
+            gPrograms.fftIterCube,
+            {
+                tex: iterQuads[0],
+                blockSize: blockSize/size,
+                angleSign: (isInverse)? 1.0: -1.0,
+                scale: (isInverse && blockSize === size)? 1.0/size: 1.0,
+                size: size,
+                useCosTable: false,
+                cosTableTex: gCosTable.quad,
+                texelDimensions2D: texDimensions2D,
+                texelDimensions3D: texDimensions3D
+            }
+        );
+        let tmp = iterQuads[0];
+        iterQuads[0] = iterQuads[1];
+        iterQuads[1] = tmp;
+    }
+    return iterQuads;
+}
+
 
 function fftIter(iterQuads, orientation, isInverse) {
     let texDimensions2D = iterQuads[1].textureDimensions;
@@ -166,6 +197,13 @@ export function fft3D(dst, src) {
     refreshIterQuads(src.format, src.dimensions3D);
     let iterQuads1 = [gIterQuads[0], gIterQuads[1]];
     revBitSort2(iterQuads1[0], src);
+    if (src.dimensions3D.ind[0] === src.dimensions3D.ind[1]
+        && src.dimensions3D.ind[1] === src.dimensions3D.ind[2]) {
+        console.log('Using fft cube.');
+        let iterQuads2 = fftIterCube(iterQuads1, false);
+        dst.draw(gPrograms.copy, {tex: iterQuads2[0]});
+        return;
+    }
     let iterQuads2 = fftIter(iterQuads1, 0, false);
     let iterQuads3 = fftIter(iterQuads2, 1, false);
     let iterQuads4 = fftIter(iterQuads3, 2, false);
@@ -176,6 +214,12 @@ export function ifft3D(dst, src) {
     refreshIterQuads(src.format, src.dimensions3D);
     let iterQuads1 = [gIterQuads[0], gIterQuads[1]];
     revBitSort2(iterQuads1[0], src);
+    if (src.dimensions3D.ind[0] === src.dimensions3D.ind[1]
+        && src.dimensions3D.ind[1] === src.dimensions3D.ind[2]) {
+        let iterQuads2 = fftIterCube(iterQuads1, true);
+        dst.draw(gPrograms.copy, {tex: iterQuads2[0]});
+        return;
+    }
     let iterQuads2 = fftIter(iterQuads1, 0, true);
     let iterQuads3 = fftIter(iterQuads2, 1, true);
     let iterQuads4 = fftIter(iterQuads3, 2, true);

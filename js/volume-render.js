@@ -135,6 +135,11 @@ class Frames {
         this.view = null;
     }
     createVolumeFrames(volumeTexelDimensions2D) {
+        if (this.volume !== null &&
+            this.volume.width === volumeTexelDimensions2D.ind[0] &&
+            this.volume.height === volumeTexelDimensions2D.ind[1]) {
+            return;
+        }
         const TEX_PARAMS_VOLUME_F16 = new TextureParams(
             gl.RGBA16F,
             volumeTexelDimensions2D.ind[0],
@@ -143,8 +148,29 @@ class Frames {
             gl.CLAMP_TO_EDGE, gl.CLAMP_TO_EDGE,
             gl.LINEAR, gl.LINEAR
         );
-        this.volume = new Quad(TEX_PARAMS_VOLUME_F16);
-        this.volumeGrad = new Quad(TEX_PARAMS_VOLUME_F16);
+        const TEX_PARAMS_VOLUME_U8 = new TextureParams(
+            gl.RGBA8,
+            volumeTexelDimensions2D.ind[0],
+            volumeTexelDimensions2D.ind[1],
+            true,
+            gl.CLAMP_TO_EDGE, gl.CLAMP_TO_EDGE,
+            gl.LINEAR, gl.LINEAR
+        );
+        const TEX_PARAMS_VOLUME_F32 = new TextureParams(
+            gl.RGBA32F,
+            volumeTexelDimensions2D.ind[0],
+            volumeTexelDimensions2D.ind[1],
+            true,
+            gl.CLAMP_TO_EDGE, gl.CLAMP_TO_EDGE,
+            gl.LINEAR, gl.LINEAR
+        );
+        if (this.volume === null && this.volumeGrad === null) {
+            this.volume = new Quad(TEX_PARAMS_VOLUME_F16);
+            this.volumeGrad = new Quad(TEX_PARAMS_VOLUME_F32);
+            return;
+        }
+        this.volume.reset(TEX_PARAMS_VOLUME_F16);
+        this.volumeGrad.reset(TEX_PARAMS_VOLUME_F32);
     }
     createDataFrames(dataTexelDimensions2D) {
         if (this.gradientData !== null && 
@@ -161,6 +187,14 @@ class Frames {
         );
         const TEX_PARAMS_DATA_F16 = new TextureParams(
             gl.RGBA16F,
+            dataTexelDimensions2D.ind[0],
+            dataTexelDimensions2D.ind[1],
+            true,
+            gl.CLAMP_TO_EDGE, gl.CLAMP_TO_EDGE,
+            gl.LINEAR, gl.LINEAR
+        );
+        const TEX_PARAMS_DATA_U8 = new TextureParams(
+            gl.RGBA8,
             dataTexelDimensions2D.ind[0],
             dataTexelDimensions2D.ind[1],
             true,
@@ -337,6 +371,19 @@ export class VolumeRender {
                     cubeVertices[3*i+2])
             );
     }
+    resetVolumeDimensions(volumeDimensions3D) {
+        this.volumeTexelDimensions3D = volumeDimensions3D;
+        this.volumeTexelDimensions2D 
+            = get2DFrom3DDimensions(volumeDimensions3D);
+        let [vertices, elements] 
+            = getVolumeRenderVerticesAndElements(
+                this.volumeTexelDimensions2D, this.volumeTexelDimensions3D);
+        this._triangles = new TrianglesFrame(
+            {"uvIndex": new Attribute(2, gl.FLOAT, false)},
+            vertices, elements);
+        this._frames.createVolumeFrames(this.volumeTexelDimensions2D);
+        // this._frames.createView(viewDimensions);
+    }
 
     view(srcData, scale, rotation, additionalUniforms=null) {
         if (!(srcData instanceof MultidimensionalDataQuad)) {
@@ -359,7 +406,7 @@ export class VolumeRender {
         let dataTexelDimensions3D = new IVec3(
             ...srcData.dataDimensions);
         this._frames.createDataFrames(dataTexelDimensions2D);
-        this._frames.data.draw(
+        this._frames.dataHalfPrecision.draw(
             this.programs.zeroBoundaries, 
             {tex: srcData,
              texelDimensions2D: dataTexelDimensions2D,
@@ -368,22 +415,28 @@ export class VolumeRender {
         /* this._frames.dataHalfPrecision.draw(
             this.programs.copy, {tex: srcData}
         );*/
-        gradient(this._frames.gradientDataHalfPrecision,
+        /* gradient(this._frames.gradientDataHalfPrecision,
                  this._frames.data, 0,
                  this.programs.gradient, 2, 
                  BOUNDARY_TYPE.USE_TEXTURE_WRAPPING,
                  0, 3,
-                 dataTexelDimensions3D, dataTexelDimensions2D);
-        this._frames.volume.clear();
-        this._frames.volumeGrad.clear();
+                 dataTexelDimensions3D, dataTexelDimensions2D);*/
+        gradient(this._frames.gradientData,
+                this._frames.dataHalfPrecision, 0,
+                this.programs.gradient, 2, 
+                BOUNDARY_TYPE.USE_TEXTURE_WRAPPING,
+                0, 3,
+                dataTexelDimensions3D, dataTexelDimensions2D);
+                this._frames.volume.clear();
+                this._frames.volumeGrad.clear();
         sampleData(
-            this._frames.volume, this._frames.data,
+            this._frames.volume, this._frames.dataHalfPrecision,
             this.programs.sampleData,
             rotScale, rotation,
             this.volumeTexelDimensions3D, this.volumeTexelDimensions2D,
             dataTexelDimensions3D, dataTexelDimensions2D);
         sampleData(
-            this._frames.volumeGrad, this._frames.gradientDataHalfPrecision,
+            this._frames.volumeGrad, this._frames.gradientData,
             this.programs.sampleData,
             rotScale, rotation,
             this.volumeTexelDimensions3D, this.volumeTexelDimensions2D,

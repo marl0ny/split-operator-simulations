@@ -109,9 +109,9 @@ vec4 sample2DTextureAs3D(sampler2D tex, vec3 position) {
 }
 
 void main() {
-    if (sourceTexelDimensions3D[0] < destinationTexelDimensions3D[0] &&
-        sourceTexelDimensions3D[1] < destinationTexelDimensions3D[1] &&
-        sourceTexelDimensions3D[2] < destinationTexelDimensions3D[2]) {
+    if (sourceTexelDimensions3D[0] <= destinationTexelDimensions3D[0] &&
+        sourceTexelDimensions3D[1] <= destinationTexelDimensions3D[1] &&
+        sourceTexelDimensions3D[2] <= destinationTexelDimensions3D[2]) {
         fragColor = sample2DTextureAs3D(
             tex, to3DDestinationTextureCoordinates(UV));
     } else {

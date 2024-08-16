@@ -1287,13 +1287,15 @@ export function get2DFrom3DDimensions(dimensions3D) {
         texDimensions2D.ind[0] = width*d.ind[1];
         texDimensions2D.ind[1] = height*d.ind[0];
     } else {
-        console.error(
+        let message = 
             `3D texture dimensions ${width}, ${height}, ${length} `
              + `with possible 2D representations `
              + `${width*d.ind[0]}, ${height*d.ind[1]} `
              + `or ${width*d.ind[1]}, ${height*d.ind[0]} exceed maximum `
              + `texture size. The maximum 2D texture side length `
-             + `is ${maxTextureSize}.`);
+             + `is ${maxTextureSize}.`;
+        console.warn(message);
+        throw new Error(message);
     }
     return texDimensions2D;
 
