@@ -55,6 +55,10 @@ class GLSLPrograms {
             = Quad.makeProgramFromSource(
                 getShader("./shaders/vol-render/uniform-color-scale.frag")
             );
+        this.colorHeightMap1
+            = Quad.makeProgramFromSource(
+                getShader("./shaders/vol-render/color-height-map1.frag")
+            );
         this.abs2
             = Quad.makeProgramFromSource(
                 getShader("./shaders/util/abs2-xy.frag")
@@ -311,12 +315,10 @@ let gVolRenderSliceWidth
     ).value);
 let gVolRender = new VolumeRender(
     new IVec2(gCanvas.height, gCanvas.height),
-    // new IVec3(128, 128, 512)
-    // new IVec3(256, 256, 256),
-    // new IVec3(256, 256, 512)
     new IVec3(gVolRenderSliceWidth, gVolRenderSliceWidth,
               gVolRenderNumberOfSlices)
 );
+
 let gPlanarSlices = new PlanarSlices(
     new TextureParams(
         gl.RGBA32F, gCanvas.width, gCanvas.height, true,
@@ -519,8 +521,8 @@ function equalizeXYScaling(xy) {
 
 function scaleVolume(scaleVal) {
     gScale -= scaleVal;
-    if (gScale < 0.1)
-        gScale = 0.1;
+    if (gScale < 0.05)
+        gScale = 0.05;
     if (gScale > 1.0)
         gScale = 1.0;
 }
@@ -878,13 +880,13 @@ document.getElementById("numberOfSlices").addEventListener(
         document.getElementById("numberOfSlicesLabel").textContent
             = `Number of slices: ${gVolRenderNumberOfSlices}`;
         document.getElementById("sliceSideWidthLabel").textContent
-            = `Slice width: ${gVolRenderSliceWidth}`;
+            = `Slice size: ${gVolRenderSliceWidth}x${gVolRenderSliceWidth}`;
         gVolRender.resetVolumeDimensions(newDimensions);
     }
 );
 
 document.getElementById("sliceSideWidthLabel").textContent
-    = `Slice width: ${gVolRenderSliceWidth}`;
+    = `Slice size: ${gVolRenderSliceWidth}x${gVolRenderSliceWidth}`;
 document.getElementById("sliceSideWidth").addEventListener(
     "input", e => {
         let volRenderSliceWidth = parseInt(e.target.value);
@@ -902,7 +904,7 @@ document.getElementById("sliceSideWidth").addEventListener(
         document.getElementById("numberOfSlicesLabel").textContent
             = `Number of slices: ${gVolRenderNumberOfSlices}`;
         document.getElementById("sliceSideWidthLabel").textContent
-            = `Slice width: ${gVolRenderSliceWidth}`;
+            = `Slice size: ${gVolRenderSliceWidth}x${gVolRenderSliceWidth}`;
         gVolRender.resetVolumeDimensions(newDimensions);
     }
 );
@@ -1013,10 +1015,10 @@ function setPresetPotential(value) {
         `-i*(exp(-${u}^2/0.001) + exp(-(${u}-1.0)^2/0.001)`
         + `+ exp(-${v}^2/0.001) + exp(-(${v}-1.0)^2/0.001)`
         + `+ exp(-${w}^2/0.001) + exp(-(${w}-1.0)^2/0.001))`;
-    let doubleSlit = `step(-abs(${v}-0.5) + 0.02) ` 
-                        + `- step(-abs(${v}-0.5) + 0.02)*(`
-                            + `step(-abs(${u}-0.45) + 0.02)`
-                            + `+ step(-abs(${u}-0.55) + 0.02))`;
+    let doubleSlit = `2.0*step(-abs(${v}-0.5) + 0.02) ` 
+                        + `- 2.0*step(-abs(${v}-0.5) + 0.02)*(`
+                            + `step(-abs(${u}-0.5 - separation/20.0) + spacing/50.0)`
+                            + `+ step(-abs(${u}-0.5 + separation/20.0) + spacing/50.0))`;
     let spherical
         = `0.5*(tanh(75.0*(((x/width)^2 + (y/height)^2 + (z/depth)^2)^0.5 - 0.45))` 
             + ` + 1.0)`;
@@ -1225,6 +1227,16 @@ function animation() {
                     offset: 0.0, maxBrightness: 3.0
                 }
             );
+            /* gFrames.waveFuncVisual.draw(
+                GLSL_PROGRAMS.colorHeightMap1,
+                {
+                    tex: gFrames.abs2Psi,
+                    brightness: gWaveFunctionBrightness,
+                    // brightnessMode:
+                    //     new IScalar(gWaveFunctionBrightnessMode),
+                    offset: 0.0, maxBrightness: 1.25
+                }
+            );*/
     }
     if (gShowPotential) {
         gFrames.extra.draw(

@@ -17,7 +17,15 @@ function initializeWebGL1(gl) {
 
     ) {
         let msg = "Your browser does not support "
-                    + "the necessary WebGL extensions.";
+                    + "the necessary WebGL1 extensions:\n";
+        msg += (ext1 === null)? 
+            "\tFailed to get OES_texture_float.\n": "";
+        msg += (ext2 === null)? 
+            "\tFailed to get OES_texture_float_linear.\n": "";
+        msg += (ext3 === null)?
+            "\tFailed to get WEBGL_color_buffer_float.\n": "";
+        msg += "\nYour user agent:\n";
+        msg += window.navigator.userAgent;
         alert(msg);
         throw msg;
     }
@@ -30,9 +38,17 @@ function initializeWebGL2(gl) {
     let ext2 = gl.getExtension('OES_texture_float_linear');
     if (ext1 === null || ext2 === null) {
         let msg = "Your browser does not support "
-                    + "the necessary WebGL extensions.";
+                    + "the necessary WebGL2 extensions:\n";
+        msg += (ext1 === null)? 
+            "\tFailed to get EXT_color_buffer_float.\n": "";
+        msg += (ext2 === null)? 
+            "\tFailed to get OES_texture_float_linear.\n": "";
+        msg += "\nYour user agent:\n";
+        msg += window.navigator.userAgent;
+        // msg += "\n\nWill try WebGL1 instead."
         alert(msg);
         throw msg;
+        // initializeWebGL1(gl);
     }
     return gl;
 }

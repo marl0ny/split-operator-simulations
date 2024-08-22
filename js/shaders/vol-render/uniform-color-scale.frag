@@ -34,7 +34,7 @@ void main() {
     } else if (brightnessMode == ABS_VAL_SQUARED) {
         val = brightness*(abs(initVal)*abs(initVal) + offset);
     } else {
-        val = brightness*(initVal + offset);
+        val = brightness*(abs(initVal) + offset);
     }
     fragColor 
         = vec4(max(min(val*color.rgb, maxBrightness),
