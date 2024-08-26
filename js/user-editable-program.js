@@ -412,7 +412,7 @@ class UserEditableProgramContainer {
         return variables;
     }
     generateNewProgram() {
-        console.log(this._text);
+        // console.log(this._text);
         let rpnList = getRPNExprList(this._text);
         let variables = getVariablesFromRPNList(rpnList);
         if (variables.has('t'))
@@ -426,7 +426,7 @@ class UserEditableProgramContainer {
             (a, e) => a + `uniform complex ${e};\n`, ``
         );
         let exprString = turnRPNExpressionToString(rpnList.map(e => e));
-        console.log(exprString);
+        // console.log(exprString);
         let uniforms = {};
         variablesLst.forEach(e => uniforms[e] = new Complex(1.0, 0.0));
         for (let e of Object.keys(uniforms)) {

@@ -18,7 +18,9 @@ import { getShader } from "./shaders.js";
 import { sumSquarePowerOfTwo } from "./sum.js";
 import Touches from "./touch-manager.js";
 import { fft2D, fftShift } from "./fft.js";
+import { testMatrix3x3 } from "./matrix3x3.js";
 
+testMatrix3x3();
 
 class MainGLSLPrograms {
     constructor() {
@@ -102,7 +104,7 @@ const TEX_PARAMS_SIM2 = new TextureParams(
     true, gl.REPEAT, gl.REPEAT,
     gl.LINEAR, gl.LINEAR
 )
-console.log('texture test', TEX_PARAMS_SIM.equals(TEX_PARAMS_SIM2));
+// console.log('texture test', TEX_PARAMS_SIM.equals(TEX_PARAMS_SIM2));
 
 class Frames {
     constructor() {

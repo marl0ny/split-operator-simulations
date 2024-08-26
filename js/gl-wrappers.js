@@ -628,7 +628,7 @@ class AbstractWireFrame {
         this._attributes = attributes;
         this._vertices = vertices;
         this._elements = elements;
-        console.log(vertices);
+        // console.log(vertices);
         this._vbo = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, this._vbo);
         gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
@@ -642,29 +642,30 @@ class AbstractWireFrame {
     getVertices() {
         let vertices = [];
         let index = 0;
-        for (let k of Object.keys(this._attributes)) {
-            let attribute = this._attributes[k];
-            if (attribute.size === 1) {
-                vertices.push({k: this._vertices[index]})
-                index += 1;
-            } else if (attribute.size === 2) {
-                vertices.push({
-                    k: new Vec2(this._vertices[index],
-                                this._vertices[index + 1])});
-                index += 2;
-            } else if (attribute.size === 3) {
-                vertices.push({
-                    k: new Vec3(this._vertices[index],
-                                this._vertices[index + 1],
-                                this._vertices[index + 2])});
-                index += 3;
-            } else if (attribute.size === 4) {
-                vertices.push({
-                    k: new Vec2(this._vertices[index],
-                                this._vertices[index + 1],
-                                this._vertices[index + 2],
-                                this._vertices[index + 3])});
-                index += 4;
+        while (index < this._vertices.length) {
+            for (let k of Object.keys(this._attributes)) {
+                let attribute = this._attributes[k];
+                let obj = {};
+                if (attribute.size === 1) {
+                    obj[k] = this._vertices[index];
+                    index += 1;
+                } else if (attribute.size === 2) {
+                    obj[k] = new Vec2(this._vertices[index],
+                                      this._vertices[index + 1]);
+                    index += 2;
+                } else if (attribute.size === 3) {
+                    obj[k] = new Vec3(this._vertices[index],
+                                      this._vertices[index + 1],
+                                      this._vertices[index + 2]);
+                    index += 3;
+                } else if (attribute.size === 4) {
+                    obj[k] = new Vec2(this._vertices[index],
+                                      this._vertices[index + 1],
+                                      this._vertices[index + 2],
+                                      this._vertices[index + 3]);
+                    index += 4;
+                }
+                vertices.push(obj);
             }
         }
         return vertices;
@@ -751,14 +752,14 @@ export class RenderTarget {
             // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
             return;
         }
-        console.log(this._id);
+        // console.log(this._id);
         gl.activeTexture(gl.TEXTURE0 + this._id);
         this._texture = gl.createTexture();
         gl.bindTexture(gl.TEXTURE_2D, this._texture);
         let params = this._params;
-        console.log(this._texture);
-        console.log(params.format, toBase(params.format), toType(params.format));
-        console.log(gl.RGBA32F, gl.RGBA, gl.FLOAT);
+        // console.log(this._texture);
+        // console.log(params.format, toBase(params.format), toType(params.format));
+        // console.log(gl.RGBA32F, gl.RGBA, gl.FLOAT);
         gl.texImage2D(gl.TEXTURE_2D, 0, params.format, 
             params.width, params.height, 0,
             toBase(params.format), toType(params.format), null);
@@ -896,7 +897,7 @@ export class Quad {
                 return;
             }
         }
-        console.log('Creating new frame');
+        // console.log('Creating new frame');
         this._id = acquireNewFrame();
         this._params = textureParams;
         this._initTexture();
@@ -1041,12 +1042,12 @@ export class Quad {
             // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
             return;
         }
-        console.log(
+        /* console.log(
             "Number of texture units: ",
             gl.getParameter(gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS),
             "Texture id: ",
             this._id
-        );
+        );*/
         gl.activeTexture(gl.TEXTURE0 + this._id);
         this._texture = gl.createTexture();
         gl.bindTexture(gl.TEXTURE_2D, this._texture);

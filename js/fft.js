@@ -180,7 +180,7 @@ export function fft2D(dst, src) {
     let iterQuads1 = [gIterQuads[0], gIterQuads[1]];
     revBitSort2(iterQuads1[0], src);
     if (src.width === src.height) {
-        console.log('Using square fft.');
+        // console.log('Using square fft.');
         let iterQuads2 = fftIterSquare(iterQuads1, false);
         dst.draw(gPrograms.copy, {tex: iterQuads2[0]});
         return;

@@ -171,7 +171,7 @@ function refreshIterQuads(format, texDimensions3D) {
         !gIterQuads[0].dimensions3D.ind.every(
             (e, i) => texDimensions3D.ind[i] === e)
         ) {
-            console.log('refreshing iteration quads.');
+        // console.log('refreshing iteration quads.');
         let dimensions2D = get2DFrom3DDimensions(texDimensions3D);
         let texParams = new TextureParams(
             format, 
@@ -199,7 +199,7 @@ export function fft3D(dst, src) {
     revBitSort2(iterQuads1[0], src);
     if (src.dimensions3D.ind[0] === src.dimensions3D.ind[1]
         && src.dimensions3D.ind[1] === src.dimensions3D.ind[2]) {
-        console.log('Using fft cube.');
+        // console.log('Using fft cube.');
         let iterQuads2 = fftIterCube(iterQuads1, false);
         dst.draw(gPrograms.copy, {tex: iterQuads2[0]});
         return;

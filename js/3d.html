@@ -85,8 +85,8 @@
                 <label id="viewModeLabel" for="viewMode">View type: 
                 </label>
                 <select id="viewMode">
-                    <option value=1>Planar slices</option>
-                    <option value=2 selected>Volume render</option>
+                    <option value=1 selected>Planar slices</option>
+                    <option value=2>Volume render</option>
                 </select><br>
                 <div id="planarSlicesControls">
                     <label for="zIndex" id="zIndexLabel">xy slice - z offset:</label>
@@ -144,6 +144,7 @@
                 </select><br>
                 <hr/>
                 <label for="presetPotential">Preset V(x, y, z, t)<br>
+                    <!-- Default should be Absorbing boundaries (A.B.)-->
                     <select id="presetPotential">
                         <option value=0>Free (periodic)</option>
                         <option value=1>Harmonic</option>
@@ -151,8 +152,8 @@
                         <option value=3>Spherical well</option>
                         <option value=4>Ball spike</option>
                         <option value=5>Inverted ball spike</option>
-                        <option value=6 selected>Absorbing boundaries (A.B.)</option>
-                        <option value=7>Double slit (A.B.)</option>
+                        <option value=6>Absorbing boundaries (A.B.)</option>
+                        <option value=7 selected>Double slit (A.B.)</option>
                         <option value=8>Ball spike (A.B.)</option>
                         <option value=9>Inverted ball spike (A.B.)</option>
                         <option value=10>Moving Gaussian</option>

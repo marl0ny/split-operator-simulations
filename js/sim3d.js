@@ -4,7 +4,8 @@ import {gl, gMainRenderWindow, TextureParams, Quad,
     MultidimensionalDataQuad,
     get2DFrom3DDimensions,
     add, mul, sub, div,
-    Vec4} from "./gl-wrappers.js";
+    Vec4,
+    dot} from "./gl-wrappers.js";
 import { getShader } from "./shaders.js";
 import splitStep3D, {SimulationParameters} from "./split-step3d.js";
 import { VolumeRender } from "./volume-render.js";
@@ -380,6 +381,36 @@ function sketchPotential(x0, y0, drawStrength) {
     gFrames.potential.draw(GLSL_PROGRAMS.copy, {tex: gFrames.potential2});
 }
 
+function getPositionOnPlanes(r0, r1, s0, s1) {
+    let identity = new Quaternion(1.0);
+    let offsetVectors = gPlanarSlices.getOffsetVectors(
+        gSimParams.gridDimensions, 
+        gIndexOffset.ind[0], gIndexOffset.ind[1], gIndexOffset.ind[2],
+    );
+    let its0
+        = gPlanarSlices.getLinePlaneIntersections(
+            identity, r0, s0, offsetVectors);
+    let its1
+        = gPlanarSlices.getLinePlaneIntersections(
+            identity, r1, s1, offsetVectors);
+    let normalsDotR = gPlanarSlices.getNormalsDotLine(identity, r0, s0);
+    let u0, u1;
+    if (normalsDotR.xy > normalsDotR.xz 
+        && normalsDotR.xy > normalsDotR.yz) {
+        u0 = its0.xy;
+        u1 = its1.xy;
+    } else if (normalsDotR.xz > normalsDotR.xy
+                && normalsDotR.xz > normalsDotR.yz) {
+        u0 = its0.xz;
+        u1 = its1.xz;
+    } else if (normalsDotR.yz > normalsDotR.xy
+                && normalsDotR.yz > normalsDotR.xz) {
+        u0 = its0.yz;
+        u1 = its1.yz;
+    }
+    return [u0, u1];
+}
+
 function drawNewWavePacket(x0, y0, x1, y1, addTo=false) {
     let depth = sketchDepthFunc(gScale*gSketchDepth);
     // console.log(depth);
@@ -388,7 +419,11 @@ function drawNewWavePacket(x0, y0, x1, y1, addTo=false) {
     let halfOffset = new Vec3(0.5, 0.5, 0.5);
     r0 = scaleRotate(r0);
     r1 = scaleRotate(r1);
-    // let rNorm = div(r0, r.length());
+    if (parseInt(gViewMode) === VIEW_MODE.PLANAR_SLICES) {
+        let s0 = scaleRotate(new Vec3(x0, y0, depth + 1.0));
+        let s1 = scaleRotate(new Vec3(x1, y1, depth + 1.0));
+        [r0, r1] = getPositionOnPlanes(r0, r1, s0, s1);
+    }
     let wavepacketUniforms = {
         amplitude: 1.0,
         waveNumber: getWaveNumber(r0, r1),
@@ -751,6 +786,9 @@ function viewData(data, scale, rotation) {
                 "planarSlicesControls").setAttribute("hidden", "true");
             break;
         case VIEW_MODE.PLANAR_SLICES:
+            // let [v0, v1] = gPlanarSlices.getXYPlanarVectors(rotation);
+            // console.log('v0: (', v0.x, v0.y, v0.z, ')');
+            // console.log('v1: (', v1.x, v1.y, v1.z, ')');
             view = gPlanarSlices.view(data, rotation, scale,
                 gIndexOffset.ind[0],
                 gIndexOffset.ind[1],
