@@ -360,28 +360,11 @@ function scaleRotate(r) {
     return new Vec3(q.i/gScale, q.j/gScale, q.k/gScale);
 }
 
-function sketchPotential(x0, y0, drawStrength) {
-    let depth = sketchDepthFunc(gScale*gSketchDepth);
-    let r0 = new Vec3(x0, y0, depth);
-    let halfOffset = new Vec3(0.5, 0.5, 0.5);
-    r0 = scaleRotate(r0);
-    let sketchSize = potentialSketchWidth(gSketchWidth);
-    gFrames.potential2.draw(
-        GLSL_PROGRAMS.sketchPotential,
-        {   
-            tex: gFrames.potential,
-            location: add(r0, halfOffset),
-            sigma: new Vec3(sketchSize, sketchSize, sketchSize),
-            amplitude: drawStrength,
-            texelDimensions2D: 
-                get2DFrom3DDimensions(gSimParams.gridDimensions),
-            texelDimensions3D: gSimParams.gridDimensions,
-        }
-    );
-    gFrames.potential.draw(GLSL_PROGRAMS.copy, {tex: gFrames.potential2});
-}
-
 function getPositionOnPlanes(r0, r1, s0, s1) {
+    /* Made a mistake by assuming that the planes need to be rotated
+    as well - this isn't necessary because the rotation is only applied 
+    to the ray cast and the planes kept fixed.
+    */
     let identity = new Quaternion(1.0);
     let offsetVectors = gPlanarSlices.getOffsetVectors(
         gSimParams.gridDimensions, 
@@ -409,6 +392,32 @@ function getPositionOnPlanes(r0, r1, s0, s1) {
         u1 = its1.yz;
     }
     return [u0, u1];
+}
+
+function sketchPotential(x0, y0, drawStrength) {
+    let depth = sketchDepthFunc(gScale*gSketchDepth);
+    let r0 = new Vec3(x0, y0, depth);
+    let halfOffset = new Vec3(0.5, 0.5, 0.5);
+    r0 = scaleRotate(r0);
+    let sketchSize = potentialSketchWidth(gSketchWidth);
+    if (parseInt(gViewMode) === VIEW_MODE.PLANAR_SLICES) {
+        let s0 = scaleRotate(new Vec3(x0, y0, depth + 1.0));
+        let res = getPositionOnPlanes(r0, r0, s0, s0);
+        r0 = res[0];
+    }
+    gFrames.potential2.draw(
+        GLSL_PROGRAMS.sketchPotential,
+        {   
+            tex: gFrames.potential,
+            location: add(r0, halfOffset),
+            sigma: new Vec3(sketchSize, sketchSize, sketchSize),
+            amplitude: drawStrength,
+            texelDimensions2D: 
+                get2DFrom3DDimensions(gSimParams.gridDimensions),
+            texelDimensions3D: gSimParams.gridDimensions,
+        }
+    );
+    gFrames.potential.draw(GLSL_PROGRAMS.copy, {tex: gFrames.potential2});
 }
 
 function drawNewWavePacket(x0, y0, x1, y1, addTo=false) {
@@ -478,8 +487,8 @@ function initialStep() {
         GLSL_PROGRAMS.wavePacket, 
         {
             amplitude: 1.0,
-            waveNumber: new Vec3(10.0, 0.0, 0.0),
-            texOffset: new Vec3(0.5, 0.5, 0.5),
+            waveNumber: new Vec3(15.0, 0.0, 0.0),
+            texOffset: new Vec3(0.25, 0.5, 0.5),
             // sigma: new Vec3(0.25, 0.25, 0.25),
             sigma: new Vec3(0.05, 0.05, 0.05),
             texelDimensions3D: gFrames.psi1.dimensions3D,
@@ -758,8 +767,15 @@ document.getElementById("absPsiVisualization").addEventListener(
 );
 
 function updateTextPosition(x, y) {
-    let position0 = new Vec3(x, y, sketchDepthFunc(gScale*gSketchDepth));
+    let depth = sketchDepthFunc(gScale*gSketchDepth);
+    let position0 = new Vec3(x, y, depth);
     let position = scaleRotate(position0);
+    if (parseInt(gViewMode) === VIEW_MODE.PLANAR_SLICES) {
+        let position1 = scaleRotate(new Vec3(x, y, depth + 1));
+        let res = getPositionOnPlanes(
+            position, position, position1, position1);
+        position = res[0];
+    }
     let hoveringElement = document.getElementById("hoveringElements");
     hoveringElement.style = `opacity: 1; `
         + `position: absolute; top: ${parseInt(gCanvas.offsetTop + 0.95*gCanvas.height)}px; `

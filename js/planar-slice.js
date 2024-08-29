@@ -67,6 +67,29 @@ function getPlanarVectors(planarSlice, rotation) {
     return [r01, r02];
 }
 
+/* Three planar slices whose normal vectors are orthogonal to each other.
+
+The first of these lie along the xy plane. It is constructed using the
+vertices (-1, -1, 0), (-1, 1, 0), (1, 1, 0) and (1, -1, 0).
+Its uv texture coordinates are aligned along the same orientation as xy,
+where the vertex positions (-1, -1, 0), (0, 0, 0), and (1, 1, 0) correspond
+to the texture positions (0, 0), (0.5, 0.5), and (1.0, 1.0) respectively.
+It may be offset along the z direction.
+
+The next slice is oriented in the zy plane. It actually uses the 
+same vertices as the xy slice, but rotated by pi/2 radians along the y-axis 
+in the vertex shader (note that rotations are oriented clockwise). 
+Its uv[0] texture coordinate points in the same
+direction as the z axis, while uv[1] is oriented along y. Its offset
+is along the x direction.
+
+The final slice lies in the xz plane. It uses the same vertices
+as the xy slice, but rotated by -pi/2 radians around the x-axis.
+The uv texture coordinates are oriented in the same direction
+xz. Its offset is along the y direction.
+
+
+*/
 export class PlanarSlices {
     planarSlice;
     planarSliceProgram;
@@ -103,6 +126,19 @@ export class PlanarSlices {
             };
         }
     } 
+    /* Get a view of each of the slices 
+
+    src - MultidimensionalDataQuad containing the
+    3D array of data points.
+    rotate - Change the view orientation of the slices.
+    Except for an offset that remains perpendicular to the slices,
+    each of the slices keep the same orientation with
+    respect to the 3D data array that it slices.
+    scale - Change the view scaling of the slices.
+    sliceXY - offset for the xy planar slice
+    sliceYZ - offset for the yz planar slice
+    sliceXZ - offset for the xz planar slice
+    */
     view(src, rotate, scale, sliceXY, sliceYZ, sliceXZ) {
         if (!(src instanceof MultidimensionalDataQuad))
             throw "Argument src of method view "
@@ -173,9 +209,11 @@ export class PlanarSlices {
         );
         return this.renderTarget;
     }
+    /* Get the vectors that span the xy plane. */
     getXYPlanarVectors(rotation) {
         return getPlanarVectors(this.planarSlice, rotation);
     }
+    /* Get the vectors that span the yz plane */
     getYZPlanarVectors(rotation) {
         let rotation1 = mul(
             Quaternion.rotator(Math.PI/2.0, 0.0, 1.0, 0.0),
@@ -183,6 +221,7 @@ export class PlanarSlices {
         );
         return getPlanarVectors(this.planarSlice, rotation1);
     }
+    /* Get the vectors that span the xz plane */
     getXZPlanarVectors(rotation) {
         let rotation2 = mul(
             Quaternion.rotator(-Math.PI/2.0, 1.0, 0.0, 0.0),
@@ -190,18 +229,28 @@ export class PlanarSlices {
         );
         return getPlanarVectors(this.planarSlice, rotation2);
     }
+    /* Get the vector that is normal to the xy plane */
     getXYNormal(rotation) {
         let [v1, v2] = this.getXYPlanarVectors(rotation);
         return Vec3.crossProd(v1, v2);
     }
+    /* Get the vector that is normal to the yz plane */
     getYZNormal(rotation) {
         let [v1, v2] = this.getYZPlanarVectors(rotation);
         return Vec3.crossProd(v1, v2);
     }
+    /* Get the vector that is normal to the xz plane */
     getXZNormal(rotation) {
         let [v1, v2] = this.getXZPlanarVectors(rotation);
         return Vec3.crossProd(v1, v2);
     }
+    /* Get the point of intersection for a line for the xy
+    plane. Note that the parameter rotation does not 
+    rotate the vectors given in the planeOffsets and it is assumed that 
+    rotations have been applied to it beforehand; use the method 
+    getOffsetVectors to get the planeOffset from the offset parameters that 
+    are used in the view method.
+    */
     getXYLinePlaneIntersection(rotation, offset,
                                lineStart, lineDirection) {
         let [r0, r1] = this.getXYPlanarVectors(rotation);
@@ -222,6 +271,13 @@ export class PlanarSlices {
         // return add(add(mul(s, r0), mul(t, r1)), offset);
         // return add(lineStart, mul(lineDirection, r));
     }
+    /* Get the point of intersection for a line for the yz
+    plane. Note that the parameter rotation does not 
+    rotate the vectors given in the planeOffsets and it is assumed that 
+    rotations have been applied to it beforehand; use the method 
+    getOffsetVectors to get the planeOffset from the offset parameters that 
+    are used in the view method.
+    */
     getYZLinePlaneIntersection(rotation, offset,
                                lineStart, lineDirection) {
         let [r0, r1] = this.getYZPlanarVectors(rotation);
@@ -243,6 +299,13 @@ export class PlanarSlices {
         // console.log('Offset intersection: ', res);
         return res;
     }
+    /* Get the point of intersection for a line for the xz
+    plane. Note that the parameter rotation does not 
+    rotate the vectors given in the planeOffsets and it is assumed that 
+    rotations have been applied to it beforehand; use the method 
+    getOffsetVectors to get the planeOffset from the offset parameters that 
+    are used in the view method.
+    */
     getXZLinePlaneIntersection(rotation, offset,
                                lineStart, lineDirection) {
         let [r0, r1] = this.getXZPlanarVectors(rotation);
@@ -257,12 +320,15 @@ export class PlanarSlices {
         console.log('b', b);*/
         return add(offset, add(mul(s, r0), mul(t, r1)));
     }
+    /* Get the point of intersection for a line with each of the three
+    planes. Note that the parameter rotation does not 
+    rotate the vectors given in the planeOffsets and it is assumed that 
+    rotations have been applied to it beforehand; use the method 
+    getOffsetVectors to get the planeOffset from the offset parameters that 
+    are used in the view method.
+    */
     getLinePlaneIntersections(
         rotation, lineStart, lineFinish, planeOffsets=null) {
-        /* Made a mistake by assuming that the planes need to be rotated
-        as well - this isn't necessary because the rotation is only applied 
-        to the ray cast where the planes kept fixed.
-        */
         // console.log('Offset vectors: ', planeOffsets);
         if (planeOffsets === null) {
             planeOffsets = {

@@ -933,8 +933,31 @@ export class Quad {
     }
     reset(newTexParams) {
         if (this._id !== 0) {
+            gl.activeTexture(gl.TEXTURE0 + this._id);
+            let texture = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D, texture);
+            // console.log(texture);
+            // console.log(newTexParams.format, toBase(newTexParams.format),
+            //             toType(newTexParams.format));
+            // console.log(gl.RGBA32F, gl.RGBA, gl.FLOAT);
+            console.log(
+                "Texture dimensions: ",
+                newTexParams.width, newTexParams.height);
+            gl.texImage2D(gl.TEXTURE_2D, 0, newTexParams.format, 
+                newTexParams.width, newTexParams.height, 0,
+                toBase(newTexParams.format), toType(newTexParams.format),
+                null);
+            if (gl.getError() !== 0) {
+                /* If the new texture dimensions are too big, then texImage2D
+                 will not complete with the new texture parameters. 
+                 Backtrack by resetting with the old texture parameters. */
+                let err = gl.getError();
+                this.reset(this._params);
+                return err;
+            }
             gl.deleteTexture(this._texture);
             gl.deleteFramebuffer(this._fbo);
+            this._texture = texture;
             this._params.format = newTexParams.format;
             this._params.width = newTexParams.width;
             this._params.height = newTexParams.height;
@@ -943,19 +966,11 @@ export class Quad {
             this._params.wrapT = newTexParams.wrapT;
             this._params.minFilter = newTexParams.minFilter;
             this._params.magFilter = newTexParams.magFilter;
-            gl.activeTexture(gl.TEXTURE0 + this._id);
-            this._texture = gl.createTexture();
-            gl.bindTexture(gl.TEXTURE_2D, this._texture);
             let params = this._params;
-            // console.log(this._texture);
-            // console.log(params.format, toBase(params.format),
-            //             toType(params.format));
-            // console.log(gl.RGBA32F, gl.RGBA, gl.FLOAT);
-            gl.texImage2D(gl.TEXTURE_2D, 0, params.format, 
-                params.width, params.height, 0,
-                toBase(params.format), toType(params.format), null);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, params.wrapS);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, params.wrapT);
+            gl.texParameteri(gl.TEXTURE_2D,
+                gl.TEXTURE_WRAP_S, params.wrapS);
+            gl.texParameteri(gl.TEXTURE_2D,
+                gl.TEXTURE_WRAP_T, params.wrapT);
             gl.texParameteri(gl.TEXTURE_2D, 
                 gl.TEXTURE_MIN_FILTER, params.minFilter);
             gl.texParameteri(gl.TEXTURE_2D, 
@@ -967,6 +982,7 @@ export class Quad {
             gl.bindFramebuffer(gl.FRAMEBUFFER, this._fbo);
             gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0,
                                     gl.TEXTURE_2D, this._texture, 0);
+            return 0; // No error encountered.
         } 
 
     }
