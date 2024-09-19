@@ -1,3 +1,18 @@
+/* The variable UV from the previous vertex shading step contains 
+the 2D texture coordinate representation of the volume render.
+It is 2D so that the gradient and density uniform textures are
+properly sampled. These sampled gradient and density data points are used
+together to determine how the pixel should be displayed.
+
+This corresponds to the shading step as given on the Wikipedia
+page for Volume ray casting.
+
+References:
+
+Volume ray casting - Wikipedia
+https://en.wikipedia.org/wiki/Volume_ray_casting
+
+*/
 #if (__VERSION__ >= 330) || (defined(GL_ES) && __VERSION__ >= 300)
 #define texture2D texture
 #else
@@ -26,22 +41,6 @@ uniform ivec3 fragmentTexelDimensions3D;
 uniform ivec2 fragmentTexelDimensions2D;
 uniform float alphaBrightness;
 uniform float colorBrightness;
-
-/* The variable UV from the previous shader contains 
-the 2D texture coordinate representation of the volume render.
-It is 2D so that the gradient and density uniform textures are
-properly sampled. These sampled gradient and density data points are used
-together to determine how the pixel should be displayed.
-
-This corresponds to the shading step as given on the Wikipedia
-page for Volume ray casting.
-
-References:
-
-Volume ray casting - Wikipedia
-https://en.wikipedia.org/wiki/Volume_ray_casting
-
-*/
 
 quaternion mul(quaternion q1, quaternion q2) {
     quaternion q3;
@@ -307,6 +306,7 @@ void main() {
     // vec4 density = averageOutZSlice(densityTex, r, vec3(0.0, 0.0, 0.0));
 
     // vec4 density = gaussianFilter3x3x3(densityTex, r);
+    // vec3 grad = gaussianFilter3x3x3(gradientTex, r).xyz;
     // vec4 density = gaussianZDir(densityTex, r);
 
     // vec3 grad = averageOutZDir(gradientTex, r).xyz;

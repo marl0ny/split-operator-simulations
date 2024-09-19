@@ -1,27 +1,81 @@
 import { gl, Attribute, 
-    TrianglesFrame, makeProgramFromSources, 
+    TrianglesFrame, LinesFrame, makeProgramFromSources, 
     RenderTarget, IScalar, IVec2, IVec3, Vec4, Quaternion,
     mul, sub, add, div, dot,
     MultidimensionalDataQuad, withConfig,
     get2DFrom3DDimensions,
-    Vec3} from "./gl-wrappers.js";
+    Vec3 } from "./gl-wrappers.js";
 import { getShader } from "./shaders.js";
 import { solve3x3Matrix } from "./matrix3x3.js";
 
 function getVerticesElements() {
-    return [new Float32Array([
-                -1.0, -1.0, 0.0, -1.0, 1.0, 0.0, 
-                1.0, 1.0, 0.0, 1.0, -1.0, 0.0]),
-            (gl.version === 2)? 
-            new Int32Array([0, 1, 2, 0, 2, 3]):
-            new Uint16Array([0, 1, 2, 0, 2, 3])];
+    return [
+        new Float32Array([
+            0.0, 0.0, 0.0,
+            -1.0, -1.0, 0.0,
+            -1.0, 0.0, 0.0,
+            -1.0, 1.0, 0.0,
+            0.0, 1.0, 0.0,
+            1.0, 1.0, 0.0,
+            1.0, 0.0, 0.0,
+            1.0, -1.0, 0.0,
+            0.0, -1.0, 0.0
+        ]),
+        (gl.version === 2)? 
+        new Int32Array([
+            1, 8, 0, 1, 0, 2, 2, 0, 4, 2, 4, 3,
+            0, 5, 4, 0, 6, 5, 8, 6, 0, 8, 7, 6       
+        ]): 
+        new Uint16Array([
+            1, 8, 0, 1, 0, 2, 2, 0, 4, 2, 4, 3,
+            0, 5, 4, 0, 6, 5, 8, 6, 0, 8, 7, 6,
+        ])];
 }
 
-/*
+function getQuarteredSquareOutlineVerticesAndElements() {
+    // Start with the vertex at the center of the square,
+    // and then list the vertices at the edges.
+    // Place vertices along the edges clockwise starting from (-1, -1).
+    let vertices = new Float32Array([
+        0.0, 0.0, 0.0,
+        -1.0, -1.0, 0.0,
+        -1.0, 0.0, 0.0,
+        -1.0, 1.0, 0.0,
+        0.0, 1.0, 0.0,
+        1.0, 1.0, 0.0,
+        1.0, 0.0, 0.0,
+        1.0, -1.0, 0.0,
+        0.0, -1.0, 0.0,
+
+    ]);
+    let elements = [
+        // Edges for the "cross" that's inside the square
+        0, 8, 0, 2, 0, 4, 0, 6,
+        // Edges of the outer square
+        1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 1
+    ];
+    return [vertices, 
+        (gl.version === 2)?
+        new Int32Array(elements): new Uint16Array(elements)];
+}
+
+const QUARTERED_SQUARE_PROGRAM = makeProgramFromSources(
+    getShader("./shaders/slices/quartered-square-outline.vert"),
+    getShader("./shaders/util/uniform-color.frag")
+);
+
+function getQuarteredSquareOutline() {
+    let [vertices, elements] = getQuarteredSquareOutlineVerticesAndElements();
+    return new LinesFrame({"position": new Attribute(3, gl.FLOAT, false)},
+                          vertices, elements);
+}
+
+
 const CUBE_OUTLINE_PROGRAM = makeProgramFromSources(
     getShader("./shaders/vol-render/cube-outline.vert"),
     getShader("./shaders/util/uniform-color.frag"),
 );
+
 
 function getCubeOutlineVerticesAndElements() {
     let vertices = new Float32Array([
@@ -40,7 +94,7 @@ function getCubeOutlineVerticesAndElements() {
     return [vertices, 
             (gl.version === 2)?
             new Int32Array(elements): new Uint16Array(elements)];
-}*/
+}
 
 export function getPlanarSlice() {
     let [vertices, elements] = getVerticesElements();
@@ -88,20 +142,38 @@ as the xy slice, but rotated by -pi/2 radians around the x-axis.
 The uv texture coordinates are oriented in the same direction
 xz. Its offset is along the y direction.
 
+Note that the offsets are added to the position of the planes before they
+are rotated to their correct orientations.
 
 */
 export class PlanarSlices {
     planarSlice;
+    // cubeOutline;
+    quarteredSquareOutline;
     planarSliceProgram;
     renderTarget;
     constructor(textureParams) {
         this.renderTarget = new RenderTarget(textureParams);
         this.planarSlice = getPlanarSlice();
+        this.quarteredSquareOutline = getQuarteredSquareOutline();
         this.planarSliceProgram = makeProgramFromSources(
             getShader("./shaders/slices/planar-slice.vert"),
             // getShader("./shaders/util/uniform-color.frag"),
             getShader("./shaders/util/slice-of-3d.frag")
         );
+        // let [cubeVertices, cubeElements] = getCubeOutlineVerticesAndElements();
+        // this.cubeOutline = new LinesFrame(
+        //     {"position": new Attribute(3, gl.FLOAT, false)},
+        //     cubeVertices, cubeElements);
+        // this.cubeOutlineVertices = [];
+        // for (let i = 0; i < 8; i++)
+        //     this.cubeOutlineVertices.push(
+        //         new Quaternion(
+        //             1.0,
+        //             cubeVertices[3*i], 
+        //             cubeVertices[3*i+1],
+        //             cubeVertices[3*i+2])
+        //     );
     }
     getOffsetVectors(dimensions3D, 
                      sliceXY, sliceYZ, sliceXZ,
@@ -138,8 +210,12 @@ export class PlanarSlices {
     sliceXY - offset for the xy planar slice
     sliceYZ - offset for the yz planar slice
     sliceXZ - offset for the xz planar slice
+    ray - line representing a line of site. Used for drawing
+    the location of the cursor
     */
-    view(src, rotate, scale, sliceXY, sliceYZ, sliceXZ) {
+    view(src, rotate, scale, sliceXY, sliceYZ, sliceXZ,
+         gridDimensions, ray=null) {
+        console.log()
         if (!(src instanceof MultidimensionalDataQuad))
             throw "Argument src of method view "
                 + "must be an instance of MultidimensionalDataQuad.";
@@ -160,7 +236,8 @@ export class PlanarSlices {
             sourceTexelDimensions2D: get2DFrom3DDimensions(src.dimensions3D),
             sourceTexelDimensions3D: src.dimensions3D,
             tex: src,
-            showOutline: true,
+            alpha: 1.0,
+            showOutline: false,
             screenDimensions: 
             new IVec2(this.renderTarget.width, this.renderTarget.height)
 
@@ -168,10 +245,20 @@ export class PlanarSlices {
         let offsetVectors = this.getOffsetVectors(
             src.dimensions3D, sliceXY, sliceYZ, sliceXZ, true);
         withConfig(
-            {enable: gl.DEPTH_TEST, depthFunc: gl.LESS,
-             width: this.renderTarget.width,
+            {width: this.renderTarget.width,
              height: this.renderTarget.height
             }, () => {
+                gl.enable(gl.DEPTH_TEST);
+                gl.enable(gl.BLEND);
+                gl.depthFunc(gl.LESS);
+                // this.renderTarget.draw(
+                //     CUBE_OUTLINE_PROGRAM, {
+                //         rotation: rotate,
+                //         viewScale: scale,
+                //         color: new Vec4(0.1, 0.1, 0.1, 0.0)
+                //     },
+                //     this.cubeOutline
+                // );
                 this.renderTarget.draw(
                     this.planarSliceProgram,
                     {   
@@ -205,6 +292,115 @@ export class PlanarSlices {
                     },
                     this.planarSlice
                 );
+                for (let rotOffset of [[rotation0, offsetVectors.xy],
+                                       [rotation1, offsetVectors.yz],
+                                       [rotation2, offsetVectors.xz]]) {
+                    let [rotation, offset] = rotOffset;
+                    this.renderTarget.draw(
+                        QUARTERED_SQUARE_PROGRAM,
+                        {
+                            cursorPosition: new Vec3(
+                                -1.0, 1.0, 0.0
+                            ),
+                            offset: offset,
+                            scale: scale*1.01,
+                            rotation: rotation,
+                            screenDimensions: 
+                            new IVec2(
+                                this.renderTarget.width,
+                                this.renderTarget.height
+                            ),
+                            color: new Vec4(0.7, 0.7, 0.7, 0.5),
+                        },
+                        this.quarteredSquareOutline
+                    );
+                }
+                if (ray !== null) {
+                    let res = this.getPositionOnPlanes(
+                        ray[0], ray[1], gridDimensions, 
+                        new IVec3(sliceXY, sliceYZ, sliceXZ));
+                    try {
+                        res.x;
+                    } catch(_) {
+                        return this.renderTarget;
+                    }
+                    let posRotationOffsetOrientationSlice
+                        = this.getValueCorrespondingToMostPerpendicularPlane(
+                            ray[0], ray[1], 
+                            gridDimensions,
+                            new IVec3(sliceXY, sliceYZ, sliceXZ),
+                            {xy: [new Vec3(2.0*res.x, 2.0*res.y, 0.0),
+                                  rotation0, offsetVectors.xy,
+                                  new IScalar(0), new IScalar(sliceXY)], 
+                             xz: [new Vec3(2.0*res.x, 2.0*res.z, 0.0),
+                                  rotation2, offsetVectors.xz,
+                                  new IScalar(2), new IScalar(sliceXZ)], 
+                             yz: [new Vec3(2.0*res.z, 2.0*res.y, 0.0),
+                                  rotation1, offsetVectors.yz,
+                                  new IScalar(1), new IScalar(sliceYZ)]}
+                        );
+                    let [pos, rotation, offset, orientation, slice] 
+                        = posRotationOffsetOrientationSlice;
+                    if (pos !== 'undefined') {
+                        if (Math.abs(pos.ind[0]) < 1.0 
+                            && Math.abs(pos.ind[1]) < 1.0) {
+                            // this.renderTarget.draw(
+                            //     this.planarSliceProgram,
+                            //     {
+                            //         ...uniforms,
+                            //         orientation: orientation,
+                            //         // color: new Vec4(0.04, 0.04, 0.04, 0.0),
+                            //         offset: offset,
+                            //         rotation: rotation, 
+                            //         alpha: 1.0,
+                            //         slice: slice
+                            //     },
+                            //     this.planarSlice
+                            // );
+                            // gl.disable(gl.DEPTH_TEST);
+                            this.renderTarget.draw(
+                                QUARTERED_SQUARE_PROGRAM,
+                                {
+                                    cursorPosition: new Vec3(
+                                        pos.x, pos.y, pos.z
+                                    ),
+                                    offset: 
+                                    add(offset, new Vec3(0.0, 0.0, 0.01)),
+                                    scale: scale,
+                                    rotation: rotation,
+                                    screenDimensions: 
+                                    new IVec2(
+                                        this.renderTarget.width,
+                                        this.renderTarget.height
+                                    ),
+                                    color: new Vec4(0.5, 0.5, 0.5, 1.0),
+                                },
+                                this.quarteredSquareOutline
+                            );
+                            this.renderTarget.draw(
+                                QUARTERED_SQUARE_PROGRAM,
+                                {
+                                    cursorPosition: new Vec3(
+                                        pos.x, pos.y, pos.z
+                                    ),
+                                    offset: 
+                                    add(offset, new Vec3(0.0, 0.0, -0.01)),
+                                    scale: scale,
+                                    rotation: rotation,
+                                    screenDimensions: 
+                                    new IVec2(
+                                        this.renderTarget.width,
+                                        this.renderTarget.height
+                                    ),
+                                    color: new Vec4(0.5, 0.5, 0.5, 1.0),
+                                },
+                                this.quarteredSquareOutline
+                            );
+                        }
+                    }
+                }
+                gl.disable(gl.DEPTH_TEST);
+                gl.disable(gl.BLEND);
             }
         );
         return this.renderTarget;
@@ -362,6 +558,117 @@ export class PlanarSlices {
         let aXZ = Math.abs(dot(xzNormal, dir));
         let aYZ = Math.abs(dot(yzNormal, dir));
         return {xy: aXY, xz: aXZ, yz: aYZ};
+    }
+    getAllNormalsDotLine(r, s, gridDimensions, indexOffsets) {
+        let identity = new Quaternion(1.0);
+        let offsetVectors = this.getOffsetVectors(
+            gridDimensions,
+            indexOffsets.ind[0], 
+            indexOffsets.ind[1],
+            indexOffsets.ind[2],
+        );
+        return this.getNormalsDotLine(
+            identity, r, s, offsetVectors
+        );
+
+    }
+    /* Given a line, get the plane most perpendicular to it,
+    then from an object of given values return the value
+    that corresponds to that plane.
+
+    r - Start point of line
+    s - End point of line
+    gridDimensions - The grid dimensions of the sliced volume data.
+    indexOffsets - Offsets of the planes
+    values - An object which must contain the following members:
+    xy, xz, and yz, which corresponds to their respective planes.
+    For the plane that is most perpendicular to the given line,
+    the corresponding value will be chosen from this values object.
+    */
+    getValueCorrespondingToMostPerpendicularPlane(
+        r, s, gridDimensions, indexOffsets,
+        values
+    ) {
+        let normalsDotR = this.getAllNormalsDotLine(
+            r, s, gridDimensions, indexOffsets);
+        let u;
+        if (normalsDotR.xy > normalsDotR.xz 
+            && normalsDotR.xy > normalsDotR.yz) {
+            u = values.xy;
+        } else if (normalsDotR.xz > normalsDotR.xy
+                    && normalsDotR.xz > normalsDotR.yz) {
+            u = values.xz;
+        } else if (normalsDotR.yz > normalsDotR.xy
+                    && normalsDotR.yz > normalsDotR.xz) {
+            u = values.yz;
+        }
+        return u;
+    }
+    /* Get the point of intersection of a line on the plane that
+    is most perpendicular to the line.
+
+    r - Start point of line
+    s - End point of line
+    gridDimensions - Grid dimensions of the volume data being sliced
+    indexOffsets - Offsets of the planes
+    */
+    getPositionOnPlanes(r, s, gridDimensions, indexOffsets) {
+        let identity = new Quaternion(1.0);
+        let offsetVectors = this.getOffsetVectors(
+            gridDimensions,
+            indexOffsets.ind[0], 
+            indexOffsets.ind[1],
+            indexOffsets.ind[2],
+        );
+        let intersection
+            = this.getLinePlaneIntersections(
+                identity, r, s, offsetVectors
+            );
+        return this.getValueCorrespondingToMostPerpendicularPlane(
+            r, s, gridDimensions, indexOffsets, intersection
+        )
+    }
+    /* Get the point of intersection for two lines on the plane
+    most perpendicular to these lines.
+
+    r0 - Start point of first line
+    r1 - Start point of second line
+    s0 - End point of first line
+    s1 - End point of second line
+    gridDimensions - Grid dimensions of the volume data being sliced
+    indexOffsets - Offsets of the planes
+    */
+    getPositionOnPlanesFor2Lines(
+        r0, r1, s0, s1, gridDimensions, indexOffsets) {
+        let identity = new Quaternion(1.0);
+        let offsetVectors = this.getOffsetVectors(
+            gridDimensions, 
+            indexOffsets.ind[0], 
+            indexOffsets.ind[1],
+            indexOffsets.ind[2],
+        );
+        let its0
+            = this.getLinePlaneIntersections(
+                identity, r0, s0, offsetVectors);
+        let its1
+            = this.getLinePlaneIntersections(
+                identity, r1, s1, offsetVectors);
+        let normalsDotR = this.getNormalsDotLine(identity, r0, s0);
+        let u0, u1;
+        if (normalsDotR.xy > normalsDotR.xz 
+            && normalsDotR.xy > normalsDotR.yz) {
+            u0 = its0.xy;
+            u1 = its1.xy;
+        } else if (normalsDotR.xz > normalsDotR.xy
+                    && normalsDotR.xz > normalsDotR.yz) {
+            u0 = its0.xz;
+            u1 = its1.xz;
+        } else if (normalsDotR.yz > normalsDotR.xy
+                    && normalsDotR.yz > normalsDotR.xz) {
+            u0 = its0.yz;
+            u1 = its1.yz;
+        }
+        return [u0, u1];
     }
 }
 

@@ -1,3 +1,18 @@
+/* The variable UV from the vertex shading step contains 
+the 2D texture coordinate representation of the volume render.
+It is 2D so that the gradient and density uniform textures are
+properly sampled. These sampled gradient and density data points are used
+together to determine how the pixel should be displayed.
+
+This corresponds to the shading step as given on the Wikipedia
+page for Volume ray casting.
+
+References:
+
+Volume ray casting - Wikipedia
+https://en.wikipedia.org/wiki/Volume_ray_casting
+
+*/
 #if (__VERSION__ >= 330) || (defined(GL_ES) && __VERSION__ >= 300)
 #define texture2D texture
 #else
@@ -28,22 +43,6 @@ uniform ivec3 sampleTexelDimensions3D;
 uniform ivec2 sampleTexelDimensions2D;
 uniform ivec3 viewTexelDimensions3D;
 uniform ivec2 viewTexelDimensions2D;
-
-/* The variable UV from the previous shader contains 
-the 2D texture coordinate representation of the volume render.
-It is 2D so that the gradient and density uniform textures are
-properly sampled. These sampled gradient and density data points are used
-together to determine how the pixel should be displayed.
-
-This corresponds to the shading step as given on the Wikipedia
-page for Volume ray casting.
-
-References:
-
-Volume ray casting - Wikipedia
-https://en.wikipedia.org/wiki/Volume_ray_casting
-
-*/
 
 quaternion mul(quaternion q1, quaternion q2) {
     quaternion q3;

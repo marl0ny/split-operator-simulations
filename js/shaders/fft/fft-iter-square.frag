@@ -1,5 +1,6 @@
 /* This shadder is used to implement part of the 
-Cooley-Tukey iterative radix-2 FFT algorithm.
+Cooley-Tukey iterative radix-2 FFT algorithm. It is assumed that 
+the width of the input texture is equal to its height.
 
 References:
 
@@ -72,45 +73,8 @@ complex2 c2C1(complex2 z, complex w) {
     return complex2(mul(z.rg, w), mul(z.ba, w));
 }
 
-/*complex2 compute00(complex2 ee, complex2 oe, complex2 eo, complex2 oo,
-                   float angleX, float angleY) {
-    complex eIAngleX = expI(angleX);
-    complex eIAngleY = expI(angleY);
-    return scale*scale*(ee 
-                  + c2C1(oe, eIAngleX) + c2C1(eo, eIAngleY)
-                  + c2C1(oo, mul(eIAngleX, eIAngleY)));
-}
-
-complex2 compute10(complex2 ee, complex2 oe, complex2 eo, complex2 oo,
-                   float angleX, float angleY) {
-    complex eIAngleX = expI(angleX);
-    complex eIAngleY = expI(angleY);
-    return scale*scale*(ee 
-                  - c2C1(oe, eIAngleX) + c2C1(eo, eIAngleY)
-                  - c2C1(oo, mul(eIAngleX, eIAngleY)));
-}
-
-complex2 compute01(complex2 ee, complex2 oe, complex2 eo, complex2 oo,
-                   float angleX, float angleY) {
-    complex eIAngleX = expI(angleX);
-    complex eIAngleY = expI(angleY);
-    return scale*scale*(ee 
-                  + c2C1(oe, eIAngleX) - c2C1(eo, eIAngleY)
-                  - c2C1(oo, mul(eIAngleX, eIAngleY)));
-}
-
-complex2 compute11(complex2 ee, complex2 oe, complex2 eo, complex2 oo,
-                   float angleX, float angleY) {
-    complex eIAngleX = expI(angleX);
-    complex eIAngleY = expI(angleY);
-    return scale*scale*(ee 
-                  - c2C1(oe, eIAngleX) - c2C1(eo, eIAngleY)
-                  + c2C1(oo, mul(eIAngleX, eIAngleY)));
-}*/
-
 void main() {
     vec2 blockPosition = vec2(mod(UV[0], blockSize), mod(UV[1], blockSize));
-
     float h = blockSize/2.0;
     vec2 signFactor = vec2((blockPosition.x <= h)? 1.0: -1.0,
                            (blockPosition.y <= h)? 1.0: -1.0);
@@ -127,67 +91,4 @@ void main() {
     fragColor = scale*scale*(ee 
          + signFactor.x*c2C1(oe, eIAngleX) + signFactor.y*c2C1(eo, eIAngleY)
          + signFactor.x*signFactor.y*c2C1(oo, mul(eIAngleX, eIAngleY)));
-
-    /* if (blockPosition.x <= blockSize/2.0 && 
-        blockPosition.y <= blockSize/2.0) {
-        vec2 angle00 = angleSign*2.0*PI*(
-            blockPosition - vec2(0.5/size))/blockSize;
-        float h = blockSize/2.0;
-        complex2 valCC = texture2D(tex, UV);
-        complex2 valRC = texture2D(tex, vec2(UV[0] + h, UV[1]));
-        complex2 valCU = texture2D(tex, vec2(UV[0], UV[1] + h));
-        complex2 valRU = texture2D(tex, vec2(UV[0] + h, UV[1] + h));
-        complex2 ee = valCC;
-        complex2 oe = valRC;
-        complex2 eo = valCU;
-        complex2 oo = valRU;
-        fragColor = compute00(ee, oe, eo, oo, angle00.x, angle00.y);
-    } else if (blockPosition.x > blockSize/2.0 &&
-               blockPosition.y <= blockSize/2.0) {
-        float h = blockSize/2.0;
-        vec2 angle10 = angleSign*2.0*PI*(blockPosition - vec2(0.5/size)
-                                         - vec2(blockSize/2.0, 0.0)
-                                        )/blockSize;
-        complex2 valLC = texture2D(tex, vec2(UV[0] - h, UV[1]));
-        complex2 valCC = texture2D(tex, UV);
-        complex2 valLU = texture2D(tex, vec2(UV[0] - h, UV[1] + h));
-        complex2 valCU = texture2D(tex, vec2(UV[0], UV[1] + h));
-        complex2 ee = valLC;
-        complex2 oe = valCC;
-        complex2 eo = valLU;
-        complex2 oo = valCU;
-        fragColor = compute10(ee, oe, eo, oo, angle10.x, angle10.y);
-    } else if (blockPosition.x <= blockSize/2.0 &&
-               blockPosition.y > blockSize/2.0) {
-        float h = blockSize/2.0;
-        vec2 angle01 = angleSign*2.0*PI*(blockPosition - vec2(0.5/size)
-                                         - vec2(0.0, blockSize/2.0)
-                                        )/blockSize;
-        complex2 valCD = texture2D(tex, vec2(UV[0], UV[1] - h));
-        complex2 valRD = texture2D(tex, vec2(UV[0] + h, UV[1] - h));
-        complex2 valCC = texture2D(tex, UV);
-        complex2 valRC = texture2D(tex, vec2(UV[0] + h, UV[1]));
-        complex2 ee = valCD;
-        complex2 oe = valRD;
-        complex2 eo = valCC;
-        complex2 oo = valRC;
-        fragColor = compute01(ee, oe, eo, oo, angle01.x, angle01.y);
-    } else if (blockPosition.x > blockSize/2.0 &&
-               blockPosition.y > blockSize/2.0) {
-        float h = blockSize/2.0;
-        vec2 angle11 = angleSign*2.0*PI*(blockPosition - vec2(0.5/size)
-                                         - vec2(blockSize/2.0,
-                                                blockSize/2.0)
-                                        )/blockSize;
-        complex2 valLD = texture2D(tex, vec2(UV[0] - h, UV[1] - h));
-        complex2 valCD = texture2D(tex, vec2(UV[0], UV[1] - h));
-        complex2 valLC = texture2D(tex, vec2(UV[0] - h, UV[1]));
-        complex2 valCC = texture2D(tex, UV);
-        complex2 ee = valLD;
-        complex2 oe = valCD;
-        complex2 eo = valLC;
-        complex2 oo = valCC;
-        fragColor = compute11(ee, oe, eo, oo, angle11.x, angle11.y);
-
-    }*/
 }

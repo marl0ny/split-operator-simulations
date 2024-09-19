@@ -1,3 +1,9 @@
+/* The attribute or input uvIndex contains the 2D coordinates represetation
+of the volume render frame, which is then converted to 3D coordinates
+and manipulated using the other uniforms.
+It is also directly passed to the fragment shader as the varying or
+out variable UV, so that it can be used to sample the volume data which
+is stored in the 2D texture format. */
 #if (__VERSION__ >= 330) || (defined(GL_ES) && __VERSION__ >= 300)
 #define texture2D texture
 #else
@@ -25,13 +31,6 @@ uniform float scale;
 uniform ivec3 texelDimensions3D;
 uniform ivec2 texelDimensions2D;
 
-/* The attribute or input uvIndex contains the 2D coordinates represetation
-of the volume render frame, which is then converted to 3D coordinates
-and manipulated using the other uniforms.
-It is also directly passed to the fragment shader as the varying or
-out variable UV, so that it can be used to sample the volume data which
-is store in the 2D texture format.
-*/
 
 quaternion mul(quaternion q1, quaternion q2) {
     quaternion q3;

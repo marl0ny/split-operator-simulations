@@ -1,7 +1,7 @@
 import gCanvas from "./canvas.js";
 import {gl, gMainRenderWindow, TextureParams, Quad,
     IVec2, Vec2, Vec3, IVec3, Quaternion, Complex, IScalar,
-    MultidimensionalDataQuad,
+    MultidimensionalDataQuad, withConfig,
     get2DFrom3DDimensions,
     add, mul, sub, div,
     Vec4,
@@ -360,40 +360,6 @@ function scaleRotate(r) {
     return new Vec3(q.i/gScale, q.j/gScale, q.k/gScale);
 }
 
-function getPositionOnPlanes(r0, r1, s0, s1) {
-    /* Made a mistake by assuming that the planes need to be rotated
-    as well - this isn't necessary because the rotation is only applied 
-    to the ray cast and the planes kept fixed.
-    */
-    let identity = new Quaternion(1.0);
-    let offsetVectors = gPlanarSlices.getOffsetVectors(
-        gSimParams.gridDimensions, 
-        gIndexOffset.ind[0], gIndexOffset.ind[1], gIndexOffset.ind[2],
-    );
-    let its0
-        = gPlanarSlices.getLinePlaneIntersections(
-            identity, r0, s0, offsetVectors);
-    let its1
-        = gPlanarSlices.getLinePlaneIntersections(
-            identity, r1, s1, offsetVectors);
-    let normalsDotR = gPlanarSlices.getNormalsDotLine(identity, r0, s0);
-    let u0, u1;
-    if (normalsDotR.xy > normalsDotR.xz 
-        && normalsDotR.xy > normalsDotR.yz) {
-        u0 = its0.xy;
-        u1 = its1.xy;
-    } else if (normalsDotR.xz > normalsDotR.xy
-                && normalsDotR.xz > normalsDotR.yz) {
-        u0 = its0.xz;
-        u1 = its1.xz;
-    } else if (normalsDotR.yz > normalsDotR.xy
-                && normalsDotR.yz > normalsDotR.xz) {
-        u0 = its0.yz;
-        u1 = its1.yz;
-    }
-    return [u0, u1];
-}
-
 function sketchPotential(x0, y0, drawStrength) {
     let depth = sketchDepthFunc(gScale*gSketchDepth);
     let r0 = new Vec3(x0, y0, depth);
@@ -402,8 +368,8 @@ function sketchPotential(x0, y0, drawStrength) {
     let sketchSize = potentialSketchWidth(gSketchWidth);
     if (parseInt(gViewMode) === VIEW_MODE.PLANAR_SLICES) {
         let s0 = scaleRotate(new Vec3(x0, y0, depth + 1.0));
-        let res = getPositionOnPlanes(r0, r0, s0, s0);
-        r0 = res[0];
+        r0 = gPlanarSlices.getPositionOnPlanes(
+            r0, s0, gSimParams.gridDimensions, gIndexOffset);
     }
     gFrames.potential2.draw(
         GLSL_PROGRAMS.sketchPotential,
@@ -431,7 +397,9 @@ function drawNewWavePacket(x0, y0, x1, y1, addTo=false) {
     if (parseInt(gViewMode) === VIEW_MODE.PLANAR_SLICES) {
         let s0 = scaleRotate(new Vec3(x0, y0, depth + 1.0));
         let s1 = scaleRotate(new Vec3(x1, y1, depth + 1.0));
-        [r0, r1] = getPositionOnPlanes(r0, r1, s0, s1);
+        [r0, r1] = gPlanarSlices.getPositionOnPlanesFor2Lines(
+            r0, r1, s0, s1, gSimParams.gridDimensions, gIndexOffset
+        );
     }
     let wavepacketUniforms = {
         amplitude: 1.0,
@@ -528,7 +496,8 @@ function displayAverageFPS() {
 }
 
 let gRotation = Quaternion.rotator(Math.PI/4.0, 0.0, 0.0, 1.0);
-let gMousePosition = [];
+let gMouseIdlePosition = [];
+let gMouseInteractPosition = [];
 
 
 function setRotation(x0, y0, x1, y1) {
@@ -573,8 +542,8 @@ function scaleVolume(scaleVal) {
 
 gCanvas.addEventListener("wheel", e => {
     scaleVolume(e.deltaY/400.0);
-    let [x, y] = equalizeXYScaling(getMouseXY(e));
-    updateTextPosition(x, y);
+    gMouseIdlePosition = equalizeXYScaling(getMouseXY(e));
+    updateTextPosition(...gMouseIdlePosition);
 });
 
 const INPUT_MODES = {NONE: 0, ROTATE_VIEW: 1, NEW_WAVE_FUNC: 2,
@@ -658,44 +627,45 @@ function mouseInputFunc(e) {
     if (e.buttons !== 0) {
         if (getMouseXY(e)[0] < 0.0 || getMouseXY(e)[0] > 1.0 ||
             getMouseXY(e)[1] < 0.0 || getMouseXY(e)[0] > 1.0) {
-            if (gMousePosition.length >= 0)
-                gMousePosition = [];
+            if (gMouseInteractPosition.length >= 0)
+                gMouseInteractPosition = [];
             return;
         }
         if (gInputMode === INPUT_MODES.ROTATE_VIEW) {
-            if (gMousePosition.length === 0) {
-                gMousePosition = equalizeXYScaling(getMouseXY(e));
+            if (gMouseInteractPosition.length === 0) {
+                gMouseInteractPosition = equalizeXYScaling(getMouseXY(e));
                 return;
             }
-            // console.log(gMousePosition);
+            // console.log(gMouseInteractPosition);
             let [x1, y1] = equalizeXYScaling(getMouseXY(e));
-            let [x0, y0] = gMousePosition;
+            let [x0, y0] = gMouseInteractPosition;
             setRotation(x0, y0, x1, y1);
-            gMousePosition = [x1, y1];
+            gMouseInteractPosition = [x1, y1];
         }
         else if (gInputMode === INPUT_MODES.NEW_WAVE_FUNC) {
             let [x1, y1] = equalizeXYScaling(getMouseXY(e));
-            if (gMousePosition.length === 0) {
-                gMousePosition = [x1, y1];
+            if (gMouseInteractPosition.length === 0) {
+                gMouseInteractPosition = [x1, y1];
                 drawNewWavePacket(x1, y1, x1, y1);
                 return;
             }
-            let [x0, y0] = gMousePosition;
+            let [x0, y0] = gMouseInteractPosition;
+            gMouseIdlePosition = [x0, y0];
             updateTextPosition(x0, y0);
             // displayInitialMomentum(x0, y0, x1, y1);
             drawNewWavePacket(x0, y0, x1, y1);
         }
         else if (gInputMode === INPUT_MODES.SKETCH_V) {
             let [x1, y1] = equalizeXYScaling(getMouseXY(e));
-            if (gMousePosition.length === 0) {
-                gMousePosition = [x1, y1];
+            if (gMouseInteractPosition.length === 0) {
+                gMouseInteractPosition = [x1, y1];
             }
             sketchPotential(x1, y1, 0.3);
         }
         else if (gInputMode === INPUT_MODES.ERASE_V) {
             let [x1, y1] = equalizeXYScaling(getMouseXY(e));
-            if (gMousePosition.length === 0) {
-                gMousePosition = [x1, y1];
+            if (gMouseInteractPosition.length === 0) {
+                gMouseInteractPosition = [x1, y1];
             }
             sketchPotential(x1, y1, -0.3);
         }
@@ -703,14 +673,14 @@ function mouseInputFunc(e) {
 }
 
 gCanvas.addEventListener("mousemove", e => {
-    let [x, y] = equalizeXYScaling(getMouseXY(e));
-    updateTextPosition(x, y);
+    gMouseIdlePosition = equalizeXYScaling(getMouseXY(e));
+    updateTextPosition(...gMouseIdlePosition);
     mouseInputFunc(e);
 });
 gCanvas.addEventListener("mousedown", e => mouseInputFunc(e));
 
 gCanvas.addEventListener("mouseup", () => {
-    gMousePosition = [];
+    gMouseInteractPosition = [];
 });
 
 document.getElementById("potentialEntry").addEventListener(
@@ -772,9 +742,9 @@ function updateTextPosition(x, y) {
     let position = scaleRotate(position0);
     if (parseInt(gViewMode) === VIEW_MODE.PLANAR_SLICES) {
         let position1 = scaleRotate(new Vec3(x, y, depth + 1));
-        let res = getPositionOnPlanes(
-            position, position, position1, position1);
-        position = res[0];
+        position = gPlanarSlices.getPositionOnPlanes(
+            position, position1, gSimParams.gridDimensions, gIndexOffset
+        );
     }
     let hoveringElement = document.getElementById("hoveringElements");
     hoveringElement.style = `opacity: 1; `
@@ -805,11 +775,21 @@ function viewData(data, scale, rotation) {
             // let [v0, v1] = gPlanarSlices.getXYPlanarVectors(rotation);
             // console.log('v0: (', v0.x, v0.y, v0.z, ')');
             // console.log('v1: (', v1.x, v1.y, v1.z, ')');
-            view = gPlanarSlices.view(data, rotation, scale,
-                gIndexOffset.ind[0],
-                gIndexOffset.ind[1],
-                gIndexOffset.ind[2]
-            );
+            if (gMouseIdlePosition.length !== 0) {
+                let [x, y] = gMouseIdlePosition;
+                let depth = sketchDepthFunc(gScale*gSketchDepth);
+                let position0 = new Vec3(x, y, depth);
+                let position = scaleRotate(position0);
+                let position1 = scaleRotate(new Vec3(x, y, depth + 1));
+                let ray = [position, position1];
+                view = gPlanarSlices.view(data, rotation, scale,
+                    gIndexOffset.ind[0],
+                    gIndexOffset.ind[1],
+                    gIndexOffset.ind[2],
+                    gSimParams.gridDimensions,
+                    ray
+                );
+            }
             document.getElementById(
                 "planarSlicesControls").removeAttribute("hidden");
             document.getElementById(
@@ -1221,7 +1201,6 @@ function animation() {
     gTextEditNonlinear.refresh(() => {
         gUseNonlinear = true;
     });
-    // gTextEditKE.
     for (let i = 0; i < gStepsPerFrame; i++) {
         let potential = gFrames.potential;
         if (gUseNonlinear) {
@@ -1313,7 +1292,6 @@ function animation() {
                 tex2: gFrames.extra
             }
         );
-        // console.log('This is reached.');
         view = viewData(gFrames.waveFuncVisual2, 
             gScale, gRotation);
     } else if (gShowPotential) {
@@ -1323,12 +1301,16 @@ function animation() {
         view = viewData(gFrames.waveFuncVisual, 
             gScale, gRotation);
     }
-
+    // withConfig(
+    //     {enable: gl.BLEND}, () => {
+    // gl.enable(gl.BLEND);
     gFrames.target.draw(
         GLSL_PROGRAMS.scale, {tex: view, scale: 1.0},
-        {viewport: [0.5*(gCanvas.width - gCanvas.height), 0, 
+        {viewport: [0.5*(gCanvas.width - gCanvas.height), 0,
             gCanvas.height, gCanvas.height]}
     );
+    // gl.disable(gl.BLEND);
+    // });
     requestAnimationFrame(animation);
 }
 

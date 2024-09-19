@@ -23,6 +23,7 @@ uniform int orientation;
 uniform int slice;
 uniform bool showAxis;
 uniform bool showOutline;
+uniform float alpha;
 
 uniform sampler2D tex;
 uniform ivec3 sourceTexelDimensions3D;
@@ -110,7 +111,7 @@ void main() {
     }
     // fragColor = vec4(1.0);
     // fragColor = vec4(5.0*uv[0], 0.0, 0.0, 1.0);
-    fragColor = vec4(sample2DTextureAs3D(tex, uvw).rgb, 1.0);
+    fragColor = vec4(sample2DTextureAs3D(tex, uvw).rgb, alpha);
     if (showAxis) {
         if (abs(UV[0] - 0.5) < 1.0/float(sourceTexelDimensions2D[0]) ||
             abs(UV[1] - 0.5) < 1.0/float(sourceTexelDimensions2D[1])) {
@@ -118,11 +119,11 @@ void main() {
         }
     }
     if (showOutline) {
-        if (UV[0] < 1.0/float(sourceTexelDimensions2D[0]) ||
-            UV[0] > (1.0 - 1.0/float(sourceTexelDimensions2D[0])) ||
-            UV[1] < 1.0/float(sourceTexelDimensions2D[1]) ||
-            UV[1] > (1.0 - 1.0/float(sourceTexelDimensions2D[1]))) {
-            fragColor += vec4(1.0, 1.0, 1.0, 0.0);
-        }
+        float d = 0.01;
+        float col = smoothstep(1.0 - d, 1.0, 1.0 - UV[0])
+                        + smoothstep(1.0 - d, 1.0, UV[0])
+                        + smoothstep(1.0 - d, 1.0, 1.0 - UV[1])
+                        + smoothstep(1.0 - d, 1.0, UV[1]);
+        fragColor += vec4(col);
     }
 }

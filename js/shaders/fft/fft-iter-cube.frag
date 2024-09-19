@@ -1,6 +1,7 @@
 /* This shadder is used to implement part of the 
-Cooley-Tukey iterative radix-2 FFT algorithm for 3D data stored
-in 2D textures.
+Cooley-Tukey iterative radix-2 FFT algorithm for 3D array data stored
+in 2D textures. It is assumed that the 3D array data has equal side
+lengths.
 
 References:
 

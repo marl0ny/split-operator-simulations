@@ -1,3 +1,14 @@
+/* Sample and interpolate data points from the texture containing the 
+initial raw 3D data to points on volume render frame.
+This corresponds to the sampling step given in the Wikipedia page
+for volume ray casting.
+
+References:
+
+Volume ray casting - Wikipedia
+https://en.wikipedia.org/wiki/Volume_ray_casting
+
+*/
 #if (__VERSION__ >= 330) || (defined(GL_ES) && __VERSION__ >= 300)
 #define texture2D texture
 #else
@@ -25,18 +36,6 @@ uniform ivec3 volumeTexelDimensions3D;
 uniform ivec2 volumeTexelDimensions2D;
 uniform ivec3 dataTexelDimensions3D;
 uniform ivec2 dataTexelDimensions2D;
-
-/* Sample and interpolate data points from the texture containing the 
-initial raw 3D data to points on volume render frame.
-This corresponds to the sampling step given in the Wikipedia page
-for volume ray casting.
-
-References:
-
-Volume ray casting - Wikipedia
-https://en.wikipedia.org/wiki/Volume_ray_casting
-
-*/
 
 quaternion mul(quaternion q1, quaternion q2) {
     quaternion q3;
@@ -90,7 +89,7 @@ vec3 to3DVolumeTextureCoordinates(vec2 uv) {
     return vec3(u, v, w);
 }
 
-// bilinear interpolation
+/* Bilinear interpolation */
 vec4 blI(vec2 r, float x0, float y0, float x1, float y1,
          vec4 w00, vec4 w10, vec4 w01, vec4 w11) {
     float dx = x1 - x0, dy = y1 - y0;
