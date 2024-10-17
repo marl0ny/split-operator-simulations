@@ -14,10 +14,16 @@
 			https://stackoverflow.com/q/2006134 by eric-d-bari
 			https://stackoverflow.com/a/2006162 by marcgg
 		!-->
-        <div id="hoveringElements" style="position: relative; z-index: 10;">
+        <div id="hoveringStatsElements" style="position: relative; z-index: 10;">
             <div id="stats" style="position: absolute; top: 0px; right: 0px; width: 200px;">
                 <label id="hoveringStats" 
-                    style="color: white;">This is some text.</label>
+                    style="color: white;"></label>
+            </div>
+        </div>
+        <div id="hoveringMessageElements" style="position: relative; z-index: 10;">
+            <div id="message" style="position: absolute; top: 0px; right: 0px; width: 200px;">
+                <label id="hoveringMessage" 
+                    style="color: white;"></label>
             </div>
         </div>
         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr;">
@@ -61,11 +67,11 @@
                     <label for="showWavefunction">Show Ψ(<b>r</b>)</label><br>
                     <input type="checkbox" id="showWavefunctionPhase" checked="true"></input>
                     <label for="showWavefunctionPhase">Colour phase</label><br>
-                    <label for="wavefunctionBrightness">Ψ brightness:</label><br>
+                    <label for="wavefunctionBrightness">Ψ opacity:</label><br>
                     <input type="range" id="wavefunctionBrightness"
                         min="5" max="100" value="10"
                         style="width: 95%;"/>
-                    <label for="absPsiVisualization">Map brightness from: </label>
+                    <label for="absPsiVisualization">Map opacity from: </label>
                     <select id="absPsiVisualization">
                         <option value=1>|Ψ(<b>r</b>)|</option>
                         <option value=2>|Ψ(<b>r</b>)|²</option>
@@ -74,7 +80,7 @@
                     </select><br>
                     <input type="checkbox" id="showPotential" checked="false"></input>
                     <label for="showPotential">Show V(<b>r</b>)</label><br>
-                    <label for="potentialBrightness">V(<b>r</b>)  brightness:</label>
+                    <label for="potentialBrightness">V(<b>r</b>)  opacity:</label>
                     <br>
                     <input type="range" id="potentialBrightness"
                         min="0" max="100" value="10"
@@ -86,8 +92,8 @@
                 </label>
                 <!--default should be volume render-->
                 <select id="viewMode">
-                    <option value=1>Planar slices</option>
-                    <option value=2 selected>Volume render</option>
+                    <option value=1 selected>Planar slices</option>
+                    <option value=2>Volume render</option>
                 </select><br>
                 <div id="planarSlicesControls">
                     <label for="zIndex" id="zIndexLabel">xy slice - z offset:</label>
@@ -151,13 +157,13 @@
                         <option value=1>Harmonic</option>
                         <option value=2>Double slit</option>
                         <option value=3>Spherical well</option>
-                        <option value=4>Ball spike</option>
-                        <option value=5>Inverted ball spike</option>
+                        <option value=4>Repulsive "spike"</option>
+                        <option value=5>Attractive "spike"</option>
                         <option value=6>Absorbing boundaries (A.B.)</option>
                         <option value=7 selected>Double slit (A.B.)</option>
-                        <option value=8>Ball spike (A.B.)</option>
-                        <option value=9>Inverted ball spike (A.B.)</option>
-                        <option value=10>Moving Gaussian</option>
+                        <option value=8>Repulsive "spike" (A.B.)</option>
+                        <option value=9>Attractive "spike" (A.B.)</option>
+                        <option value=10>Moving cylinder</option>
                         <!--<option value=11>Moving att. spike (A.B.)</option>!-->
                         <!--<option value=12>Upside down Gaussian</option>!-->
                         <!--<option value=13>Rotating harmonic</option>!-->
@@ -169,6 +175,10 @@
                     name="potentialEntry" size="40"
                     />
                 <br>
+                <label id="potentialClippedMessage">
+                    (To reduce numerical error, V will be clipped so that
+                    |V(x, y, t)| &lt; 2)
+                </label><br/>
                 <div id="potentialUserSliders"></div>
                 <hr/>
                 <label for="presetNonlinear">Preset nonlinear term<br>
@@ -213,7 +223,17 @@
                         style="width: 95%;"/>
                 <br>
                 <input type="checkbox" id="normalizePsi"/>
-					<label for="normalizePsi">Normalize Ψ after each frame</label><br/>
+					<label for="normalizePsi">Normalize Ψ after each frame</label><hr/>
+                <input type="checkbox" id="screenshots"/>
+                <label for="screenshots" id="screenshotsLabel">Capture frames</label><br/>
+                <label for="angularVel" id="angularVelLabel">3D auto-rotate
+                </label>
+                <br>
+                <input type="range" id="angularVel"
+                        name="angularVel"
+                        min="-100.0" max="100.0" value="0.0"
+                        style="width: 95%;"/>
+                <br>
             </div>
         </div>
         <script type="module" src="./sim3d.js"></script>

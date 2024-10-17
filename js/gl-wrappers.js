@@ -1,3 +1,15 @@
+/* This script contains custom wrapper functions and classes around 
+the WebGL API to hide a lot of the boilerplate code and to greatly
+simplify the structure of those GLSL-based simulation programs and
+their visualizations. 
+
+Aside from primarily consulting Mozilla's WebGL API documentation
+(https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API),
+some other helpful resources for writing this script are Learn OpenGL
+(https://learnopengl.com) and the WebGL fundamentals
+(https://webglfundamentals.org/webgl/lessons/webgl-render-to-texture.html), 
+where these two are especially helpful for learning it for the first time.
+*/
 import gCanvas from "./canvas.js";
 
 function initializeWebGL1(gl) {
@@ -504,7 +516,7 @@ function toBase(sized) {
     switch (sized) {
         case gl.RGBA32F: case gl.RGBA32I: case gl.RGBA32UI: case gl.RGBA16F:
         case gl.RGBA16I: case gl.RGBA16UI: case gl.RGBA8I: case gl.RGBA8UI:
-        case gl.RGBA8:
+        case gl.RGBA8: case gl.RGBA:
             return gl.RGBA;
         case gl.RGB32F: case gl.RGB32I: case gl.RGB32UI: case gl.RGB16F:
         case gl.RGB16I: case gl.RGB16UI: case gl.RGB8I: case gl.RGB8UI:
@@ -1185,6 +1197,25 @@ export class Quad {
                     originalViewport[2], originalViewport[3]);
         unbind();
     }
+    asUInt8Array(viewport=null) {
+        if (self.id !== 0)
+            gl.bindFramebuffer(gl.FRAMEBUFFER, this._fbo);
+        let pixelSize = this.channelCount();
+        let size = pixelSize*this.width*this.height;
+        let arr = new Uint8Array(size);
+        if (viewport === null)
+            gl.readPixels(
+                0, 0, this.width, this.height,
+                toBase(this._params.format), gl.UNSIGNED_BYTE,
+                arr);
+        else
+            gl.readPixels(
+                viewport[0], viewport[1], viewport[2], viewport[3],
+                toBase(this._params.format),
+                gl.UNSIGNED_BYTE, arr);
+        unbind();
+        return arr;
+    }
     asFloat32Array(viewport=null) {
         if (self.id !== 0)
             gl.bindFramebuffer(gl.FRAMEBUFFER, this._fbo);
@@ -1374,4 +1405,99 @@ export function get3DFrom2DTextureCoordinates(
     let w = (Math.floor(uv.ind[1]*hStack)*wStack
                 + Math.floor(uv.ind[0]*wStack) + 0.5)/length3D;
     return new Vec3(u, v, w)
+}
+
+function isSmallEndian() {
+    let val = 23424;
+    let a = new ArrayBuffer(4);
+    let view = new DataView(a);
+    view.setInt32(0, val);
+    return !(a[0] === val)
+}
+
+
+/* Get the contents of a Quad object as a byte array, and
+then save it as a BMP image.
+
+References:
+
+Wikipedia - BMP file format
+https://en.wikipedia.org/wiki/BMP_file_format
+
+*/
+export function saveQuadAsBMPImage(
+    document, frame, backgroundCol=null, viewport=null) {
+    let endian = isSmallEndian();
+    let headerFileSize = 14;
+    let headerInfoSize = 40;
+    let headerBuf = new ArrayBuffer(headerFileSize + headerInfoSize);
+    let headerView = new DataView(headerBuf);
+    let frameHeight = (viewport !== null)?
+        viewport[3] - viewport[1]: frame.height;
+    let frameWidth = (viewport !== null)?
+        viewport[2] - viewport[0]: frame.width;
+    let imageHeight
+        = (frameHeight % 2 === 1)? frameHeight + 1: frameHeight;
+    let imageWidth 
+        = (frameWidth % 2 === 1)? frameWidth + 1: frameWidth;
+    let padding = (4 - (imageWidth * 3) % 4) % 4;
+    let paddedImageRowSize = imageWidth * 3 + padding;
+    let imageSize = paddedImageRowSize*imageHeight;
+    for (let i = 0; i < headerFileSize; i++)
+        headerView.setUint8(i, 0, endian);
+    headerView.setUint8(0, 'B'.charCodeAt(0), endian);
+    headerView.setUint8(1, 'M'.charCodeAt(0), endian);
+    // Write total size of file
+    headerView.setUint32(
+        2, headerFileSize + headerInfoSize + imageSize, endian);
+    // Write the offset to the image data
+    headerView.setUint32(10, headerFileSize + headerInfoSize, endian);
+    let headerInfo = {
+        size: {value: 40, offset: 0, size: 4},
+        width: {value: imageWidth, offset: 4, size: 4},
+        height: {value: imageHeight, offset: 8, size: 4},
+        nPlanes: {value: 1, offset: 12, size: 2},
+        bitsPerPixel: {value: 24, offset: 14, size: 2},
+        compressionMethod: {value: 0, offset: 16, size: 4},
+        imageSize: {value: imageSize, offset: 20, size: 4},
+        hResolution: {value: 100, offset: 24, size: 4},
+        vResolution: {value: 100, offset: 28, size: 4},
+        nColoursPalette: {value: 16777216, offset: 32, size: 4},
+        nImportantColours: {value: 0, offset: 36, size: 4},
+    };
+    for (let k of Object.keys(headerInfo)) {
+        let value = headerInfo[k].value;
+        let offset = headerInfo[k].offset;
+        let size = headerInfo[k].size;
+        if (size === 2)
+            headerView.setUint16(headerFileSize + offset, value, endian);
+        else
+            headerView.setUint32(headerFileSize + offset, value, endian);
+    }
+    let frameArr = frame.asUInt8Array(viewport);
+    let imBuf = new ArrayBuffer(imageSize);
+    let imView = new DataView(imBuf);
+    for (let i = 0; i < frameHeight; i++) {
+        for (let j = 0; j < frameWidth; j++) {
+            let frameArrIndex = 4*(i*frameWidth + j);
+            let imArrIndex = i*paddedImageRowSize + 3*j;
+            let alphaVal = frameArr[frameArrIndex + 3]/255.0;
+            for (let k = 0; k < 3; k++) {
+                let colVal = frameArr[frameArrIndex + k];
+                imView.setUint8(imArrIndex + k,
+                    (backgroundCol === null)?
+                        colVal: 
+                        colVal*alphaVal + backgroundCol[k]*(1.0 - alphaVal),
+                endian);
+            }
+        }
+    }
+    let blob = new Blob([headerBuf, imBuf], {type: "octet/stream"});
+    let url = URL.createObjectURL(blob);
+    let time = Date.now();
+    let aTag = document.createElement('a');
+    aTag.hidden = true;
+    aTag.href = url;
+    aTag.download = `${time}.bmp`;
+    new Promise(() => aTag.click()).then(() => aTag.remove());
 }

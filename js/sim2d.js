@@ -3,11 +3,10 @@ import { gl, gMainRenderWindow, TextureParams, RenderTarget,
          Quad, Vec2, IVec2, IVec3, Vec3, Vec4, Complex,
          Quaternion, mul, add, div,
          withConfig,
-         get3DFrom2DTextureCoordinates,
          sub,
-         MultidimensionalDataQuad} from "./gl-wrappers.js";
+         saveQuadAsBMPImage} from "./gl-wrappers.js";
 import splitStep, { 
-    initializeDefaultKineticEnergy, SimulationParameters 
+    SimulationParameters 
 } from "./split-step.js";
 import makeSurface, { makeSurfaceProgram } from "./surface.js";
 import { 
@@ -252,9 +251,9 @@ function getTouchXY(touch) {
 
 let gMousePosition = [];
 let gTouchesPosition = new Touches();
-let gRotation = Quaternion.rotator(Math.PI/4.0, 0.0, 0.0, 1.0);
-// let gRotation = mul(Quaternion.rotator(-1.0, 0.0, 0.0, 1.0),
-//                     Quaternion.rotator(-1.0, 1.0, 0.0, 0.0));
+let gRotation = mul(Quaternion.rotator(Math.PI/4.0, 0.0, 0.0, 1.0),
+                    Quaternion.rotator(-Math.PI/4.0, 1.0, 0.0, 0.0));
+
 let gScale = 1.0;
 let gTextEditPotential 
     = new UserEditablePotentialProgramContainer('potentialUserSliders');
@@ -290,6 +289,25 @@ document.getElementById("timeStepReal").addEventListener(
     e => timeStepRealCallback(e.target.value)
 );
 
+let gAutoRotationVelocity = 0.0;
+
+function autoRotationVelocityCallback(value) {
+    gAutoRotationVelocity = value/10000.0;
+    document.getElementById("angularVelLabel").textContent
+        = `Auto-rotate = ${gAutoRotationVelocity}`;
+}
+
+{
+    let angularVelElement
+        = document.getElementById("angularVel");
+    if (angularVelElement !== null) {
+        autoRotationVelocityCallback(angularVelElement.value);
+        angularVelElement.addEventListener(
+            "input", e => autoRotationVelocityCallback(e.target.value)
+        );
+    }
+}
+
 document.getElementById("potentialClippedMessage").innerHTML
     = "To reduce numerical error,<br\> "
     + " V will be clipped so that<br\> "
@@ -321,6 +339,20 @@ document.getElementById("timeStepImag").addEventListener(
 document.getElementById("normalizePsi").addEventListener(
     "input", e => gNormalize = e.target.checked
 );
+
+let gTakeScreenshots = (() => {
+    let screenshotsElement = document.getElementById("screenshots");
+    if (screenshotsElement !== null)
+        return document.getElementById("screenshots").checked;
+    return false;
+})()
+
+{
+    let screenshotsElement = document.getElementById("screenshots");
+    if (screenshotsElement !== null)
+        screenshotsElement.addEventListener(
+            "input", e => gTakeScreenshots = e.target.checked);
+}
 
 let gSketchWidth = document.getElementById("sketchWidth").value;
 const potentialSketchWidth 
@@ -1220,9 +1252,17 @@ function drawSurface() {
     gFrames.target.draw(GLSL_PROGRAMS.copy, {tex: gFrames.render});
 }
 
+function applyRotationAlongZAxisOfSurface(angularVel) {
+    let axis = Quaternion.rotate(
+        new Quaternion(1.0, 0.0, 0.0, 1.0), gRotation);
+    let rotationAxis = Quaternion.rotator(angularVel, axis.i, axis.j, axis.k);
+    gRotation = mul(gRotation, rotationAxis);
+}
+
 function animate() {
     displayAverageFPS();
     refreshPotential();
+    applyRotationAlongZAxisOfSurface(gAutoRotationVelocity);
     gTextEditNonlinear.refresh(() => {
         gUseNonlinear = true;
     });
@@ -1298,6 +1338,19 @@ function animate() {
     }
     if (gShowPsiP)
         showPsiPWindow();
+    if (gTakeScreenshots) {
+        // let url = gCanvas.toDataURL('image/png', 1);
+        // let time = Date.now();
+        // let aTag = document.createElement('a');
+        // aTag.hidden = true;
+        // aTag.href = url;
+        // aTag.download = `${time}.png`;
+        // new Promise(() => aTag.click()).then(() => aTag.remove());
+        saveQuadAsBMPImage(
+            document, gFrames.target, [50, 50, 50],
+            [0, 0, gCanvas.width, gCanvas.height]
+        );
+    }
     requestAnimationFrame(animate);
 }
 

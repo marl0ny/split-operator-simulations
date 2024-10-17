@@ -1,11 +1,12 @@
 import gCanvas from "./canvas.js";
+gCanvas.width = gCanvas.height;
 import {gl, gMainRenderWindow, TextureParams, Quad,
-    IVec2, Vec2, Vec3, IVec3, Quaternion, Complex, IScalar,
-    MultidimensionalDataQuad, withConfig,
+    IVec2, Vec3, IVec3, Quaternion, Complex, IScalar,
+    MultidimensionalDataQuad,
     get2DFrom3DDimensions,
     add, mul, sub, div,
     Vec4,
-    dot} from "./gl-wrappers.js";
+    saveQuadAsBMPImage} from "./gl-wrappers.js";
 import { getShader } from "./shaders.js";
 import splitStep3D, {SimulationParameters} from "./split-step3d.js";
 import { VolumeRender } from "./volume-render.js";
@@ -15,8 +16,6 @@ import {
     UserEditable3DKEProgramContainer} from "./user-editable-program.js";
 import { sumPowerOfTwo } from "./sum.js";
 import { PlanarSlices } from "./planar-slice.js";
-
-gCanvas.width = gCanvas.height;
 
 // console.log('2D from 3D (128^3): ', get2DFrom3DDimensions(new IVec3(128, 128, 128)));
 // console.log('2D from 3D (256^3): ', get2DFrom3DDimensions(new IVec3(256, 256, 256)));
@@ -88,6 +87,7 @@ let gUseNonlinear = false;
 let gTextEditKE
     = new UserEditable3DKEProgramContainer('kineticEnergyUserSliders');
 
+// let gTimedEvents = [];
 
 document.getElementById("nonlinearEntry").addEventListener(
     "input", e => {
@@ -177,6 +177,25 @@ timeStepImagCallback(document.getElementById("timeStepImag").value);
 document.getElementById("timeStepImag").addEventListener(
     "input", e => timeStepImagCallback(e.target.value)
 );
+
+let gAutoRotationVelocity = 0.0;
+
+function autoRotationVelocityCallback(value) {
+    gAutoRotationVelocity = value/10000.0;
+    document.getElementById("angularVelLabel").textContent
+        = `Auto-rotate = ${gAutoRotationVelocity}`;
+}
+
+{
+    let angularVelElement
+        = document.getElementById("angularVel");
+    if (angularVelElement !== null) {
+        autoRotationVelocityCallback(angularVelElement.value);
+        angularVelElement.addEventListener(
+            "input", e => autoRotationVelocityCallback(e.target.value)
+        );
+    }
+}
 
 const TEX_PARAMS_SIM = new TextureParams(
     (gl.version === 2)? gl.RG32F: gl.RGBA32F,
@@ -746,9 +765,11 @@ function updateTextPosition(x, y) {
             position, position1, gSimParams.gridDimensions, gIndexOffset
         );
     }
-    let hoveringElement = document.getElementById("hoveringElements");
-    hoveringElement.style = `opacity: 1; `
-        + `position: absolute; top: ${parseInt(gCanvas.offsetTop + 0.95*gCanvas.height)}px; `
+    let hoveringStatsElement 
+        = document.getElementById("hoveringStatsElements");
+    hoveringStatsElement.style = `opacity: 1; `
+        + `position: absolute; `
+        + `top: ${parseInt(gCanvas.offsetTop + 0.95*gCanvas.height)}px; `
         + `left: ${gCanvas.offsetLeft + 210}px`;
     let hoveringStats = document.getElementById("hoveringStats");
     hoveringStats.textContent = 
@@ -808,6 +829,20 @@ let gNormalize = document.getElementById("normalizePsi").checked;
 document.getElementById("normalizePsi").addEventListener(
     "input", e => gNormalize = e.target.checked
 );
+
+let gTakeScreenshots = (() => {
+    let screenshotsElement = document.getElementById("screenshots");
+    if (screenshotsElement !== null)
+        return document.getElementById("screenshots").checked;
+    return false;
+})()
+
+{
+    let screenshotsElement = document.getElementById("screenshots");
+    if (screenshotsElement !== null)
+        screenshotsElement.addEventListener(
+            "input", e => gTakeScreenshots = e.target.checked);
+}
 
 let gWaveFunctionBrightness = 
     document.getElementById("wavefunctionBrightness").value/100.0;
@@ -1025,6 +1060,59 @@ function refreshPotential() {
     }
 }
 
+// class Timer {
+//     constructor(time, funcCall) {
+//         this.time = time;
+//         this.funcCall = funcCall;
+//     }
+//     tick() {
+//         this.time -= 0.1;
+//         if (this.time <= 0.0)
+//             this.funcCall();
+//     }
+// }
+
+// class Timers {
+//     constructor() {
+//         this._timersList = [];
+//     }
+//     add(timer) {
+//         this._timersList.push(timer);
+//     }
+//     update() {
+//         for (let timer of this._timersList) {
+//             timer.tick();
+//         }
+//         let timer = this._timersList.pop();
+//         if (timer.time <= 0.0)
+//             0
+//     }
+// }
+
+let gHoveringMessageOpacity = 1.0;
+
+function decreaseOpacityOfHoveringMessage() {
+    if (gHoveringMessageOpacity > 0.0) {
+        gHoveringMessageOpacity = Math.max(
+            0.0, gHoveringMessageOpacity - 0.02
+        );
+        document.getElementById("hoveringMessageElements").style.opacity
+                = `${gHoveringMessageOpacity}`;
+    }
+}
+
+function showHoveringMessage(message) {
+    let hoveringMessageElement 
+        = document.getElementById("hoveringMessageElements");
+    gHoveringMessageOpacity = 1.0;
+    hoveringMessageElement.style = `opacity: ${gHoveringMessageOpacity}; `
+        + `position: absolute; `
+        + `top: ${parseInt(gCanvas.offsetTop + 0.01*gCanvas.height)}px; `
+        + `left: ${gCanvas.offsetLeft + 210}px`;
+    let hoveringMessage = document.getElementById("hoveringMessage");
+    hoveringMessage.textContent = message;
+}
+
 function setPresetPotential(value) {
     const PRESETS = {
         FREE: 0, 
@@ -1063,6 +1151,11 @@ function setPresetPotential(value) {
             gTextEditPotential.newText(`0`);
             break;
         case PRESETS.HARMONIC:
+            if (parseInt(gViewMode) === VIEW_MODE.VOLUME_RENDER
+                && document.getElementById("showPotential").checked)
+                showHoveringMessage(
+                    `If render for the selected V is obstructing view, `
+                    + `uncheck "Show V(r)"`);
             gTextEditPotential.newText(
                 `2.0*abs(strength)*`
                 + `((${u}-0.5)^2 + (${v}-0.5)^2 + (${w}-0.5)^2)`);
@@ -1071,6 +1164,11 @@ function setPresetPotential(value) {
             gTextEditPotential.newText(doubleSlit);
             break;
         case PRESETS.SPHERICAL:
+            if (parseInt(gViewMode) === VIEW_MODE.VOLUME_RENDER
+                && document.getElementById("showPotential").checked)
+                showHoveringMessage(
+                    `If render for the selected V is obstructing view, `
+                    + `uncheck "Show V(r)"`);
             gTextEditPotential.newText(spherical);
             break;
         case PRESETS.REPULSIVE_COULOMB:
@@ -1194,10 +1292,18 @@ function refreshKE() {
     });
 }
 
+function applyRotationAlongZAxisOfCubicDomain(angularVel) {
+    let axis = Quaternion.rotate(
+        new Quaternion(1.0, 0.0, 0.0, 1.0), gRotation);
+    let rotationAxis = Quaternion.rotator(angularVel, axis.i, axis.j, axis.k);
+    gRotation = mul(gRotation, rotationAxis);
+}
+
 function animation() {
     displayAverageFPS();
     refreshPotential();
     refreshKE();
+    applyRotationAlongZAxisOfCubicDomain(gAutoRotationVelocity);
     gTextEditNonlinear.refresh(() => {
         gUseNonlinear = true;
     });
@@ -1311,6 +1417,18 @@ function animation() {
     );
     // gl.disable(gl.BLEND);
     // });
+    if (gTakeScreenshots) {
+        // let url = gCanvas.toDataURL('image/png', 1);
+        // let time = Date.now();
+        // let aTag = document.createElement('a');
+        // aTag.hidden = true;
+        // aTag.href = url;
+        // aTag.download = `${time}.png`;
+        // new Promise(() => aTag.click()).then(() => aTag.remove());
+        saveQuadAsBMPImage(document, gFrames.target, null,
+            [0, 0, gCanvas.width, gCanvas.height]);
+    }
+    decreaseOpacityOfHoveringMessage();
     requestAnimationFrame(animation);
 }
 
