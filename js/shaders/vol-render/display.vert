@@ -3,7 +3,7 @@ of the volume render frame, which is then converted to 3D coordinates
 and manipulated using the other uniforms.
 It is also directly passed to the fragment shader as the varying or
 out variable UV, so that it can be used to sample the volume data which
-is stored in the 2D texture format. */
+is stored in a 2D texture format. */
 #if (__VERSION__ >= 330) || (defined(GL_ES) && __VERSION__ >= 300)
 #define texture2D texture
 #else

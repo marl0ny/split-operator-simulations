@@ -1,8 +1,8 @@
-/* The variable UV from the vertex shading step contains 
+/* The variable UV from the previous vertex shading step contains 
 the 2D texture coordinate representation of the volume render.
-It is 2D so that the gradient and density uniform textures are
-properly sampled. These sampled gradient and density data points are used
-together to determine how the pixel should be displayed.
+It is in 2D because the gradient and density are stored in 2D textures.
+These sampled gradient and density data points are combined to determine
+how the pixel should be displayed.
 
 This corresponds to the shading step as given on the Wikipedia
 page for Volume ray casting.

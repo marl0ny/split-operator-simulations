@@ -1,3 +1,4 @@
+/* Script for managing the 2D simulation. */
 import gCanvas from "./canvas.js";
 import { gl, gMainRenderWindow, TextureParams, RenderTarget, 
          Quad, Vec2, IVec2, IVec3, Vec3, Vec4, Complex,

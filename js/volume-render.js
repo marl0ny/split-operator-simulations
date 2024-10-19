@@ -1,3 +1,15 @@
+/* Script for managing the volume render.
+
+The volume render works by first sampling the 3D volume data along separate
+translucent planar slices which are stacked parallel and equal distance
+to each other, then rendering each slice in order from back to front.
+With enough slices the illusion of presenting a 3D object is maintained.
+Wikipedia page explaining this process:
+
+Volume ray casting - Wikipedia
+https://en.wikipedia.org/wiki/Volume_ray_casting
+
+*/
 import { gl, IVec2, IVec3, Vec3, Vec4, Attribute, Quad, TrianglesFrame,
     RenderTarget, Quaternion, TextureParams,
     makeProgramFromSources, 

@@ -1,4 +1,4 @@
-/* This shadder is used to implement part of the 
+/* This shader is used to implement the iterative part of the
 Cooley-Tukey iterative radix-2 FFT algorithm. It is assumed that 
 the width of the input texture is equal to its height.
 

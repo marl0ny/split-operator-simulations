@@ -1,3 +1,4 @@
+/* Script for managing the 3D simulation. */
 import gCanvas from "./canvas.js";
 gCanvas.width = gCanvas.height;
 import {gl, gMainRenderWindow, TextureParams, Quad,
@@ -514,7 +515,8 @@ function displayAverageFPS() {
     gUserTime = time;
 }
 
-let gRotation = Quaternion.rotator(Math.PI/4.0, 0.0, 0.0, 1.0);
+let gRotation = mul(Quaternion.rotator(Math.PI/4.0, 0.0, 0.0, 1.0),
+                    Quaternion.rotator(-Math.PI/4.0, 1.0, 0.0, 0.0));
 let gMouseIdlePosition = [];
 let gMouseInteractPosition = [];
 

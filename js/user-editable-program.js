@@ -1,3 +1,4 @@
+/* Script for creating shader programs on the fly programs from user input. */
 import { Complex, Quad } from "./gl-wrappers.js";
 import { getRPNExprList, getVariablesFromRPNList,
     turnRPNExpressionToString

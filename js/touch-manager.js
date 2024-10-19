@@ -1,5 +1,4 @@
-
-
+/* Class for managing touch input. */
 class Touches {
     _touches;
     lockToDouble;

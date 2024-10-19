@@ -1,3 +1,7 @@
+/* Reverse bit sort a 3D array of data that's organized into 
+a single 2D texture. It is assumed the the side lengths of this
+3D array are a power of two in size.
+*/
 #if (__VERSION__ >= 330) || (defined(GL_ES) && __VERSION__ >= 300)
 #define texture2D texture
 #else
