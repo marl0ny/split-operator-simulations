@@ -127,7 +127,7 @@ vec3 revBitSort2(vec3 uvw) {
     int rev = int(0), i = indexU;
     for (int asc = 1,
          des = texelDimensions3D[0]/2; des > 0; des /= 2, asc *= 2) {
-        if (i/des > 0) {
+        if (des > i) {
             rev += asc;
             i -= des;
         }
@@ -137,7 +137,7 @@ vec3 revBitSort2(vec3 uvw) {
     rev = 0, i = indexV;
     for (int asc = 1,
          des = texelDimensions3D[1]/2; des > 0; des /= 2, asc *= 2) {
-        if (i/des > 0) {
+        if (des > i) {
             rev += asc;
             i -= des;
         }
@@ -147,7 +147,7 @@ vec3 revBitSort2(vec3 uvw) {
     rev = 0, i = indexW;
     for (int asc = 1,
          des = texelDimensions3D[2]/2; des > 0; des /= 2, asc *= 2) {
-        if (i/des > 0) {
+        if (des > i) {
             rev += asc;
             i -= des;
         }

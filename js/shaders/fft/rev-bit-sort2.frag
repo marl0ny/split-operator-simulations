@@ -95,7 +95,7 @@ vec2 revBitSort2(vec2 uv) {
     uv2[0] = (float(rev) + 0.5)/float(width);
     rev = 0, i = indexV;
     for (int asc = 1, des = height/2; des > 0; des /= 2, asc *= 2) {
-        if (i/des > 0) {
+        if (des > i) {
             rev += asc;
             i -= des;
         }
