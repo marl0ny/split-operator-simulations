@@ -1,0 +1,11 @@
+{
+    "stepsPerFrame": {"name": "Steps/Frame", "type": "int", "value": 1, "min": 0, "max": 5},
+    "c": {"name": "c (a.u.)", "type": "float", "value": 137.06},
+    "hbar": {"name": "hbar (a.u.)", "type": "float", "value": 1.0},
+    "m": {"name": "mass (a.u.)", "type": "float", "value": 1.0, "min": 0.0, "max": 10.0, "step": 0.1},
+    "dt": {"name": "Time Step (a.u.)", "type": "float", "value": 0.000028, "min": 0.0, "max": 0.00003, "step": 0.000001, "comment":0.000028},
+    "t": {"name": "Time elapsed (a.u.)", "type": "float", "value": 0.0},
+    "texelSideLength": {"name": "Grid Side Length (Cubic)", "type": "int", "value": 64, "min": 64, "max": 128, "step": 64},
+    "sideLength": {"name": "Simulation Side Length", "type": "float", "value": 2.0},
+    "fourVectorPotential": {"name": "4-Vector Potential", "type": "std::vector<std::string>", "value": "{\"0\", \"0\", \"0\", \"0\"}"}
+}
