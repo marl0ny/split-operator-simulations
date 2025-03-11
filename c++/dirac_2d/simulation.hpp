@@ -35,6 +35,7 @@ struct GLSLPrograms {
     uint32_t harmonic;
     uint32_t all_alpha;
     uint32_t combine_potential_view;
+    uint32_t sketch_potential;
     GLSLPrograms();
 };
 
@@ -53,6 +54,11 @@ class Simulation {
     void new_wave_function(
         const SimParams &sim_params,
         const Vec2 &tex_pos, const Vec2 &wave_num);
+    void sketch_modify_scalar_potential(
+        const SimParams &sim_params, const Vec2 &pos);
+    void sketch_modify_vector_potential(
+        const SimParams &sim_params,
+        const Vec2 &pos, const Vec2 &dir);
 };
 
 }

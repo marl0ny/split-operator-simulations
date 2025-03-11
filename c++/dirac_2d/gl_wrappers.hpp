@@ -276,6 +276,15 @@ struct Config {
         c._viewport[3] = height;
         return c;
     }
+    static Config viewport(int x0, int y0, int width, int height) {
+        Config c;
+        c.usage = VIEWPORT;
+        c._viewport[0] = x0;
+        c._viewport[1] = y0;
+        c._viewport[2] = width;
+        c._viewport[3] = height;
+        return c;
+    }
 };
 
 class Enables {
@@ -400,7 +409,7 @@ class WireFrame {
     int draw_type;
     public:
     enum {
-        TRIANGLES=0, LINES
+        TRIANGLES=0, LINES, POINTS
     };
     WireFrame(const Attributes &attributes,
               const std::vector<float> &vertices,
@@ -460,6 +469,7 @@ class Quad {
     void init(const TextureParams &);
     friend class MultidimensionalDataQuad;
     friend class MainQuad;
+    void substitute_array(void *array, IVec4 viewport);
     public:
     Quad(const TextureParams &);
     Quad(Quad &&);
@@ -477,6 +487,11 @@ class Quad {
     uint32_t format();
     void draw(uint32_t program, const Uniforms &uniforms,
               const Config = Config());
+    void set_pixels(std::vector<float>);
+    std::vector<float> get_float_pixels();
+    std::vector<float> get_float_pixels(IVec4 viewport);
+    std::vector<uint8_t> get_byte_pixels();
+    std::vector<uint8_t> get_byte_pixels(IVec4 viewport);
     ~Quad();
 };
 

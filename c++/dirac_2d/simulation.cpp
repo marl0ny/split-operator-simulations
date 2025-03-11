@@ -53,7 +53,7 @@ Frames::Frames(
             .mag_filter=GL_LINEAR,
         }
     ),
-    visual_intermediate(Quad(view_tex_params)),
+    visual_intermediate(Quad(sim_tex_params)),
     psi({sim_tex_params}),
     potential(Quad(sim_tex_params)),
     temps {
@@ -121,6 +121,9 @@ GLSLPrograms::GLSLPrograms() {
     this->combine_potential_view = Quad::make_program_from_path(
         "./shaders/combine-potential-view.frag"
     );
+    this->sketch_potential = Quad::make_program_from_path(
+        "./shaders/sketch/potential2d.frag"
+    );
 }
 
 Simulation::Simulation(
@@ -165,6 +168,8 @@ const RenderTarget & Simulation::render_view(
     options.spatial_current = params.showSpatialCurrent;
     options.spatial_pseudocurrent = params.showPseudospatialCurrent;
     options.scalar_potential = params.showScalarPotential;
+    options.scalar = params.showScalar;
+    options.pseudoscalar = params.showPseudoscalar;
     options.vector_potential = params.showVectorPotential;
     options.spin[0] = params.showPsi01Spin;
     options.spin[1] = params.showPsi23Spin;
@@ -239,10 +244,11 @@ void Simulation::new_wave_function(
     Vec2 p_xy = gaussian_wave_packet2d::wave_number_to_momentum(
         wave_num, get_dimensions(params.sideLength));
     Vec3 p {.ind{p_xy.x, p_xy.y, 0.0F}};
+    float length_p = p.length();
     spinors::Spinor p_u 
-        = spinors::get_spin_up_state(p.normalized(), 1.0);
+        = spinors::get_spin_up_state(p, length_p);
     spinors::Spinor p_d
-        = spinors::get_spin_down_state(p.normalized(), 1.0);
+        = spinors::get_spin_down_state(p, length_p);
     float pos_amount = params.posE;
     float neg_amount = negative_coeff(pos_amount);
     std::complex<float> c0 = neg_amount*inner_prod(neg_state, p_u);
@@ -251,6 +257,11 @@ void Simulation::new_wave_function(
     std::complex<float> c3 = pos_amount*inner_prod(pos_state, p_d);
     printf("p/|p| = (%g, %g, %g)\n", 
         p.normalized().x, p.normalized().y, p.normalized().z);
+    printf("|+> = [\n\t%g + (%g) i,\n\t%g + (%g) i\n] \n", 
+        pos_state[0].real(), pos_state[0].imag(), 
+        pos_state[1].real(), pos_state[1].imag());
+    printf("|p up> = [\n\t%g + (%g) i,\n\t%g + (%g) i\n] \n", 
+        p_u[0].real(), p_u[0].imag(), p_u[1].real(), p_u[1].imag());
     printf("c0 = %g + (%g) i\n", c0.real(), c0.imag());
     printf("c1 = %g + (%g) i\n", c1.real(), c1.imag());
     printf("c2 = %g + (%g) i\n", c2.real(), c2.imag());
@@ -280,6 +291,7 @@ void Simulation::new_wave_function(
                     spinors::Spinor(0.0, 0.0))
             },
             .use_energy_states_combinations=int(1),
+            .invert_negative_energy_momentum=int(0),
             .dimensions2d=get_dimensions(params.sideLength),
             .texel_dimensions2d=get_texel_dimensions(params.texelSideLength),
             .coefficients={
@@ -290,4 +302,42 @@ void Simulation::new_wave_function(
             .m=params.m,
             .c=params.c,
             .hbar=params.hbar});
+}
+
+void Simulation::sketch_modify_scalar_potential(
+    const SimParams &sim_params, const Vec2 &pos) {
+    m_frames.visual_intermediate.draw(
+        m_programs.copy,
+        {{"tex", {&m_frames.potential}}}
+    );
+    m_frames.potential.draw(
+        m_programs.sketch_potential,
+        {
+            {"tex", {&m_frames.visual_intermediate}},
+            {"offsetTexCoord", {pos}},
+            {"sigmaTexCoord", {Vec2{.x=0.01, .y=0.01}}},
+            {"amplitude", {Vec4{.x=0.0, .y=0.0, .z=0.0, .w=10.0}}},
+            {"maxScalarValue", {80.0F}},
+            {"maxVectorMag", {80.0F}},
+        }
+    );
+}
+
+void Simulation::sketch_modify_vector_potential(
+    const SimParams &sim_params, const Vec2 &pos, const Vec2 &dir) {
+    m_frames.visual_intermediate.draw(
+        m_programs.copy,
+        {{"tex", {&m_frames.potential}}}
+    );
+    m_frames.potential.draw(
+        m_programs.sketch_potential,
+        {
+            {"tex", {&m_frames.visual_intermediate}},
+            {"offsetTexCoord", {pos}},
+            {"sigmaTexCoord", {Vec2{.x=0.01, .y=0.01}}},
+            {"amplitude", {Vec4{.x=dir.x, .y=dir.y, .z=0.0, .w=0.0}}},
+            {"maxScalarValue", {80.0F}},
+            {"maxVectorMag", {80.0F}},
+        }
+    );
 }

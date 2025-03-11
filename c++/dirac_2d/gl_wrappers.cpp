@@ -990,6 +990,14 @@ void WireFrame::draw(uint32_t program) {
                 GL_LINES, this->elements.size(), GL_UNSIGNED_INT, NULL);
         }
         break;
+        case WireFrame::POINTS:
+        if (this->elements.size() == 0) {
+            glDrawArrays(GL_POINTS, 0, this->vertices.size());
+        } else {
+            glDrawElements(
+                GL_POINTS, this->elements.size(), GL_UNSIGNED_INT, NULL);
+        }
+        break;
         case WireFrame::TRIANGLES:
         if (this->elements.size() == 0) {
             glDrawArrays(GL_TRIANGLES, 0, this->vertices.size());
@@ -1442,6 +1450,79 @@ void Quad::clear() {
         glBindFramebuffer(GL_FRAMEBUFFER, (unsigned int)0);
         // glBindRenderbuffer(GL_RENDERBUFFER, (unsigned int)0);
     }
+}
+
+void Quad::substitute_array(void *array, IVec4 viewport) {
+    int old_viewport[4] = {0,};
+    glGetIntegerv(GL_VIEWPORT, old_viewport);
+    glViewport(0, 0, this->width(), this->height());
+    if (this->id != 0)
+        glBindFramebuffer(GL_FRAMEBUFFER, this->fbo);
+    glActiveTexture(GL_TEXTURE0 + this->id);
+    glTexSubImage2D(
+        GL_TEXTURE_2D, 0,
+        viewport[0], viewport[1], viewport[2], viewport[3],
+        to_base(this->format()), to_type(this->format()), array);
+    glViewport(old_viewport[0], old_viewport[1],
+        old_viewport[2], old_viewport[3]);
+    unbind();
+}
+
+void Quad::set_pixels(std::vector<float> vec) {
+    this->substitute_array(
+        (void *)&vec[0], 
+        {.ind{0, 0, (int)this->width(), (int)this->height()}}
+    );
+}
+
+static int number_of_channels(int sized) {
+    switch(to_type(sized)) {
+        case GL_RGBA:
+            return 4;
+        case GL_RGB:
+            return 3;
+        case GL_RG:
+            return 2;
+        case GL_RED:
+            return 1;
+        default:
+            return -1;
+    }
+
+}
+
+std::vector<float> Quad::get_float_pixels(IVec4 viewport) {
+    if (this->id != 0)
+        glBindFramebuffer(GL_FRAMEBUFFER, this->fbo);
+    int size = 
+        this->width()*this->height()*number_of_channels(this->params.format);
+    std::vector<float> vec(size);
+    glReadPixels(viewport[0], viewport[1], viewport[2], viewport[3],
+        to_base(this->format()), GL_FLOAT, (void *)&vec[0]);
+    unbind();
+    return vec;
+}
+
+std::vector<float> Quad::get_float_pixels() {
+    return this->get_float_pixels(
+        {.ind{0, 0, (int)this->width(), (int)this->height()}});
+}
+ 
+std::vector<uint8_t> Quad::get_byte_pixels(IVec4 viewport) {
+    if (this->id != 0)
+        glBindFramebuffer(GL_FRAMEBUFFER, this->fbo);
+    int size = 
+        this->width()*this->height()*number_of_channels(this->params.format);
+    std::vector<uint8_t> vec(size);
+    glReadPixels(viewport[0], viewport[1], viewport[2], viewport[3],
+        to_base(this->format()), GL_UNSIGNED_BYTE, (void *)&vec[0]);
+    unbind();
+    return vec;
+}
+
+std::vector<uint8_t> Quad::get_byte_pixels() {
+    return this->get_byte_pixels(
+        {.ind{0, 0, (int)this->width(), (int)this->height()}});
 }
 
 void Quad::reset(const TextureParams &new_tex_params) {

@@ -28,6 +28,27 @@ function createScalarParameterSlider(
     });
 };
 
+function createCheckbox(controls, enumCode, name, value) {
+    let label = document.createElement("label");
+    // label.for = spec['id']
+    label.style = "color:white; font-family:Arial, Helvetica, sans-serif";
+    label.textContent = `${name}`
+    let checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    // slider.style ="width: 95%;"
+    // checkbox.value = value;
+    checkbox.checked = value;
+    // controls.appendChild(document.createElement("br"));
+    controls.appendChild(checkbox);
+    controls.appendChild(label);
+    controls.appendChild(document.createElement("br"));
+    checkbox.addEventListener("input", e => {
+        console.log(e.target.checked);
+        Module.set_bool_param(enumCode, e.target.checked);
+    }
+    );
+}
+
 let gVecParams = {};
 
 function createVectorParameterSliders(
@@ -102,8 +123,8 @@ function createEntryBoxes(
 let controls = document.getElementById('controls');
 createScalarParameterSlider(controls, 0, "Steps/Frame", "int", {'value': 4, 'min': 0, 'max': 20});
 createScalarParameterSlider(controls, 3, "mass (a.u.)", "float", {'value': 1.0, 'min': 0.0, 'max': 10.0, 'step': 0.1});
-createScalarParameterSlider(controls, 4, "Time step (a.u.)", "float", {'value': 2.8e-05, 'min': 0.0, 'max': 3e-05, 'step': 1e-06});
-createScalarParameterSlider(controls, 6, "sigma", "float", {'value': 0.05, 'min': 0.001, 'max': 0.25, 'step': 0.001});
+createScalarParameterSlider(controls, 4, "Time step (a.u.)", "float", {'value': 2.8e-05, 'min': -3e-05, 'max': 3e-05, 'step': 1e-06});
+createScalarParameterSlider(controls, 6, "sigma", "float", {'value': 0.05, 'min': 0.005, 'max': 0.15, 'step': 0.001});
 createScalarParameterSlider(controls, 7, "Grid side length (Cubic)", "int", {'value': 512, 'min': 256, 'max': 4096, 'step': 64});
 createScalarParameterSlider(controls, 9, "Wave Function Brightness", "float", {'value': 1.0, 'min': 0.0, 'max': 20.0, 'step': 0.01});
 createScalarParameterSlider(controls, 10, "Potential brightness", "float", {'value': 0.1, 'min': 0.0, 'max': 1.0, 'step': 0.001});
@@ -113,8 +134,22 @@ createScalarParameterSlider(controls, 13, "+x spin direction", "float", {'value'
 createScalarParameterSlider(controls, 14, "+y spin direction", "float", {'value': 1.0, 'min': -1.0, 'max': 1.0, 'step': 0.01});
 createScalarParameterSlider(controls, 15, "+z spin direction", "float", {'value': 0.0, 'min': -1.0, 'max': 1.0, 'step': 0.01});
 createScalarParameterSlider(controls, 16, "-x spin direction", "float", {'value': 0.0, 'min': -1.0, 'max': 1.0, 'step': 0.01});
-createScalarParameterSlider(controls, 17, "-y spin direction", "float", {'value': 0.0, 'min': -1.0, 'max': 1.0, 'step': 0.01});
-createScalarParameterSlider(controls, 18, "-z spin direction", "float", {'value': 1.0, 'min': -1.0, 'max': 1.0, 'step': 0.01});
+createScalarParameterSlider(controls, 17, "-y spin direction", "float", {'value': 1.0, 'min': -1.0, 'max': 1.0, 'step': 0.01});
+createScalarParameterSlider(controls, 18, "-z spin direction", "float", {'value': 0.0, 'min': -1.0, 'max': 1.0, 'step': 0.01});
+createCheckbox(controls, 19, "Current 0th component - 𝜓†𝜓", false);
+createCheckbox(controls, 20, "Pseudocurrent 0th component", false);
+createCheckbox(controls, 21, "Scalar - 𝜓†𝛾⁰𝜓", true);
+createCheckbox(controls, 22, "Pseudoscalar", false);
+createCheckbox(controls, 23, "Scalar potential - V", true);
+createCheckbox(controls, 24, "Spatial current", true);
+createCheckbox(controls, 25, "Spatial pseudocurrent", false);
+createCheckbox(controls, 26, "Upper spinor spin", false);
+createCheckbox(controls, 27, "Bottom spinor spin", false);
+createCheckbox(controls, 28, "3-Vector potential", true);
+createCheckbox(controls, 29, "|𝜓1|^2 with phase", false);
+createCheckbox(controls, 30, "|𝜓2|^2 with phase", false);
+createCheckbox(controls, 31, "|𝜓3|^2 with phase", false);
+createCheckbox(controls, 32, "|𝜓4|^2 with phase", false);
 createScalarParameterSlider(controls, 33, "Arrows max length", "float", {'value': 0.05, 'min': 0.0, 'max': 1.0, 'step': 0.01});
 createScalarParameterSlider(controls, 34, "Arrows scale", "float", {'value': 1.0, 'min': 0.0, 'max': 20.0, 'step': 0.1});
 

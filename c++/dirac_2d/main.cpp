@@ -34,9 +34,9 @@ static std::function<std::string(int)>
 
 
 enum {
-    NEW_INITIAL_CONDITIONS=0, 
+    NEW_WAVE_FUNCTION=0, SKETCH_SCALAR_POTENTIAL, SKETCH_VECTOR_POTENTIAL,
 };
-static int s_input_type = NEW_INITIAL_CONDITIONS;
+static int s_input_type = NEW_WAVE_FUNCTION;
 
 void dirac_2d(MainGLFWQuad main_render,
              int window_width, int window_height,
@@ -53,12 +53,28 @@ void dirac_2d(MainGLFWQuad main_render,
     // );
     sim_2d::Simulation sim(params, window_width, window_height);
 
+    auto max = [](int a, int b) -> int {
+        return (a > b)? a: b;
+    };
+
     s_loop = [&] {
-        if (start_position.size() > 0) {
+        if (s_input_type == NEW_WAVE_FUNCTION && start_position.size() > 0) {
             Vec2 dist = 64.0*(curr_position[curr_position.size() - 1] - start_position[0]);
             sim.new_wave_function(params, start_position[0], dist);
         } else {
             sim.time_steps(params);
+        }
+        if (start_position.size() > 0) {
+            Vec2 pos = curr_position[curr_position.size() - 1];
+            if (s_input_type == SKETCH_SCALAR_POTENTIAL) {
+                sim.sketch_modify_scalar_potential(params, pos);
+            } else if (s_input_type == SKETCH_VECTOR_POTENTIAL) {
+                Vec2 dir = 1000.0*(
+                    curr_position[curr_position.size() - 1] 
+                    - curr_position[max(curr_position.size() - 2, 0)]);
+                printf("Vector potential: %g, %g\n", dir.x, dir.y);
+                sim.sketch_modify_vector_potential(params, pos, dir);
+            }
         }
         Vec2 mouse_pos = interactor.get_mouse_position();
         main_render.draw(sim.render_view(params, mouse_pos));
@@ -72,16 +88,13 @@ void dirac_2d(MainGLFWQuad main_render,
                 // Vec2 delta_2d = interactor.get_mouse_delta();
                 if (start_position.empty()) {
                     start_position.push_back(pos);
-                    curr_position.push_back(pos);
                 } else {
-                    // if (!curr_position.empty())
-                    //     curr_position.pop_back();
-                    curr_position.push_back(pos);
                     #ifdef __EMSCRIPTEN__
                     // TODO
                     #endif
                     // TODO
                 }
+                curr_position.push_back(pos);
             }
             if (interactor.left_released()) {
                 if (!start_position.empty()) {
@@ -103,7 +116,7 @@ void dirac_2d(MainGLFWQuad main_render,
             #ifndef __EMSCRIPTEN__
             if (glfwGetKey(main_render.get_window(), 
                 GLFW_KEY_A) == GLFW_PRESS)
-                s_input_type = NEW_INITIAL_CONDITIONS;
+                s_input_type = NEW_WAVE_FUNCTION;
             #endif
         };
         poll_events();

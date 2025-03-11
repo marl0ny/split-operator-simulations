@@ -46,6 +46,27 @@ function createScalarParameterSlider(
     });
 };
 
+function createCheckbox(controls, enumCode, name, value) {
+    let label = document.createElement("label");
+    // label.for = spec['id']
+    label.style = "color:white; font-family:Arial, Helvetica, sans-serif";
+    label.textContent = `${name}`
+    let checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    // slider.style ="width: 95%;"
+    // checkbox.value = value;
+    checkbox.checked = value;
+    // controls.appendChild(document.createElement("br"));
+    controls.appendChild(checkbox);
+    controls.appendChild(label);
+    controls.appendChild(document.createElement("br"));
+    checkbox.addEventListener("input", e => {
+        console.log(e.target.checked);
+        Module.set_bool_param(enumCode, e.target.checked);
+    }
+    );
+}
+
 let gVecParams = {};
 
 function createVectorParameterSliders(
@@ -150,6 +171,10 @@ def write_sliders_js(parameters, dst_file_name):
                     'createScalarParameterSlider(controls, '\
                         f'{i}, "{name}", "{type_}", '\
                             + f'{str(p)});\n'
+        if parameter['type'] == 'bool':
+            p = parameter['value']
+            file_contents += f'createCheckbox('\
+                  + f'controls, {i}, "{name}", {"true" if p else "false"});\n'
     file_contents += '\n'
     with open(dst_file_name, "w") as f:
         f.write(file_contents)

@@ -13,11 +13,13 @@ Vec2 tex_to_sim_coordinates(Vec2 tex_coord, Vec2 dimensions2d);
 
 struct MomentumInitParams {
     float amplitude;
-    Vec2 sigma;
-    Vec2 p0;
-    Vec2 x0;
-    spinors::BiSpinor s;
+    Vec2 sigma; // Position space standard deviation of the wave packet
+    Vec2 p0; // Average momentum
+    Vec2 x0; // average position
+    spinors::BiSpinor s; // If use_energy_states_combination set to false,
+    // use this to initialize the spinor part of the wave function.
     bool use_energy_states_combinations;
+    bool invert_negative_energy_momentum;
     Vec2 dimensions2d;
     IVec2 texel_dimensions2d;
     std::complex<float> coefficients[4];

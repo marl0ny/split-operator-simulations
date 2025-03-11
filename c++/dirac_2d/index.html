@@ -11,7 +11,8 @@
     <body style="font-family: Arial; background-color: rgb(0, 0, 0);">
         <!--<h3 style="color:white; text-align: center;">Box of springs</h3>!-->
         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr;">
-            <div style="grid-column: 1;" id="controls">
+            <div style="grid-column: 1;">
+                <div style="overflow-y: scroll; max-height: 700px;" id="controls"></div>
             </div>
             <div style="grid-column: 2;">
                 <canvas id="canvas" oncontextmenu="event.preventDefault()"
@@ -29,7 +30,9 @@
             <div style="grid-column: 3; padding: 10px;">
                 <label for="setMouseInput">Mouse input<br>
                 <select id="setMouseInput">
-                    <option value=0>New initial conditions</option>
+                    <option value=0>New wave function</option>
+                    <option value=1>Scalar potential sketch</option>
+                    <option value=2>Vector potential sketch</option>
                     <!--<option value=1 selected>Rotate view</option>!-->
                 </select><br>
             </div>

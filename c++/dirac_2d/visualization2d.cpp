@@ -38,8 +38,8 @@ static void compute_scalar(
     scalar.draw(
         draw_scalar_program,
         {
-            {"uTex", &psi.u},
-            {"vTex", &psi.v},
+            {"uTex", {&psi.u}},
+            {"vTex", {&psi.v}},
             {"representation", {int(0)}}
         }
     );
@@ -92,6 +92,7 @@ void visualization2d::scalar_or_single_component_quantities(
             programs.domain_color,
             {
                 {"tex", {&intermediate_quantity}},
+                {"index", {int(0)}},
                 {"brightness", {params.brightness}},
             },
             dst_wireframe
@@ -213,7 +214,8 @@ void visualization2d::vector_quantities(
             },
             dst_wireframe
         );
-    } else if (options.spatial_pseudocurrent) {
+    }
+    if (options.spatial_pseudocurrent) {
         compute_current(
             intermediate_quantity, psi, 
             programs.pseudocurrent, {
@@ -230,22 +232,25 @@ void visualization2d::vector_quantities(
             },
             dst_wireframe
         );
-    } else if (options.vector_potential) {
+    }
+    if (options.vector_potential) {
         dst_render.draw(
             programs.arrows,
             {
                 {"tex", {&potential}},
                 {"scale", {10.0F}},
-                {"vecTex", {&intermediate_quantity}},
+                {"vecTex", {&potential}},
                 {"arrowScale", {params.arrows_scale}},
                 {"maxLength", {params.arrows_max_length}},
                 {"color", {Vec4{.ind{2.0, 2.0, 2.0, 2.0}}}}
             },
             dst_wireframe
         );
-    } else if (options.electric_field) {
+    }
+    if (options.electric_field) {
         // TODO
-    } else if (options.magnetic_field) {
+    }
+    if (options.magnetic_field) {
         // TODO
     }
 }
@@ -282,7 +287,7 @@ void visualization2d::spin_quantities(
         intermediate_quantity.draw(
             programs.spin,
             {
-                {"psiTex", {&psi.ind[1]}},
+                {"psiTex", {&psi.v}},
             }
         );
         dst_render.draw(
