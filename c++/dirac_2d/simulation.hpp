@@ -59,6 +59,10 @@ class Simulation {
     void sketch_modify_vector_potential(
         const SimParams &sim_params,
         const Vec2 &pos, const Vec2 &dir);
+    void modify_potential_with_user_program(
+        const SimParams &sim_params, uint32_t program,
+        std::map<std::string, float> variables
+    );
 };
 
 }

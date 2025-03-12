@@ -12,10 +12,10 @@
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #include <emscripten/bind.h>
-
-using namespace emscripten;
 #endif
 #include <functional>
+
+#include "wasm_wrappers.hpp"
 
 static std::function <void()> s_loop;
 #ifdef __EMSCRIPTEN__
@@ -24,25 +24,68 @@ static void s_main_loop() {
 }
 #endif
 
-static std::function <void(int, Uniform)> s_sim_params_set;
-static std::function <void(int, int, std::string)> s_sim_params_set_string;
-static std::function <Uniform(int)> s_sim_params_get;
-static std::function<void(int, std::string, float)> s_user_edit_set_value;
-static std::function<float(int, std::string)> s_user_edit_get_value;
-static std::function<std::string(int)>
-    s_user_edit_get_comma_separated_variables;
-
-
-enum {
-    NEW_WAVE_FUNCTION=0, SKETCH_SCALAR_POTENTIAL, SKETCH_VECTOR_POTENTIAL,
+struct UserDefinedProgram {
+    bool is_time_dependent;
+    int program;
+    std::map<std::string, float> uniforms;
 };
-static int s_input_type = NEW_WAVE_FUNCTION;
+
+struct UserProgramsManager {
+    std::map<std::string, float> all_seen_variables;
+    UserDefinedProgram program;
+    std::vector<int> programs_queue;
+    void add_new_program(int program, std::set<std::string> variables_set) {
+        std::map<std::string, float> variables {};
+        for (std::string variable: variables_set) {
+            if (all_seen_variables.count(variable))
+                variables.insert({variable, all_seen_variables.at(variable)});
+            else
+                variables.insert({variable, 1.0F});
+        }
+        this->program = {
+            .is_time_dependent=(bool)variables.count("t"),
+            .program=program,
+            .uniforms=variables,
+        };
+        this->programs_queue.clear();
+        this->programs_queue.push_back(this->program.program);
+    }
+    void add_seen_variable(std::string variable, float value) {
+        this->all_seen_variables.insert({variable, value});
+        this->program.uniforms.insert({variable, value});
+
+    }
+    void queue_current() {
+        this->programs_queue.push_back(this->program.program);
+    }
+    bool program_queued() {
+        return this->programs_queue.size() != 0;
+    }
+    UserDefinedProgram expend_program() {
+        this->programs_queue.pop_back();
+        return this->program;
+    }
+};
+
+static void display_parameters_as_sliders(
+    int c, std::set<std::string> variables) {
+    std::string string_val = "[";
+    for (auto &e: variables)
+        string_val += "\"" + e + "\", ";
+    string_val += "]";
+    string_val 
+        = "modifyUserSliders(" + std::to_string(c) + ", " + string_val + ");";
+    printf("%s\n", &string_val[0]);
+    #ifdef __EMSCRIPTEN__
+    emscripten_run_script(&string_val[0]);
+    #endif
+}
 
 void dirac_2d(MainGLFWQuad main_render,
              int window_width, int window_height,
              sim_2d::SimParams &params,
              Interactor interactor,
-             UserEditGLSLProgram &potential_edit) {
+             UserProgramsManager &programs_manager) {
     std::vector<Vec2> start_position {};
     std::vector<Vec2> curr_position {};
     // potential.draw(
@@ -58,6 +101,11 @@ void dirac_2d(MainGLFWQuad main_render,
     };
 
     s_loop = [&] {
+        if (programs_manager.program_queued()) {
+            UserDefinedProgram program = programs_manager.expend_program();
+            sim.modify_potential_with_user_program(
+                params, program.program, program.uniforms);
+        }
         if (s_input_type == NEW_WAVE_FUNCTION && start_position.size() > 0) {
             Vec2 dist = 64.0*(curr_position[curr_position.size() - 1] - start_position[0]);
             sim.new_wave_function(params, start_position[0], dist);
@@ -102,16 +150,6 @@ void dirac_2d(MainGLFWQuad main_render,
                     curr_position.clear();
                 }
             }
-            // TODO
-            if (potential_edit.refresh()) {
-                // #ifdef __EMSCRIPTEN__
-                // std::string s 
-                //     = std::string("userSliders(")
-                //     + std::to_string(sim_params.FOUR_VECTOR_POTENTIAL) 
-                //     +  ")";
-                // emscripten_run_script(s.c_str());
-                // #endif
-            }
 
             #ifndef __EMSCRIPTEN__
             if (glfwGetKey(main_render.get_window(), 
@@ -149,147 +187,36 @@ int main(int argc, char *argv[]) {
 
     // Initialize interactor
     Interactor interactor(main_quad.get_window());
-
-    UserEditGLSLProgram glsl_potential_edit {};
-
+    UserProgramsManager user_programs_manager;
     sim_2d::SimParams sim_params;
     {
         s_sim_params_set = [&sim_params](int c, Uniform u) {
             sim_params.set(c, u);
         };
-        // s_sim_params_set_string = [&sim_params, &glsl_potential_edit](
-        //     int c, int index, std::string val) {
-        //     sim_params.set(c, index, val);
-        //     glsl_potential_edit.new_texts({
-        //         sim_params.fourVectorPotential[0],
-        //         sim_params.fourVectorPotential[1],
-        //         sim_params.fourVectorPotential[2],
-        //         sim_params.fourVectorPotential[3]});
-        // };
-        // s_user_edit_set_value
-        //     = [&glsl_potential_edit](int c, std::string s, float value) {
-        //     glsl_potential_edit.set_value(s, value);      
-        // };
-        // s_user_edit_get_value
-        //     = [&glsl_potential_edit](int c, std::string s) -> float {
-        //     auto uniforms = glsl_potential_edit.get_active_uniforms();
-        //     return uniforms.operator[](s).vec2[0];
-        // };
-        // s_user_edit_get_comma_separated_variables 
-        //     = [&glsl_potential_edit](int c) -> std::string {
-        //     std::string r = "";
-        //     int count = 0;
-        //     auto uniforms = glsl_potential_edit.get_active_uniforms();
-        //     int size = uniforms.size();
-        //     for (auto &e: uniforms) {
-        //         count++;
-        //         r += e.first + ((count == size)? "": ",");
-        //     }
-        //     return r;
-        // };
         s_sim_params_get = [&sim_params](int c) -> Uniform {
             return sim_params.get(c);
+        };
+        s_sim_params_set_string = [
+            &sim_params, &user_programs_manager](int c, int i, std::string s) {
+            sim_params.set(c, i, s);
+            int program;
+            std::set<std::string> variables_set = 
+                initialize_glsl_program_from_strings(
+                    program, sim_params.fourVectorPotential);
+            user_programs_manager.add_new_program(
+                program, variables_set
+            );
+            display_parameters_as_sliders(c, variables_set);
+        };
+        s_sim_params_set_user_float_param = [&user_programs_manager](
+            int c, std::string var_name, float value) {
+            user_programs_manager.add_seen_variable(var_name, value);
+            user_programs_manager.queue_current();
         };
     }
 
     dirac_2d(
         main_quad, window_width, window_height, 
-        sim_params, interactor,
-        glsl_potential_edit);
+        sim_params, interactor, user_programs_manager);
     return 1;
 }
-
-//////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////
-
-/* Setters for the simulation parameters struct, where they act
-as the exposed entry point for JavaScript code in the WASM build.
-There are multiple functions, one for each type. They all take as the first
-argument a param_code representing each field of the parameter struct,
-where these codes must be written and enumerated separately in JavaScript.
-For the function setters of scalar quantities, the next and final argument is
-just the quantity itself. For those that set a vector quantity,
-these next arguments in order must be passed into the function: 
-the number of elements the vector contains, the index of the vector to change
-the value, and lastly the value itself. The actual vector structs
-themselves are not passed as argument: this is to avoid the complexity of 
-getting non-primitive objects to be passed between JS/C++.
-*/
-
-void set_int_param(int param_code, int i) {
-    s_sim_params_set(param_code, Uniform((int)i));
-}
-
-void set_float_param(int param_code, float f) {
-    s_sim_params_set(param_code, Uniform((float)f));
-}
-
-void set_bool_param(int param_code, bool b) {
-    s_sim_params_set(param_code, Uniform((bool)b));
-}
-
-void set_string_param(int param_code, int index, std::string s) {
-    s_sim_params_set_string(param_code, index, s);
-}
-
-// std::string send_json_string() {
-//     return {"This", "is", "some", "text\n";
-// }
-
-float user_edit_get_value(int div_code, std::string variable_name) {
-    return s_user_edit_get_value(div_code, variable_name);
-}
-
-void user_edit_set_value(int div_code, std::string variable_name, float value) {
-    s_user_edit_set_value(div_code, variable_name, value);
-}
-
-std::string user_edit_get_comma_separated_variables(int div_code) {
-    return s_user_edit_get_comma_separated_variables(div_code);
-}
-
-void set_vec_param(int param_code, int elem_count, int index, float val) {
-    auto u = s_sim_params_get(param_code);
-    if (elem_count == 2) {
-        u.vec2[index] = val;
-    } else if (elem_count == 3) {
-        u.vec3[index] = val;
-    } else {
-        u.vec4[index] = val;
-    }
-    s_sim_params_set(param_code, u);
-}
-
-void set_ivec_param(int param_code, int elem_count, int index, float val) {
-    auto u = s_sim_params_get(param_code);
-    if (elem_count == 2) {
-        u.ivec2[index] = val;
-    } else if (elem_count == 3) {
-        u.ivec3[index] = val;
-    } else {
-        u.ivec4[index] = val;
-    }
-    s_sim_params_set(param_code, u);
-}
-
-void set_mouse_mode(int type) {
-    s_input_type = type;
-}
-
-#ifdef __EMSCRIPTEN__
-EMSCRIPTEN_BINDINGS(my_module) {
-    function("set_float_param", set_float_param);
-    function("set_int_param", set_int_param);
-    function("set_bool_param", set_bool_param);
-    function("set_vec_param", set_vec_param);
-    function("set_ivec_param", set_ivec_param);
-    function("set_mouse_mode", set_mouse_mode);
-    function("set_string_param", set_string_param);
-    function("user_edit_get_value", user_edit_get_value);
-    function("user_edit_set_value", user_edit_set_value);
-    function("user_edit_get_comma_separated_variables",
-             user_edit_get_comma_separated_variables);
-}
-#endif

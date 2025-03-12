@@ -488,6 +488,7 @@ class Quad {
     void draw(uint32_t program, const Uniforms &uniforms,
               const Config = Config());
     void set_pixels(std::vector<float>);
+    void set_pixels(float *arr);
     std::vector<float> get_float_pixels();
     std::vector<float> get_float_pixels(IVec4 viewport);
     std::vector<uint8_t> get_byte_pixels();

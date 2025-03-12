@@ -960,7 +960,7 @@ void WireFrame::draw(uint32_t program) {
         std::string name = name_attribute.first;
         Attribute attribute = name_attribute.second;
         GLint id = glGetAttribLocation(program, name.c_str());
-        glEnableVertexAttribArray(id);
+        glEnableVertexAttribArray(id); 
         /* std::cout << "size: " << attribute.size << std::endl;
         std::cout << "type: " << attribute.type << std::endl;
         std::cout << "normalized: " << (GLboolean)attribute.normalized << std::endl;
@@ -1469,6 +1469,13 @@ void Quad::substitute_array(void *array, IVec4 viewport) {
 }
 
 void Quad::set_pixels(std::vector<float> vec) {
+    this->substitute_array(
+        (void *)&vec[0], 
+        {.ind{0, 0, (int)this->width(), (int)this->height()}}
+    );
+}
+
+void Quad::set_pixels(float *vec) {
     this->substitute_array(
         (void *)&vec[0], 
         {.ind{0, 0, (int)this->width(), (int)this->height()}}

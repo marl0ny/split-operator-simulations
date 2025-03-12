@@ -3,6 +3,7 @@
 #include "visualization2d.hpp"
 #include "gaussian_wavepacket2d.hpp"
 #include "spinors.hpp"
+#include <cmath>
 
 using namespace sim_2d;
 
@@ -29,6 +30,10 @@ static WireFrame get_quad_wire_frame() {
     );
 }
 
+static int convert_side_length_selector_value(int val) {
+    return std::powl(2, (long)(val + 7));
+}
+
 Frames::Frames(
     const SimParams &sim_params, int view_width, int view_height):
     view_tex_params(
@@ -45,8 +50,10 @@ Frames::Frames(
     sim_tex_params(
         {
             .format=GL_RGBA32F,
-            .width=(uint32_t)sim_params.texelSideLength,
-            .height=(uint32_t)sim_params.texelSideLength,
+            .width=(uint32_t)convert_side_length_selector_value(
+                sim_params.texelSideLengthSelector.selected),
+            .height=(uint32_t)convert_side_length_selector_value(
+                sim_params.texelSideLengthSelector.selected),
             .wrap_s=GL_REPEAT,
             .wrap_t=GL_REPEAT,
             .min_filter=GL_LINEAR,
@@ -137,6 +144,9 @@ Simulation::Simulation(
 }
 
 void Simulation::time_steps(const SimParams &params) {
+    int texel_side_length = convert_side_length_selector_value(
+        params.texelSideLengthSelector.selected
+    );
     for (int i = 0; i < params.stepsPerFrame; i++)
         dirac_split_step2d::split_step(
             m_frames.psi,
@@ -151,7 +161,7 @@ void Simulation::time_steps(const SimParams &params) {
                 .hbar=params.hbar,
                 .dimensions2d=get_dimensions(params.sideLength),
                 .texel_dimensions2d
-                    =get_texel_dimensions(params.texelSideLength),
+                    =get_texel_dimensions(texel_side_length),
 
     });
 }
@@ -233,6 +243,9 @@ const RenderTarget & Simulation::render_view(
 void Simulation::new_wave_function(
     const SimParams &params,
     const Vec2 &tex_pos, const Vec2 &wave_num) {
+    int texel_side_length 
+        = convert_side_length_selector_value(
+            params.texelSideLengthSelector.selected);
     Vec3 pos_spin_dir = Vec3{.ind{
         params.posX, params.posY, params.posZ
     }}.normalized();
@@ -293,7 +306,7 @@ void Simulation::new_wave_function(
             .use_energy_states_combinations=int(1),
             .invert_negative_energy_momentum=int(0),
             .dimensions2d=get_dimensions(params.sideLength),
-            .texel_dimensions2d=get_texel_dimensions(params.texelSideLength),
+            .texel_dimensions2d=get_texel_dimensions(texel_side_length),
             .coefficients={
                 c0, c1, c2, c3
                 // {0.0}, {1.0}, {0.0}, {0.0},
@@ -340,4 +353,21 @@ void Simulation::sketch_modify_vector_potential(
             {"maxVectorMag", {80.0F}},
         }
     );
+}
+
+void Simulation::modify_potential_with_user_program(
+    const SimParams &sim_params, uint32_t program,
+    std::map<std::string, float> variables
+) {
+    Uniforms uniforms {};
+    for (auto &e: variables)
+        uniforms.insert({e.first, float(e.second)});
+    uniforms.insert({"width", Vec2{.x=sim_params.sideLength, .y=0.0}});
+    uniforms.insert({"height", Vec2{.x=sim_params.sideLength, .y=0.0}});
+    uniforms.insert({"depth", Vec2{.x=sim_params.sideLength, .y=0.0}});
+    uniforms.insert({"useRealPartOfExpression", int(1)});
+    for (auto &e: uniforms) {
+        printf("%s, %g\n", &e.first[0], e.second.f32);
+    }
+    m_frames.potential.draw(program, uniforms);
 }

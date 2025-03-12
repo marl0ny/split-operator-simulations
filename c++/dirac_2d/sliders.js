@@ -28,13 +28,22 @@ function createScalarParameterSlider(
     });
 };
 
-function createCheckbox(controls, enumCode, name, value) {
+gCheckboxXorLists = {};
+
+function createCheckbox(controls, enumCode, name, value, xorListName='') {
     let label = document.createElement("label");
     // label.for = spec['id']
     label.style = "color:white; font-family:Arial, Helvetica, sans-serif";
     label.textContent = `${name}`
     let checkbox = document.createElement("input");
     checkbox.type = "checkbox";
+    checkbox.id = `checkbox-${enumCode}`;
+    if (xorListName !== '') {
+        if (!(xorListName in gCheckboxXorLists))
+            gCheckboxXorLists[xorListName] = [checkbox.id];
+        else
+            gCheckboxXorLists[xorListName].push(checkbox.id);
+    }
     // slider.style ="width: 95%;"
     // checkbox.value = value;
     checkbox.checked = value;
@@ -45,6 +54,15 @@ function createCheckbox(controls, enumCode, name, value) {
     checkbox.addEventListener("input", e => {
         console.log(e.target.checked);
         Module.set_bool_param(enumCode, e.target.checked);
+        if (e.target.checked === true && xorListName !== '') {
+            for (let id_ of gCheckboxXorLists[xorListName]) {
+                if (id_ !== checkbox.id) {
+                    let enumCode2 = parseInt(id_.split('-')[1]);
+                    Module.set_bool_param(enumCode2, false);
+                    document.getElementById(id_).checked = false;
+                }
+            }
+        }
     }
     );
 }
@@ -90,6 +108,62 @@ function createVectorParameterSliders(
     }
 };
 
+function createSelectionList(
+    controls, enumCode, defaultVal, selectionBoxName, textOptions
+) {
+    let label = document.createElement("label");
+    label.style = "color:white; font-family:Arial, Helvetica, sans-serif";
+    label.textContent = selectionBoxName;
+    controls.appendChild(label);
+    controls.appendChild(document.createElement("br"));
+    let selector = document.createElement("select");
+    for (let i = 0; i < textOptions.length; i++) {
+        let option = document.createElement("option");
+        option.value = i;
+        option.textContent = textOptions[i];
+        selector.add(option);
+    }
+    selector.value = defaultVal;
+    controls.appendChild(selector);
+    controls.appendChild(document.createElement("br"));
+}
+
+let gUserParams = {};
+
+function modifyUserSliders(enumCode, variableList) {
+    if (!(`${enumCode}` in gUserParams))
+        gUserParams[`${enumCode}`] = {}; 
+    for (let c of variableList) {
+        if (!( c in gUserParams[`${enumCode}`]))
+            gUserParams[`${enumCode}`][c] = 1.0;
+    }
+    let userSliders 
+        = document.getElementById(`user-sliders-${enumCode}`);
+    userSliders.textContent = ``;
+    for (let v of variableList) {
+        let label = document.createElement("label");
+        label.style = "color:white; font-family:Arial, Helvetica, sans-serif";
+        label.textContent = `${v} = ${gUserParams[`${enumCode}`][v]}`;
+        userSliders.appendChild(label);
+        let slider = document.createElement("input");
+        slider.type = "range";
+        slider.style = "width: 95%;"
+        slider.min = "-5";
+        slider.max = "5";
+        slider.step = "0.01";
+        slider.value = gUserParams[`${enumCode}`][v];
+        slider.addEventListener("input", e => {
+            let value = Number.parseFloat(e.target.value);
+            label.textContent = `${v} = ${value}`;
+            gUserParams[`${enumCode}`][v] = value;
+            Module.set_user_float_param(enumCode, v, value);
+        });
+        userSliders.appendChild(document.createElement("br"));
+        userSliders.appendChild(slider);
+        userSliders.appendChild(document.createElement("br"));
+    }
+}
+
 function createEntryBoxes(
     controls, enumCode, entryBoxName, count
 ) {
@@ -108,8 +182,10 @@ function createEntryBoxes(
         let label = document.createElement("label");
         label.style = "color:white; font-family:Arial, Helvetica, sans-serif";
         label.textContent = `${i}`;
-        controls.appendChild(label);
-        controls.appendChild(document.createElement("br"));
+        if (count >= 2) {
+            controls.appendChild(label);
+            controls.appendChild(document.createElement("br"));
+        }
         controls.appendChild(entryBox);
         controls.appendChild(document.createElement("br"));
         entryBoxes.push(entryBox);
@@ -117,39 +193,83 @@ function createEntryBoxes(
             Module.set_string_param(enumCode, i, `${e.target.value}`)
         );
     }
+    let userSlidersDiv = document.createElement("div");
+    userSlidersDiv.id = `user-sliders-${enumCode}`
+    controls.appendChild(userSlidersDiv);
+
 }
 
+function createButton(
+    controls, enumCode, buttonName, style=''
+) {
+    let button = document.createElement("button");
+    button.innerText = buttonName;
+    if (style !== '')
+        button.style = style;
+    controls.appendChild(button);
+    controls.appendChild(document.createElement("br"));
+    button.addEventListener("click", e => Module.button_pressed(enumCode));
+}
+
+function createLabel(
+    controls, labelName, style=''
+) {
+    let label = document.createElement("label");
+    if (style === '')
+        label.style = "color:white; font-family:Arial, Helvetica, sans-serif";
+    else
+        label.style = style;
+    label.textContent = `${labelName}`;
+    controls.appendChild(label);
+    controls.appendChild(document.createElement("br"));
+}
+
+function createLineDivider(controls) {
+    let hr = document.createElement("hr");
+    hr.style = "color:white;"
+    controls.appendChild(hr);
+}
 
 let controls = document.getElementById('controls');
-createScalarParameterSlider(controls, 0, "Steps/Frame", "int", {'value': 4, 'min': 0, 'max': 20});
-createScalarParameterSlider(controls, 3, "mass (a.u.)", "float", {'value': 1.0, 'min': 0.0, 'max': 10.0, 'step': 0.1});
+createScalarParameterSlider(controls, 0, "Steps/frame", "int", {'value': 4, 'min': 0, 'max': 20});
+createScalarParameterSlider(controls, 3, "Mass in atomic units (a.u.)", "float", {'value': 1.0, 'min': 0.0, 'max': 10.0, 'step': 0.1});
 createScalarParameterSlider(controls, 4, "Time step (a.u.)", "float", {'value': 2.8e-05, 'min': -3e-05, 'max': 3e-05, 'step': 1e-06});
-createScalarParameterSlider(controls, 6, "sigma", "float", {'value': 0.05, 'min': 0.005, 'max': 0.15, 'step': 0.001});
-createScalarParameterSlider(controls, 7, "Grid side length (Cubic)", "int", {'value': 512, 'min': 256, 'max': 4096, 'step': 64});
-createScalarParameterSlider(controls, 9, "Wave Function Brightness", "float", {'value': 1.0, 'min': 0.0, 'max': 20.0, 'step': 0.01});
-createScalarParameterSlider(controls, 10, "Potential brightness", "float", {'value': 0.1, 'min': 0.0, 'max': 1.0, 'step': 0.001});
-createEntryBoxes(controls, 11, "4-Vector potential (WIP; currently does nothing)", 4);
-createScalarParameterSlider(controls, 12, "Positive energy (+E) amount", "float", {'value': 1.0, 'min': 0.0, 'max': 1.0, 'step': 0.01});
-createScalarParameterSlider(controls, 13, "+x spin direction", "float", {'value': 0.0, 'min': -1.0, 'max': 1.0, 'step': 0.01});
-createScalarParameterSlider(controls, 14, "+y spin direction", "float", {'value': 1.0, 'min': -1.0, 'max': 1.0, 'step': 0.01});
-createScalarParameterSlider(controls, 15, "+z spin direction", "float", {'value': 0.0, 'min': -1.0, 'max': 1.0, 'step': 0.01});
-createScalarParameterSlider(controls, 16, "-x spin direction", "float", {'value': 0.0, 'min': -1.0, 'max': 1.0, 'step': 0.01});
-createScalarParameterSlider(controls, 17, "-y spin direction", "float", {'value': 1.0, 'min': -1.0, 'max': 1.0, 'step': 0.01});
-createScalarParameterSlider(controls, 18, "-z spin direction", "float", {'value': 0.0, 'min': -1.0, 'max': 1.0, 'step': 0.01});
-createCheckbox(controls, 19, "Current 0th component - 𝜓†𝜓", false);
-createCheckbox(controls, 20, "Pseudocurrent 0th component", false);
-createCheckbox(controls, 21, "Scalar - 𝜓†𝛾⁰𝜓", true);
-createCheckbox(controls, 22, "Pseudoscalar", false);
-createCheckbox(controls, 23, "Scalar potential - V", true);
-createCheckbox(controls, 24, "Spatial current", true);
-createCheckbox(controls, 25, "Spatial pseudocurrent", false);
-createCheckbox(controls, 26, "Upper spinor spin", false);
-createCheckbox(controls, 27, "Bottom spinor spin", false);
-createCheckbox(controls, 28, "3-Vector potential", true);
-createCheckbox(controls, 29, "|𝜓1|^2 with phase", false);
-createCheckbox(controls, 30, "|𝜓2|^2 with phase", false);
-createCheckbox(controls, 31, "|𝜓3|^2 with phase", false);
-createCheckbox(controls, 32, "|𝜓4|^2 with phase", false);
-createScalarParameterSlider(controls, 33, "Arrows max length", "float", {'value': 0.05, 'min': 0.0, 'max': 1.0, 'step': 0.01});
-createScalarParameterSlider(controls, 34, "Arrows scale", "float", {'value': 1.0, 'min': 0.0, 'max': 20.0, 'step': 0.1});
+createScalarParameterSlider(controls, 7, "Wave function brightness", "float", {'value': 1.0, 'min': 0.0, 'max': 20.0, 'step': 0.01});
+createScalarParameterSlider(controls, 8, "Potential brightness", "float", {'value': 0.1, 'min': 0.0, 'max': 1.0, 'step': 0.001});
+createSelectionList(controls, 9, 2, "Grid discretization size", [ "128x128",  "256x256",  "512x512",  "1024x1024",  "2048x2048"]);
+createLineDivider(controls);
+createLabel(controls, "Wave function initialization options", "color:white; font-family:Arial, Helvetica, sans-serif; font-weight: bold;");
+createScalarParameterSlider(controls, 12, "Standard deviation/ size", "float", {'value': 0.05, 'min': 0.005, 'max': 0.15, 'step': 0.001});
+createScalarParameterSlider(controls, 13, "Positive energy solutions (+E) proportion", "float", {'value': 1.0, 'min': 0.0, 'max': 1.0, 'step': 0.01});
+createLabel(controls, "Negative energy (-E) proportion: 0", "");
+createScalarParameterSlider(controls, 15, "+x spin direction", "float", {'value': 0.0, 'min': -1.0, 'max': 1.0, 'step': 0.01});
+createScalarParameterSlider(controls, 16, "+y spin direction", "float", {'value': 1.0, 'min': -1.0, 'max': 1.0, 'step': 0.01});
+createScalarParameterSlider(controls, 17, "+z spin direction", "float", {'value': 0.0, 'min': -1.0, 'max': 1.0, 'step': 0.01});
+createScalarParameterSlider(controls, 18, "-x spin direction", "float", {'value': 0.0, 'min': -1.0, 'max': 1.0, 'step': 0.01});
+createScalarParameterSlider(controls, 19, "-y spin direction", "float", {'value': 1.0, 'min': -1.0, 'max': 1.0, 'step': 0.01});
+createScalarParameterSlider(controls, 20, "-z spin direction", "float", {'value': 0.0, 'min': -1.0, 'max': 1.0, 'step': 0.01});
+createLineDivider(controls);
+createLabel(controls, "Scalar/single component visualizations", "color:white; font-family:Arial, Helvetica, sans-serif; font-weight: bold;");
+createCheckbox(controls, 23, "Current 0th component - 𝜓†𝜓", false, "scalarVis");
+createCheckbox(controls, 24, "Pseudocurrent 0th component", false, "scalarVis");
+createCheckbox(controls, 25, "Scalar - 𝜓†𝛾⁰𝜓", true, "scalarVis");
+createCheckbox(controls, 26, "Pseudoscalar", false, "scalarVis");
+createCheckbox(controls, 27, "|𝜓1|^2 with phase", false, "scalarVis");
+createCheckbox(controls, 28, "|𝜓2|^2 with phase", false, "scalarVis");
+createCheckbox(controls, 29, "|𝜓3|^2 with phase", false, "scalarVis");
+createCheckbox(controls, 30, "|𝜓4|^2 with phase", false, "scalarVis");
+createCheckbox(controls, 31, "Scalar potential - V", true);
+createLineDivider(controls);
+createLabel(controls, "Vector visualizations", "color:white; font-family:Arial, Helvetica, sans-serif; font-weight: bold;");
+createCheckbox(controls, 34, "Spatial current", true);
+createCheckbox(controls, 35, "Spatial pseudocurrent", false);
+createCheckbox(controls, 36, "3-Vector potential", true);
+createLineDivider(controls);
+createLabel(controls, "Spinor visualizations", "color:white; font-family:Arial, Helvetica, sans-serif; font-weight: bold;");
+createCheckbox(controls, 39, "Upper spinor spin", false);
+createCheckbox(controls, 40, "Bottom spinor spin", false);
+createLineDivider(controls);
+createScalarParameterSlider(controls, 42, "Arrows max length", "float", {'value': 0.05, 'min': 0.0, 'max': 1.0, 'step': 0.01});
+createScalarParameterSlider(controls, 43, "Arrows scale", "float", {'value': 1.0, 'min': 0.0, 'max': 20.0, 'step': 0.1});
+createEntryBoxes(controls, 44, "4-Vector potential", 4);
 
