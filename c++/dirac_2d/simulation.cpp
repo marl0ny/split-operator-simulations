@@ -1,6 +1,8 @@
 #include "simulation.hpp"
 #include "arrows2d.hpp"
+#include "surface.hpp"
 #include "visualization2d.hpp"
+#include "visualization3d2d.hpp"
 #include "gaussian_wavepacket2d.hpp"
 #include "spinors.hpp"
 #include <cmath>
@@ -68,7 +70,10 @@ Frames::Frames(
             .psi_x {{sim_tex_params}, {sim_tex_params}},
             .fft {.ind{Quad(sim_tex_params), Quad(sim_tex_params)}}
     },
-    view(view_tex_params) {
+    view(view_tex_params),
+    quad(get_quad_wire_frame()),
+    arrows(arrows2d::get_2d_vector_field_wire_frame({.ind{64, 64}})),
+    surface(get_surface_wireframe({.ind{1024, 1024}})) {
 
 }
 
@@ -117,6 +122,9 @@ GLSLPrograms::GLSLPrograms() {
     this->domain_color = Quad::make_program_from_path(
         "./shaders/util/domain-coloring.frag"
     );
+    this->uniform_color = Quad::make_program_from_path(
+        "./shaders/util/uniform-color.frag"
+    );
     this->wave_packet = Quad::make_program_from_path(
         "./shaders/wavepacket/position-gaussian2d.frag"
     );
@@ -136,8 +144,12 @@ GLSLPrograms::GLSLPrograms() {
         "./shaders/scalar/scalar.frag"
     );
     this->arrows = make_program_from_paths(
-        "./shaders/util/arrows2d.vert",
+        "./shaders/arrows/arrows2d.vert",
         "./shaders/util/uniform-color.frag");
+    this->arrows3d = make_program_from_paths(
+        "./shaders/arrows/arrows3d2d.vert",
+        "./shaders/util/uniform-color.frag"
+    );
     this->copy = Quad::make_program_from_path(
         "./shaders/util/copy.frag"
     );
@@ -145,25 +157,33 @@ GLSLPrograms::GLSLPrograms() {
         "./shaders/util/scale.frag"
     );
     this->harmonic = Quad::make_program_from_path(
-        "./shaders/harmonic.frag"
+        "./shaders/potential/harmonic.frag"
     );
     this->all_alpha = Quad::make_program_from_path(
         "./shaders/util/all-alpha.frag"
     );
     this->combine_potential_view = Quad::make_program_from_path(
-        "./shaders/combine-potential-view.frag"
+        "./shaders/potential/combine-potential-view.frag"
     );
     this->sketch_potential = Quad::make_program_from_path(
         "./shaders/sketch/potential2d.frag"
+    );
+    this->surface_domain_coloring = make_program_from_paths(
+        "./shaders/surface/surface.vert",
+        "./shaders/surface/domain-coloring.frag");
+    this->surface_all_alpha = make_program_from_paths(
+        "./shaders/surface/surface.vert",
+        "./shaders/surface/all-alpha.frag");
+    this->surface_single_color = make_program_from_paths(
+        "./shaders/surface/surface.vert",
+        "./shaders/surface/single-color.frag"
     );
 }
 
 Simulation::Simulation(
     const SimParams &sim_params, int view_width, int view_height):
     m_programs(),
-    m_frames(sim_params, view_width, view_height),
-    m_quad_wire_frame(get_quad_wire_frame()),
-    m_arrows_wire_frame(get_2d_vector_field_wire_frame({.ind{64, 64}}))
+    m_frames(sim_params, view_width, view_height)
     {
 
 }
@@ -209,9 +229,9 @@ const RenderTarget & Simulation::render_view(
     options.vector_potential = params.showVectorPotential;
     options.spin[0] = params.showPsi01Spin;
     options.spin[1] = params.showPsi23Spin;
-    scalar_or_single_component_quantities(
+    visualization2d::scalar_or_single_component_quantities(
         m_frames.view,
-        m_quad_wire_frame, 
+        m_frames.quad, 
         m_frames.visual_intermediate,
         m_frames.psi, 
         m_frames.potential, 
@@ -230,9 +250,9 @@ const RenderTarget & Simulation::render_view(
             .brightness=params.brightness, 
             .potential_brightness=params.potentialBrightness}
     );
-    spin_quantities(
+    visualization2d::spin_quantities(
         m_frames.view,
-        m_arrows_wire_frame,
+        m_frames.arrows,
         m_frames.visual_intermediate,
         m_frames.psi,
         options,
@@ -245,9 +265,9 @@ const RenderTarget & Simulation::render_view(
             .arrows_scale=params.arrowScale
         }
     );
-    vector_quantities(
+    visualization2d::vector_quantities(
         m_frames.view, 
-        m_arrows_wire_frame,
+        m_frames.arrows,
         m_frames.visual_intermediate, 
         m_frames.psi, m_frames.potential,
         options,
@@ -263,6 +283,69 @@ const RenderTarget & Simulation::render_view(
             .arrows_scale=params.arrowScale
         }
     );
+    return m_frames.view;
+}
+
+const RenderTarget & Simulation::render_view(
+    SimParams params,
+    Vec2 cursor_pos,
+    Quaternion rotation, float scale) {
+    if (!params.show3D)
+        return this->render_view(params, cursor_pos);
+    m_frames.view.clear();
+    visualization3d2d::Options options {};
+    options.current_time_component=params.showCurrent0;
+    options.pseudocurrent_time_component=params.showPsuedocurrent0;
+    options.component_magnitude_w_phase[0]=params.showPsi0WPhase;
+    options.component_magnitude_w_phase[1]=params.showPsi1WPhase;
+    options.component_magnitude_w_phase[2]=params.showPsi2WPhase;
+    options.component_magnitude_w_phase[3]=params.showPsi3WPhase;
+    options.spatial_current = params.showSpatialCurrent;
+    options.spatial_pseudocurrent = params.showPseudospatialCurrent;
+    options.scalar_potential = params.showScalarPotential;
+    options.scalar = params.showScalar;
+    options.pseudoscalar = params.showPseudoscalar;
+    options.vector_potential = params.showVectorPotential;
+    options.spin[0] = params.showPsi01Spin;
+    options.spin[1] = params.showPsi23Spin;
+    IVec2 screen_dimensions {.ind{
+        (int)m_frames.view_tex_params.width,
+        (int)m_frames.view_tex_params.height
+    }};
+    m_frames.view.draw(
+        m_programs.uniform_color,
+        {{"color", Vec4{.r=0.3, .g=0.3, .b=0.3, .a=0.1}}},
+        m_frames.quad
+    );
+    glEnable(GL_DEPTH_TEST);
+    visualization3d2d::scalar_or_single_component_quantities(
+        m_frames.view,
+        m_frames.surface,
+        m_frames.quad,
+        m_frames.visual_intermediate,
+        m_frames.psi, 
+        m_frames.potential, 
+        options, 
+        {
+            .copy=m_programs.copy,
+            .surface_all_alpha=m_programs.surface_all_alpha,
+            .surface_domain_coloring=m_programs.surface_domain_coloring,
+            .surface_single_color=m_programs.surface_single_color,
+            .uniform_color=m_programs.uniform_color,
+            .current=m_programs.current,
+            .pseudocurrent=m_programs.pseudocurrent,
+            .scalar=m_programs.scalar,
+            .pseudoscalar=m_programs.pseudoscalar}, 
+        {
+            .hbar=params.hbar,
+            .brightness=params.brightness, 
+            .potential_brightness=params.potentialBrightness,
+            .rotation=rotation,
+            .scale=scale,
+            .screen_dimensions=screen_dimensions}
+    );
+    glDisable(GL_DEPTH_TEST);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     return m_frames.view;
 }
 

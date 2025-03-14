@@ -126,6 +126,7 @@ void dirac_2d(MainGLFWQuad main_render,
             sim.change_simulation_dimensions(params);
         }
     };
+    Quaternion rotation = Quaternion{.i=0.0, .j=0.0, .k=0.0, .real=1.0};
 
     s_loop = [&] {
         if (programs_manager.program_queued()) {
@@ -133,13 +134,24 @@ void dirac_2d(MainGLFWQuad main_render,
             sim.modify_potential_with_user_program(
                 params, program.program, program.uniforms);
         }
-        if (s_input_type == NEW_WAVE_FUNCTION && start_position.size() > 0) {
+        if (start_position.size() > 0 && params.show3D) {
+            Vec2 delta_2d = interactor.get_mouse_delta();
+            Vec3 delta {.ind={delta_2d[0], delta_2d[1], 0.0}};
+            Vec3 view_vec {.ind={0.0, 0.0, -1.0}};
+            Vec3 axis = cross_product(delta, view_vec);
+            Quaternion rot = Quaternion::rotator(
+                3.0*axis.length(), axis);
+            rotation = rotation*rot;
+        }
+        if (!params.show3D 
+            && s_input_type == NEW_WAVE_FUNCTION
+            && start_position.size() > 0) {
             Vec2 dist = 64.0*(curr_position[curr_position.size() - 1] - start_position[0]);
             sim.new_wave_function(params, start_position[0], dist);
         } else {
             sim.time_steps(params);
         }
-        if (start_position.size() > 0) {
+        if (!params.show3D && start_position.size() > 0) {
             Vec2 pos = curr_position[curr_position.size() - 1];
             if (s_input_type == SKETCH_SCALAR_POTENTIAL) {
                 sim.sketch_modify_scalar_potential(params, pos);
@@ -152,7 +164,8 @@ void dirac_2d(MainGLFWQuad main_render,
             }
         }
         Vec2 mouse_pos = interactor.get_mouse_position();
-        main_render.draw(sim.render_view(params, mouse_pos));
+        main_render.draw(sim.render_view(
+            params, mouse_pos, rotation, 0.25*Interactor::get_scroll()));
         auto poll_events = [&] {
             glfwPollEvents();
             interactor.click_update(main_render.get_window());

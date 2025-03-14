@@ -29,6 +29,7 @@ struct LineDivider {};
     float brightness = (float)(1.0F);
     float potentialBrightness = (float)(0.1F);
     SelectionList texelSideLengthSelector = SelectionList{2, {"128x128", "256x256", "512x512", "1024x1024", "2048x2048"}};
+    bool show3D = (bool)(true);
     LineDivider waveFuncInitializationLineDividerStart = LineDivider{};
     Label waveFuncInitializationLabel = Label{};
     float sigma = (float)(0.05F);
@@ -75,41 +76,42 @@ struct LineDivider {};
         BRIGHTNESS=7,
         POTENTIAL_BRIGHTNESS=8,
         TEXEL_SIDE_LENGTH_SELECTOR=9,
-        WAVE_FUNC_INITIALIZATION_LINE_DIVIDER_START=10,
-        WAVE_FUNC_INITIALIZATION_LABEL=11,
-        SIGMA=12,
-        POS_E=13,
-        NEG_E=14,
-        POS_X=15,
-        POS_Y=16,
-        POS_Z=17,
-        NEG_X=18,
-        NEG_Y=19,
-        NEG_Z=20,
-        SCALAR_LINE_DIVIDER_START=21,
-        SCALAR_SINGLE_COMPONENTS_LABEL=22,
-        SHOW_CURRENT0=23,
-        SHOW_PSUEDOCURRENT0=24,
-        SHOW_SCALAR=25,
-        SHOW_PSEUDOSCALAR=26,
-        SHOW_PSI0_W_PHASE=27,
-        SHOW_PSI1_W_PHASE=28,
-        SHOW_PSI2_W_PHASE=29,
-        SHOW_PSI3_W_PHASE=30,
-        SHOW_SCALAR_POTENTIAL=31,
-        SCALAR_LINE_DIVIDER_END=32,
-        MULTI_COMPONENTS_VIS_LABEL=33,
-        SHOW_SPATIAL_CURRENT=34,
-        SHOW_PSEUDOSPATIAL_CURRENT=35,
-        SHOW_VECTOR_POTENTIAL=36,
-        VECTOR_FIELD_VIS_DIVIDER_END=37,
-        SPINOR_FIELD_VIS_LABEL=38,
-        SHOW_PSI01_SPIN=39,
-        SHOW_PSI23_SPIN=40,
-        SPINOR_FIELD_VIS_DIVIDER_END=41,
-        ARROW_MAX_LENGTH=42,
-        ARROW_SCALE=43,
-        FOUR_VECTOR_POTENTIAL=44,
+        SHOW3_D=10,
+        WAVE_FUNC_INITIALIZATION_LINE_DIVIDER_START=11,
+        WAVE_FUNC_INITIALIZATION_LABEL=12,
+        SIGMA=13,
+        POS_E=14,
+        NEG_E=15,
+        POS_X=16,
+        POS_Y=17,
+        POS_Z=18,
+        NEG_X=19,
+        NEG_Y=20,
+        NEG_Z=21,
+        SCALAR_LINE_DIVIDER_START=22,
+        SCALAR_SINGLE_COMPONENTS_LABEL=23,
+        SHOW_CURRENT0=24,
+        SHOW_PSUEDOCURRENT0=25,
+        SHOW_SCALAR=26,
+        SHOW_PSEUDOSCALAR=27,
+        SHOW_PSI0_W_PHASE=28,
+        SHOW_PSI1_W_PHASE=29,
+        SHOW_PSI2_W_PHASE=30,
+        SHOW_PSI3_W_PHASE=31,
+        SHOW_SCALAR_POTENTIAL=32,
+        SCALAR_LINE_DIVIDER_END=33,
+        MULTI_COMPONENTS_VIS_LABEL=34,
+        SHOW_SPATIAL_CURRENT=35,
+        SHOW_PSEUDOSPATIAL_CURRENT=36,
+        SHOW_VECTOR_POTENTIAL=37,
+        VECTOR_FIELD_VIS_DIVIDER_END=38,
+        SPINOR_FIELD_VIS_LABEL=39,
+        SHOW_PSI01_SPIN=40,
+        SHOW_PSI23_SPIN=41,
+        SPINOR_FIELD_VIS_DIVIDER_END=42,
+        ARROW_MAX_LENGTH=43,
+        ARROW_SCALE=44,
+        FOUR_VECTOR_POTENTIAL=45,
     };
     void set(int enum_val, Uniform val) {
         switch(enum_val) {
@@ -139,6 +141,9 @@ struct LineDivider {};
             break;
             case POTENTIAL_BRIGHTNESS:
             potentialBrightness = val.f32;
+            break;
+            case SHOW3_D:
+            show3D = val.b32;
             break;
             case SIGMA:
             sigma = val.f32;
@@ -234,6 +239,8 @@ struct LineDivider {};
             return {(float)brightness};
             case POTENTIAL_BRIGHTNESS:
             return {(float)potentialBrightness};
+            case SHOW3_D:
+            return {(bool)show3D};
             case SIGMA:
             return {(float)sigma};
             case POS_E:
