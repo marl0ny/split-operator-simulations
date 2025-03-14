@@ -72,6 +72,31 @@ Frames::Frames(
 
 }
 
+void Frames::change_simulation_dimensions(IVec2 d_2d) {
+    this->sim_tex_params = {
+        .format=GL_RGBA32F,
+        .width=(uint32_t)d_2d[0],
+        .height=(uint32_t)d_2d[1],
+        .wrap_s=GL_REPEAT,
+        .wrap_t=GL_REPEAT,
+        .min_filter=GL_LINEAR,
+        .mag_filter=GL_LINEAR};
+    this->visual_intermediate.reset(this->sim_tex_params);
+    this->psi.u.reset(this->sim_tex_params);
+    this->psi.v.reset(this->sim_tex_params);
+    this->potential.reset(this->sim_tex_params);
+    this->temps.psi_p[0].u.reset(this->sim_tex_params);
+    this->temps.psi_p[0].v.reset(this->sim_tex_params);
+    this->temps.psi_p[1].u.reset(this->sim_tex_params);
+    this->temps.psi_p[1].v.reset(this->sim_tex_params);
+    this->temps.psi_x[0].u.reset(this->sim_tex_params);
+    this->temps.psi_x[0].v.reset(this->sim_tex_params);
+    this->temps.psi_x[1].u.reset(this->sim_tex_params);
+    this->temps.psi_x[1].v.reset(this->sim_tex_params);
+    this->temps.fft.ind[0].reset(this->sim_tex_params);
+    this->temps.fft.ind[1].reset(this->sim_tex_params);
+}
+
 GLSLPrograms::GLSLPrograms() {
     this->split_operator = {
         .momentum_step
@@ -170,7 +195,8 @@ const RenderTarget & Simulation::render_view(
     SimParams params, Vec2 cursor_pos) {
     m_frames.view.clear();
     visualization2d::Options options {};
-    options.current_time_component=params.showCurrent0,
+    options.current_time_component=params.showCurrent0;
+    options.pseudocurrent_time_component=params.showPsuedocurrent0;
     options.component_magnitude_w_phase[0]=params.showPsi0WPhase;
     options.component_magnitude_w_phase[1]=params.showPsi1WPhase;
     options.component_magnitude_w_phase[2]=params.showPsi2WPhase;
@@ -361,7 +387,7 @@ void Simulation::modify_potential_with_user_program(
 ) {
     Uniforms uniforms {};
     for (auto &e: variables)
-        uniforms.insert({e.first, float(e.second)});
+        uniforms.insert({e.first, Vec2{.x=e.second, .y=0.0}});
     uniforms.insert({"width", Vec2{.x=sim_params.sideLength, .y=0.0}});
     uniforms.insert({"height", Vec2{.x=sim_params.sideLength, .y=0.0}});
     uniforms.insert({"depth", Vec2{.x=sim_params.sideLength, .y=0.0}});
@@ -370,4 +396,14 @@ void Simulation::modify_potential_with_user_program(
         printf("%s, %g\n", &e.first[0], e.second.f32);
     }
     m_frames.potential.draw(program, uniforms);
+}
+
+void Simulation::change_simulation_dimensions(const SimParams &params) {
+    IVec2 d_2d = {.ind{
+        convert_side_length_selector_value(
+            params.texelSideLengthSelector.selected), 
+        convert_side_length_selector_value(
+            params.texelSideLengthSelector.selected)
+    }};
+    m_frames.change_simulation_dimensions(d_2d);
 }

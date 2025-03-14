@@ -14,8 +14,11 @@ static std::function<float(int, std::string)> s_user_edit_get_value;
 static std::function<std::string(int)>
     s_user_edit_get_comma_separated_variables;
 static std::function<void(int)> s_button_pressed;
+static std::function<void(int, int)> s_selection_set;
 static std::function<void(int, std::string, float)>
     s_sim_params_set_user_float_param;
+
+//////////////////////////////////////////////////////////////////////////////
 
 enum {
     NEW_WAVE_FUNCTION=0, SKETCH_SCALAR_POTENTIAL, SKETCH_VECTOR_POTENTIAL,
@@ -25,6 +28,8 @@ static int s_input_type = NEW_WAVE_FUNCTION;
 void s_set_input_mode(int val) {
     s_input_type = val;
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 /* Setters for the simulation parameters struct, where they act
 as the exposed entry point for JavaScript code in the WASM build.
@@ -104,6 +109,10 @@ void button_pressed(int param_code) {
     s_button_pressed(param_code);
 }
 
+void selection_set(int param_code, int value) {
+    s_selection_set(param_code, value);
+}
+
 // void set_mouse_mode(int type) {
 //     s_input_type = type;
 // }
@@ -122,7 +131,10 @@ EMSCRIPTEN_BINDINGS(my_module) {
     function("user_edit_get_comma_separated_variables",
              user_edit_get_comma_separated_variables);
     function("button_pressed", button_pressed);
+    function("selection_set", selection_set);
     function("set_user_float_param", set_user_float_param);
+    //
     function("set_mouse_mode", s_set_input_mode);
+    //
 }
 #endif

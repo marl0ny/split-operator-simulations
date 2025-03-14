@@ -51,8 +51,11 @@ struct UserProgramsManager {
         this->programs_queue.push_back(this->program.program);
     }
     void add_seen_variable(std::string variable, float value) {
-        this->all_seen_variables.insert({variable, value});
-        this->program.uniforms.insert({variable, value});
+        // while (this->all_seen_variables.at(variable) != value) {
+        this->all_seen_variables[variable] = value;
+        this->program.uniforms[variable] = value;
+        // this->all_seen_variables.insert({variable, value});
+        // this->program.uniforms.insert({variable, value});
 
     }
     void queue_current() {
@@ -84,8 +87,7 @@ static void display_parameters_as_sliders(
 void dirac_2d(MainGLFWQuad main_render,
              int window_width, int window_height,
              sim_2d::SimParams &params,
-             Interactor interactor,
-             UserProgramsManager &programs_manager) {
+             Interactor interactor) {
     std::vector<Vec2> start_position {};
     std::vector<Vec2> curr_position {};
     // potential.draw(
@@ -98,6 +100,31 @@ void dirac_2d(MainGLFWQuad main_render,
 
     auto max = [](int a, int b) -> int {
         return (a > b)? a: b;
+    };
+    UserProgramsManager programs_manager {};
+    s_sim_params_set_user_float_param = [&programs_manager](
+        int c, std::string var_name, float value) {
+        programs_manager.add_seen_variable(var_name, value);
+        programs_manager.queue_current();
+    };
+    s_sim_params_set_string = [
+        &params, &programs_manager](int c, int i, std::string s) {
+        params.set(c, i, s);
+        int program;
+        std::set<std::string> variables_set = 
+            initialize_glsl_program_from_strings(
+                program, params.fourVectorPotential);
+        programs_manager.add_new_program(
+            program, variables_set
+        );
+        display_parameters_as_sliders(c, variables_set);
+    };
+    s_selection_set = [&params, &sim](int c, int val) {
+        if (c == params.TEXEL_SIDE_LENGTH_SELECTOR) {
+            printf("Selected %d\n", val);
+            params.texelSideLengthSelector.selected = val;
+            sim.change_simulation_dimensions(params);
+        }
     };
 
     s_loop = [&] {
@@ -187,7 +214,6 @@ int main(int argc, char *argv[]) {
 
     // Initialize interactor
     Interactor interactor(main_quad.get_window());
-    UserProgramsManager user_programs_manager;
     sim_2d::SimParams sim_params;
     {
         s_sim_params_set = [&sim_params](int c, Uniform u) {
@@ -196,27 +222,10 @@ int main(int argc, char *argv[]) {
         s_sim_params_get = [&sim_params](int c) -> Uniform {
             return sim_params.get(c);
         };
-        s_sim_params_set_string = [
-            &sim_params, &user_programs_manager](int c, int i, std::string s) {
-            sim_params.set(c, i, s);
-            int program;
-            std::set<std::string> variables_set = 
-                initialize_glsl_program_from_strings(
-                    program, sim_params.fourVectorPotential);
-            user_programs_manager.add_new_program(
-                program, variables_set
-            );
-            display_parameters_as_sliders(c, variables_set);
-        };
-        s_sim_params_set_user_float_param = [&user_programs_manager](
-            int c, std::string var_name, float value) {
-            user_programs_manager.add_seen_variable(var_name, value);
-            user_programs_manager.queue_current();
-        };
     }
 
     dirac_2d(
         main_quad, window_width, window_height, 
-        sim_params, interactor, user_programs_manager);
+        sim_params, interactor);
     return 1;
 }

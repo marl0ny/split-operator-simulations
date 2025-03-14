@@ -142,6 +142,10 @@ function createSelectionList(
         selector.add(option);
     }
     selector.value = defaultVal;
+    selector.addEventListener("change", e =>
+        Module.selection_set(
+            enumCode, Number.parseInt(e.target.value))
+    );
     controls.appendChild(selector);
     controls.appendChild(document.createElement("br"));
 }

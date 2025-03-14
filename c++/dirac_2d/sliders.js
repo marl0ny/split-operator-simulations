@@ -124,6 +124,10 @@ function createSelectionList(
         selector.add(option);
     }
     selector.value = defaultVal;
+    selector.addEventListener("change", e =>
+        Module.selection_set(
+            enumCode, Number.parseInt(e.target.value))
+    );
     controls.appendChild(selector);
     controls.appendChild(document.createElement("br"));
 }
@@ -239,7 +243,7 @@ createScalarParameterSlider(controls, 8, "Potential brightness", "float", {'valu
 createSelectionList(controls, 9, 2, "Grid discretization size", [ "128x128",  "256x256",  "512x512",  "1024x1024",  "2048x2048"]);
 createLineDivider(controls);
 createLabel(controls, "Wave function initialization options", "color:white; font-family:Arial, Helvetica, sans-serif; font-weight: bold;");
-createScalarParameterSlider(controls, 12, "Standard deviation/ size", "float", {'value': 0.05, 'min': 0.005, 'max': 0.15, 'step': 0.001});
+createScalarParameterSlider(controls, 12, "Gaussian wave packet standard deviation", "float", {'value': 0.05, 'min': 0.005, 'max': 0.15, 'step': 0.001});
 createScalarParameterSlider(controls, 13, "Positive energy solutions (+E) proportion", "float", {'value': 1.0, 'min': 0.0, 'max': 1.0, 'step': 0.01});
 createLabel(controls, "Negative energy (-E) proportion: 0", "");
 createScalarParameterSlider(controls, 15, "+x spin direction", "float", {'value': 0.0, 'min': -1.0, 'max': 1.0, 'step': 0.01});

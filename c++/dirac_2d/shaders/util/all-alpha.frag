@@ -21,6 +21,6 @@ uniform sampler2D tex;
 uniform float scale;
 
 void main() {
-    fragColor = scale*vec4(texture2D(tex, UV).a);
+    fragColor = scale*vec4(abs(texture2D(tex, UV).a));
     // fragColor = vec4(1.0);
 }

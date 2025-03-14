@@ -17,6 +17,7 @@ struct Frames {
     RenderTarget view;
     Frames(
         const SimParams &sim_params, int view_width, int view_height);
+    void change_simulation_dimensions(IVec2 d_2d);
 };
 
 struct GLSLPrograms {
@@ -63,6 +64,7 @@ class Simulation {
         const SimParams &sim_params, uint32_t program,
         std::map<std::string, float> variables
     );
+    void change_simulation_dimensions(const SimParams &sim_params);
 };
 
 }
