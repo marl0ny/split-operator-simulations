@@ -29,7 +29,7 @@ struct LineDivider {};
     float brightness = (float)(1.0F);
     float potentialBrightness = (float)(0.1F);
     SelectionList texelSideLengthSelector = SelectionList{2, {"128x128", "256x256", "512x512", "1024x1024", "2048x2048"}};
-    bool show3D = (bool)(true);
+    bool show3D = (bool)(false);
     LineDivider waveFuncInitializationLineDividerStart = LineDivider{};
     Label waveFuncInitializationLabel = Label{};
     float sigma = (float)(0.05F);

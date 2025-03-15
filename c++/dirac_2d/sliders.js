@@ -241,7 +241,7 @@ createScalarParameterSlider(controls, 4, "Time step (a.u.)", "float", {'value': 
 createScalarParameterSlider(controls, 7, "Wave function brightness", "float", {'value': 1.0, 'min': 0.0, 'max': 20.0, 'step': 0.01});
 createScalarParameterSlider(controls, 8, "Potential brightness", "float", {'value': 0.1, 'min': 0.0, 'max': 1.0, 'step': 0.001});
 createSelectionList(controls, 9, 2, "Grid discretization size", [ "128x128",  "256x256",  "512x512",  "1024x1024",  "2048x2048"]);
-createCheckbox(controls, 10, "3D view", true);
+createCheckbox(controls, 10, "3D view", false);
 createLineDivider(controls);
 createLabel(controls, "Wave function initialization options", "color:white; font-family:Arial, Helvetica, sans-serif; font-weight: bold;");
 createScalarParameterSlider(controls, 13, "Gaussian wave packet standard deviation", "float", {'value': 0.05, 'min': 0.005, 'max': 0.15, 'step': 0.001});

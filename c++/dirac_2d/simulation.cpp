@@ -1,5 +1,6 @@
 #include "simulation.hpp"
 #include "arrows2d.hpp"
+#include "arrows3d2d.hpp"
 #include "surface.hpp"
 #include "visualization2d.hpp"
 #include "visualization3d2d.hpp"
@@ -73,6 +74,7 @@ Frames::Frames(
     view(view_tex_params),
     quad(get_quad_wire_frame()),
     arrows(arrows2d::get_2d_vector_field_wire_frame({.ind{64, 64}})),
+    arrows3d(arrows3d2d::get_2d_vector_field_wire_frame({.ind{64, 64}})),
     surface(get_surface_wireframe({.ind{1024, 1024}})) {
 
 }

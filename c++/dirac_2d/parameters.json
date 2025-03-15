@@ -9,7 +9,7 @@
     "brightness": {"name": "Wave function brightness", "type": "float", "value": 1.0, "min": 0.0, "max": 20.0, "step": 0.01},
     "potentialBrightness": {"name": "Potential brightness", "type": "float", "value": 0.1, "min": 0.0, "max": 1.0, "step": 0.001},
     "texelSideLengthSelector": {"name": "Grid discretization size", "type": "SelectionList", "value": "{2, {\"128x128\", \"256x256\", \"512x512\", \"1024x1024\", \"2048x2048\"}}"},
-    "show3D": {"name": "3D view", "type": "bool", "value": true},
+    "show3D": {"name": "3D view", "type": "bool", "value": false},
     "waveFuncInitializationLineDividerStart": {"type": "LineDivider", "value": "{}"},
     "waveFuncInitializationLabel": {"name": "Wave function initialization options", "type": "Label", "value": "{}", "style": "color:white; font-family:Arial, Helvetica, sans-serif; font-weight: bold;"},
     "sigma": {"name": "Gaussian wave packet standard deviation", "type": "float", "value": 0.05, "min": 0.005, "max": 0.15, "step": 0.001},
