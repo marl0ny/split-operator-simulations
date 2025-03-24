@@ -180,3 +180,129 @@ void visualization3d2d::scalar_or_single_component_quantities(
         );
     }
 }
+
+static void draw_arrows(
+    RenderTarget &dst_render,
+    WireFrame &arrows_wireframe,
+    const Quad &src,
+    const visualization3d2d::Options &options,
+    const visualization3d2d::VectorQuantitiesPrograms &programs,
+    const visualization3d2d::VectorQuantitiesParams &params
+) {
+    dst_render.draw(
+        programs.arrows,
+        {
+            {"vecTex", &src},
+            {"arrowsScale", params.arrows_scale},
+            {"maxLength", params.arrows_max_length},
+            {"rotation", params.rotation},
+            {"translate", Vec3{.x=0.0, .y=0.0, .z=0.0}},
+            {"scale", params.scale},
+            {"screenDimensions", params.screen_dimensions},
+            {"color", Vec4{.r=1.0, .g=1.0, .b=1.0, .a=1.0}}
+        },
+        arrows_wireframe
+    );
+}
+
+void visualization3d2d::vector_quantities(
+    RenderTarget &dst_render,
+    WireFrame &arrows_wireframe,
+    Quad &intermediate_quantity,
+    dirac_split_step2d::BiSpinorQuad &psi,
+    const Quad &potential,
+    const Options &options,
+    const VectorQuantitiesPrograms &programs,
+    const VectorQuantitiesParams &params
+) {
+    if (options.spatial_current) {
+        compute_current(
+            intermediate_quantity, psi, programs.current,
+            {
+                .hbar=params.hbar, .representation=params.representation,
+            }
+        );
+        draw_arrows(
+            dst_render, arrows_wireframe, intermediate_quantity, 
+            options, programs, params);
+    }
+    if (options.spatial_pseudocurrent) {
+        compute_current(
+            intermediate_quantity, psi, programs.pseudocurrent,
+            {
+                .hbar=params.hbar, .representation=params.representation
+            }
+        );
+        draw_arrows(
+            dst_render, arrows_wireframe, intermediate_quantity, 
+            options, programs, params);
+    }
+    if (options.vector_potential) {
+        draw_arrows(
+            dst_render, arrows_wireframe, potential, 
+            options, programs, params);
+    }
+    if (options.electric_field) {
+
+    }
+    if (options.magnetic_field) {
+
+    }
+}
+
+static void draw_spins(
+    RenderTarget &dst_render,
+    WireFrame &arrows_wireframe,
+    const Quad &src,
+    const visualization3d2d::Options &options,
+    const visualization3d2d::SpinQuantitiesPrograms &programs,
+    const visualization3d2d::SpinQuantitiesParams &params
+) {
+    dst_render.draw(
+        programs.arrows,
+        {
+            {"vecTex", &src},
+            {"arrowsScale", params.arrows_scale},
+            {"maxLength", params.arrows_max_length},
+            {"rotation", params.rotation},
+            {"translate", Vec3{.x=0.0, .y=0.0, .z=0.0}},
+            {"scale", params.scale},
+            {"screenDimensions", params.screen_dimensions},
+            {"color", Vec4{.r=1.0, .g=1.0, .b=1.0, .a=1.0}}
+        },
+        arrows_wireframe
+    );
+}
+
+void visualization3d2d::spin_quantities(
+    RenderTarget &dst_render,
+    WireFrame &arrows_wireframe, 
+    Quad &intermediate_quantity,
+    dirac_split_step2d::BiSpinorQuad &psi,
+    const Options &options,
+    const SpinQuantitiesPrograms &programs,
+    const SpinQuantitiesParams &params
+) {
+    if (options.spin[0]) {
+        intermediate_quantity.draw(
+            programs.spin,
+            {
+                {"psiTex", {&psi.ind[0]}},
+            }
+        );
+        draw_spins(
+            dst_render, arrows_wireframe, intermediate_quantity, 
+            options, programs, params);
+    }
+    if (options.spin[1]) {
+        intermediate_quantity.draw(
+            programs.spin,
+            {
+                {"psiTex", {&psi.ind[1]}},
+            }
+        );
+        draw_spins(
+            dst_render, arrows_wireframe, intermediate_quantity, 
+            options, programs, params);
+    }
+}

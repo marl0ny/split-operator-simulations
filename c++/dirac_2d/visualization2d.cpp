@@ -132,6 +132,7 @@ void visualization2d::scalar_or_single_component_quantities(
                 {"tex", {&psi.u}},
                 {"index", {int(0)}},
                 {"brightness", {params.brightness}},
+                {"phaseAdjust", params.c*params.c*params.m*params.t}
             },
             dst_wireframe
         );
@@ -143,6 +144,7 @@ void visualization2d::scalar_or_single_component_quantities(
                 {"tex", {&psi.u}},
                 {"index", {int(1)}},
                 {"brightness", {params.brightness}},
+                {"phaseAdjust", params.c*params.c*params.m*params.t}
             },
             dst_wireframe
         );
@@ -154,6 +156,7 @@ void visualization2d::scalar_or_single_component_quantities(
                 {"tex", {&psi.v}},
                 {"index", {int(0)}},
                 {"brightness", {params.brightness}},
+                {"phaseAdjust", -params.c*params.c*params.m*params.t}
             },
             dst_wireframe
         );
@@ -165,6 +168,7 @@ void visualization2d::scalar_or_single_component_quantities(
                 {"tex", {&psi.v}},
                 {"index", {int(1)}},
                 {"brightness", {1.0F}},
+                {"phaseAdjust", -params.c*params.c*params.m*params.t}
             },
             dst_wireframe
         );

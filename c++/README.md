@@ -1,6 +1,7 @@
 ## Issues
 
 ### Dirac 2D
+ - Insert the appropriate sub-scripts and superscripts.
  - Include mouse selection in the simulation parameters instead of a separate thing. Add 3D mouse zoom/rotation as an option.
  - Set the time step controls as a percentage of the CFL condition instead. Display the actual time step in a label at the bottom.
  - Complete the pseudoscalar shader and add it as a visualization option.
@@ -10,4 +11,4 @@
   - Fix issues with how the 3D potential is displayed.
   - Fix issues with how 2D vector plots are displayed, particularly for vector magnitudes that are close to zero.
   - Add preset potentials.
-  - For the four-vector potential entry boxes, add sub-headings for each entry box. The entry box for the time component should be the first.
+  - Add time-dependent potentials

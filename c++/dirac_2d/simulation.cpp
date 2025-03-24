@@ -249,6 +249,9 @@ const RenderTarget & Simulation::render_view(
             .copy=m_programs.copy}, 
         {
             .hbar=params.hbar,
+            .m=params.m,
+            .c=params.c,
+            .t=params.t,
             .brightness=params.brightness, 
             .potential_brightness=params.potentialBrightness}
     );
@@ -346,6 +349,44 @@ const RenderTarget & Simulation::render_view(
             .scale=scale,
             .screen_dimensions=screen_dimensions}
     );
+    visualization3d2d::vector_quantities(
+        m_frames.view,
+        m_frames.arrows3d,
+        m_frames.visual_intermediate,
+        m_frames.psi,
+        m_frames.potential,
+        options,
+        {
+            .arrows=m_programs.arrows3d,
+            .current=m_programs.current,
+            .pseudocurrent=m_programs.pseudocurrent,
+        },
+        {
+            .hbar=params.hbar,
+            .representation=0,
+            .arrows_max_length=params.arrowMaxLength,
+            .arrows_scale=params.arrowScale,
+            .rotation=rotation,
+            .scale=scale,
+            .screen_dimensions=screen_dimensions
+        });
+    visualization3d2d::spin_quantities(
+        m_frames.view,
+        m_frames.arrows3d,
+        m_frames.visual_intermediate,
+        m_frames.psi,
+        options,
+        {
+            .arrows=m_programs.arrows3d,
+            .spin=m_programs.spin,
+        },
+        {
+            .arrows_max_length=params.arrowMaxLength,
+            .arrows_scale=params.arrowScale,
+            .rotation=rotation,
+            .scale=scale,
+            .screen_dimensions=screen_dimensions
+        });
     glDisable(GL_DEPTH_TEST);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     return m_frames.view;

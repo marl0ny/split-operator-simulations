@@ -58,6 +58,56 @@ void scalar_or_single_component_quantities(
     const ScalarQuantitiesParams &params
 );
 
+struct VectorQuantitiesParams {
+    float hbar;
+    int representation;
+    float arrows_max_length;
+    float arrows_scale;
+    Quaternion rotation;
+    float scale;
+    IVec2 screen_dimensions;
+};
+
+struct VectorQuantitiesPrograms {
+    uint32_t arrows;
+    uint32_t current;
+    uint32_t pseudocurrent;
+};
+
+void vector_quantities(
+    RenderTarget &dst_render,
+    WireFrame &arrows_wireframe,
+    Quad &intermediate_quantity,
+    dirac_split_step2d::BiSpinorQuad &psi,
+    const Quad &potential,
+    const Options &options,
+    const VectorQuantitiesPrograms &programs,
+    const VectorQuantitiesParams &params
+);
+
+struct SpinQuantitiesParams {
+    float arrows_max_length;
+    float arrows_scale;
+    Quaternion rotation;
+    float scale;
+    IVec2 screen_dimensions;
+};
+
+struct SpinQuantitiesPrograms {
+    uint32_t arrows;
+    uint32_t spin;
+};
+
+void spin_quantities(
+    RenderTarget &dst_render,
+    WireFrame &arrows_wireframe, 
+    Quad &intermediate_quantity,
+    dirac_split_step2d::BiSpinorQuad &psi,
+    const Options &options,
+    const SpinQuantitiesPrograms &programs,
+    const SpinQuantitiesParams &params
+);
+
 }
 
 #endif

@@ -69,7 +69,7 @@ void main() {
     vec3 direction = texture2D(vecTex, UV).xyz;
     if (length(direction) > maxLength)
         direction = normalize(direction)*maxLength;
-    vec3 arrowRelPoint = arrowScale*direction;
+    vec3 arrowRelPoint = arrowScale*direction - vec3(0.0, 0.0, 0.1);
     vec4 position2 = scale*(vec4(UV - vec2(0.5), 0.0, 0.0) 
                             + vec4(arrowRelPoint, 0.0));
     vec4 finalPosition = rotate(position2, rotation) + vec4(translate, 0.0);

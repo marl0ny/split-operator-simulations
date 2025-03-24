@@ -169,7 +169,7 @@ function modifyUserSliders(enumCode, variableList) {
 }
 
 function createEntryBoxes(
-    controls, enumCode, entryBoxName, count
+    controls, enumCode, entryBoxName, count, subLabels
 ) {
     let label = document.createElement("label");
     label.style = "color:white; font-family:Arial, Helvetica, sans-serif";
@@ -185,7 +185,7 @@ function createEntryBoxes(
         entryBox.style = "width: 95%;";
         let label = document.createElement("label");
         label.style = "color:white; font-family:Arial, Helvetica, sans-serif";
-        label.textContent = `${i}`;
+        label.textContent = `${subLabels[i]}`;
         if (count >= 2) {
             controls.appendChild(label);
             controls.appendChild(document.createElement("br"));
@@ -240,41 +240,43 @@ createScalarParameterSlider(controls, 3, "Mass in atomic units (a.u.)", "float",
 createScalarParameterSlider(controls, 4, "Time step (a.u.)", "float", {'value': 2.8e-05, 'min': -3e-05, 'max': 3e-05, 'step': 1e-06});
 createScalarParameterSlider(controls, 7, "Wave function brightness", "float", {'value': 1.0, 'min': 0.0, 'max': 20.0, 'step': 0.01});
 createScalarParameterSlider(controls, 8, "Potential brightness", "float", {'value': 0.1, 'min': 0.0, 'max': 1.0, 'step': 0.001});
-createSelectionList(controls, 9, 2, "Grid discretization size", [ "128x128",  "256x256",  "512x512",  "1024x1024",  "2048x2048"]);
-createCheckbox(controls, 10, "3D view", false);
+createSelectionList(controls, 9, 0, "Mouse usage", [ "New wave function",  "Scalar potential sketch",  "Vector potential sketch",  "Rotate/zoom 3D view"]);
+createSelectionList(controls, 10, 0, "Grid discretization size", [ "128x128",  "256x256",  "512x512",  "1024x1024",  "2048x2048"]);
+createCheckbox(controls, 11, "3D view", false);
 createLineDivider(controls);
 createLabel(controls, "Wave function initialization options", "color:white; font-family:Arial, Helvetica, sans-serif; font-weight: bold;");
-createScalarParameterSlider(controls, 13, "Gaussian wave packet standard deviation", "float", {'value': 0.05, 'min': 0.005, 'max': 0.15, 'step': 0.001});
-createScalarParameterSlider(controls, 14, "Positive energy solutions (+E) proportion", "float", {'value': 1.0, 'min': 0.0, 'max': 1.0, 'step': 0.01});
+createScalarParameterSlider(controls, 14, "Gaussian wave packet standard deviation", "float", {'value': 0.05, 'min': 0.005, 'max': 0.15, 'step': 0.001});
+createScalarParameterSlider(controls, 15, "Positive energy solutions (+E) proportion", "float", {'value': 1.0, 'min': 0.0, 'max': 1.0, 'step': 0.01});
 createLabel(controls, "Negative energy (-E) proportion: 0", "");
-createScalarParameterSlider(controls, 16, "+x spin direction", "float", {'value': 0.0, 'min': -1.0, 'max': 1.0, 'step': 0.01});
-createScalarParameterSlider(controls, 17, "+y spin direction", "float", {'value': 1.0, 'min': -1.0, 'max': 1.0, 'step': 0.01});
-createScalarParameterSlider(controls, 18, "+z spin direction", "float", {'value': 0.0, 'min': -1.0, 'max': 1.0, 'step': 0.01});
-createScalarParameterSlider(controls, 19, "-x spin direction", "float", {'value': 0.0, 'min': -1.0, 'max': 1.0, 'step': 0.01});
-createScalarParameterSlider(controls, 20, "-y spin direction", "float", {'value': 1.0, 'min': -1.0, 'max': 1.0, 'step': 0.01});
-createScalarParameterSlider(controls, 21, "-z spin direction", "float", {'value': 0.0, 'min': -1.0, 'max': 1.0, 'step': 0.01});
+createScalarParameterSlider(controls, 17, "+x spin direction", "float", {'value': 0.0, 'min': -1.0, 'max': 1.0, 'step': 0.01});
+createScalarParameterSlider(controls, 18, "+y spin direction", "float", {'value': 1.0, 'min': -1.0, 'max': 1.0, 'step': 0.01});
+createScalarParameterSlider(controls, 19, "+z spin direction", "float", {'value': 0.0, 'min': -1.0, 'max': 1.0, 'step': 0.01});
+createScalarParameterSlider(controls, 20, "-x spin direction", "float", {'value': 0.0, 'min': -1.0, 'max': 1.0, 'step': 0.01});
+createScalarParameterSlider(controls, 21, "-y spin direction", "float", {'value': 1.0, 'min': -1.0, 'max': 1.0, 'step': 0.01});
+createScalarParameterSlider(controls, 22, "-z spin direction", "float", {'value': 0.0, 'min': -1.0, 'max': 1.0, 'step': 0.01});
 createLineDivider(controls);
 createLabel(controls, "Scalar/single component visualizations", "color:white; font-family:Arial, Helvetica, sans-serif; font-weight: bold;");
-createCheckbox(controls, 24, "Current 0th component - 𝜓†𝜓", false, "scalarVis");
-createCheckbox(controls, 25, "Pseudocurrent 0th component", false, "scalarVis");
-createCheckbox(controls, 26, "Scalar - 𝜓†𝛾⁰𝜓", true, "scalarVis");
-createCheckbox(controls, 27, "Pseudoscalar", false, "scalarVis");
-createCheckbox(controls, 28, "|𝜓1|^2 with phase", false, "scalarVis");
-createCheckbox(controls, 29, "|𝜓2|^2 with phase", false, "scalarVis");
-createCheckbox(controls, 30, "|𝜓3|^2 with phase", false, "scalarVis");
-createCheckbox(controls, 31, "|𝜓4|^2 with phase", false, "scalarVis");
-createCheckbox(controls, 32, "Scalar potential - V", true);
+createLabel(controls, "(Please note: bar(𝜓) = 𝜓†γ⁰)", "");
+createCheckbox(controls, 26, "Current 0th component - 𝜓†𝜓", false, "scalarVis");
+createCheckbox(controls, 27, "Pseudocurrent 0th component - 𝜓†γ⁵𝜓", false, "scalarVis");
+createCheckbox(controls, 28, "Scalar - bar(𝜓)𝜓", true, "scalarVis");
+createCheckbox(controls, 29, "Pseudoscalar - bar(𝜓)γ⁵𝜓", false, "scalarVis");
+createCheckbox(controls, 30, "|𝜓₁|² component with phase", false, "scalarVis");
+createCheckbox(controls, 31, "|𝜓₂|² component with phase", false, "scalarVis");
+createCheckbox(controls, 32, "|𝜓₃|² component with phase", false, "scalarVis");
+createCheckbox(controls, 33, "|𝜓₄|² component with phase", false, "scalarVis");
+createCheckbox(controls, 34, "Potential - V", true);
 createLineDivider(controls);
 createLabel(controls, "Vector visualizations", "color:white; font-family:Arial, Helvetica, sans-serif; font-weight: bold;");
-createCheckbox(controls, 35, "Spatial current", true);
-createCheckbox(controls, 36, "Spatial pseudocurrent", false);
-createCheckbox(controls, 37, "3-Vector potential", true);
+createCheckbox(controls, 37, "Spatial current - bar(𝜓)γⁱ𝜓", true);
+createCheckbox(controls, 38, "Spatial pseudocurrent - bar(𝜓)γⁱγ⁵𝜓", false);
+createCheckbox(controls, 39, "3-Vector potential - Aⁱ", true);
 createLineDivider(controls);
 createLabel(controls, "Spinor visualizations", "color:white; font-family:Arial, Helvetica, sans-serif; font-weight: bold;");
-createCheckbox(controls, 40, "Upper spinor spin", false);
-createCheckbox(controls, 41, "Bottom spinor spin", false);
+createCheckbox(controls, 42, "Upper spinor spin", false);
+createCheckbox(controls, 43, "Bottom spinor spin", false);
 createLineDivider(controls);
-createScalarParameterSlider(controls, 43, "Arrows max length", "float", {'value': 0.05, 'min': 0.0, 'max': 1.0, 'step': 0.01});
-createScalarParameterSlider(controls, 44, "Arrows scale", "float", {'value': 1.0, 'min': 0.0, 'max': 20.0, 'step': 0.1});
-createEntryBoxes(controls, 45, "4-Vector potential", 4);
+createScalarParameterSlider(controls, 45, "Arrows max length", "float", {'value': 0.05, 'min': 0.0, 'max': 1.0, 'step': 0.01});
+createScalarParameterSlider(controls, 46, "Arrows scale", "float", {'value': 1.0, 'min': 0.0, 'max': 20.0, 'step': 0.1});
+createEntryBoxes(controls, 47, "Enter four-vector potential", 4, ['V(x, y, z)', 'Aˣ(x, y, z)', 'Aʸ(x, y, z)', 'Aᶻ(x, y, z)']);
 

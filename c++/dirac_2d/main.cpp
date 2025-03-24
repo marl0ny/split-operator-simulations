@@ -125,6 +125,9 @@ void dirac_2d(MainGLFWQuad main_render,
             params.texelSideLengthSelector.selected = val;
             sim.change_simulation_dimensions(params);
         }
+        if (c == params.MOUSE_SELECTOR) {
+            params.mouseSelector.selected = val;
+        }
     };
     Quaternion rotation = Quaternion{.i=0.0, .j=0.0, .k=0.0, .real=1.0};
 
@@ -144,18 +147,20 @@ void dirac_2d(MainGLFWQuad main_render,
             rotation = rotation*rot;
         }
         if (!params.show3D 
-            && s_input_type == NEW_WAVE_FUNCTION
+            && params.mouseSelector.selected == 0
             && start_position.size() > 0) {
+            printf("Mouse selector: %d", params.mouseSelector.selected);
             Vec2 dist = 64.0*(curr_position[curr_position.size() - 1] - start_position[0]);
             sim.new_wave_function(params, start_position[0], dist);
         } else {
             sim.time_steps(params);
+            params.t += params.dt*params.stepsPerFrame;
         }
         if (!params.show3D && start_position.size() > 0) {
             Vec2 pos = curr_position[curr_position.size() - 1];
-            if (s_input_type == SKETCH_SCALAR_POTENTIAL) {
+            if (params.mouseSelector.selected == 1) {
                 sim.sketch_modify_scalar_potential(params, pos);
-            } else if (s_input_type == SKETCH_VECTOR_POTENTIAL) {
+            } else if (params.mouseSelector.selected == 2) {
                 Vec2 dir = 1000.0*(
                     curr_position[curr_position.size() - 1] 
                     - curr_position[max(curr_position.size() - 2, 0)]);
@@ -191,11 +196,11 @@ void dirac_2d(MainGLFWQuad main_render,
                 }
             }
 
-            #ifndef __EMSCRIPTEN__
-            if (glfwGetKey(main_render.get_window(), 
-                GLFW_KEY_A) == GLFW_PRESS)
-                s_input_type = NEW_WAVE_FUNCTION;
-            #endif
+            // #ifndef __EMSCRIPTEN__
+            // if (glfwGetKey(main_render.get_window(), 
+            //     GLFW_KEY_A) == GLFW_PRESS)
+            //     s_input_type = NEW_WAVE_FUNCTION;
+            // #endif
         };
         poll_events();
         glfwSwapBuffers(main_render.get_window());

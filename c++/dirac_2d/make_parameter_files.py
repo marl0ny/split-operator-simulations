@@ -187,7 +187,7 @@ function modifyUserSliders(enumCode, variableList) {
 }
 
 function createEntryBoxes(
-    controls, enumCode, entryBoxName, count
+    controls, enumCode, entryBoxName, count, subLabels
 ) {
     let label = document.createElement("label");
     label.style = "color:white; font-family:Arial, Helvetica, sans-serif";
@@ -203,7 +203,7 @@ function createEntryBoxes(
         entryBox.style = "width: 95%;";
         let label = document.createElement("label");
         label.style = "color:white; font-family:Arial, Helvetica, sans-serif";
-        label.textContent = `${i}`;
+        label.textContent = `${subLabels[i]}`;
         if (count >= 2) {
             controls.appendChild(label);
             controls.appendChild(document.createElement("br"));
@@ -268,9 +268,12 @@ def write_sliders_js(parameters, dst_file_name):
         name = parameter["name"] if "name" in parameter.keys() else k
         if parameter['type'] == 'EntryBoxes':
             list_val = value.strip('{').strip('}').split(',')
+            print(parameter["subLabels"])
+            labels = parameter["subLabels"] if "subLabels" in parameter \
+                else [f"{i}" for i in range(len(list_val))]
             file_contents += \
                 f'createEntryBoxes('\
-                f'controls, {i}, \"{name}\", {len(list_val)});\n'
+                f'controls, {i}, \"{name}\", {len(list_val)}, {str(labels)});\n'
         if parameter['type'] == 'SelectionList':
             val2 = ''.join([c for c in value if (c != '}' and c != '{')])
             list_val = val2.split(',')[1:]

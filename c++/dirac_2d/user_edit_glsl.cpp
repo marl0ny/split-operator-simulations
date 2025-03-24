@@ -222,7 +222,8 @@ static const std::string MAIN_FRAG
 = R"(
 
 void main() {
-    fragColor = function(UV);
+    vec4 res = function(UV);
+    fragColor = vec4(res.yzw, res.x);
 }
 )";
 

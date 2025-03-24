@@ -26,6 +26,9 @@ struct Options {
 struct ScalarQuantitiesParams {
     float hbar;
     float brightness;
+    float m;
+    float c;
+    float t;
     float potential_brightness;
 };
 
