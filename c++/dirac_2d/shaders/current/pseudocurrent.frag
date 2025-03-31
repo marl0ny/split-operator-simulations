@@ -90,10 +90,10 @@ void main() {
     complex2 v = texture2D(vTex, UV);
     if (representation == DIRAC_REP)
         fragColor = vec4(
-            expectationValue(sigmaX, u) - expectationValue(sigmaX, v),
-            expectationValue(sigmaY, u) - expectationValue(sigmaY, v),
-            expectationValue(sigmaZ, u) - expectationValue(sigmaZ, v),
-            (-innerProd(u, v) - innerProd(v, u)).r);
+            -expectationValue(sigmaX, u) + expectationValue(sigmaX, v),
+            -expectationValue(sigmaY, u) + expectationValue(sigmaY, v),
+            -expectationValue(sigmaZ, u) + expectationValue(sigmaZ, v),
+            (innerProd(u, v) + innerProd(v, u)).r);
     else
         fragColor = vec4(
             expectationValue(sigmaX, u) + expectationValue(sigmaX, v),

@@ -85,8 +85,7 @@ complex wavepacket(vec2 p, vec2 x0) {
     float gx = exp(-pow(p.x*sx/hbar, 2.0))/sqrt(PI*hbar/sx);
     float gy = exp(-pow(p.y*sy/hbar, 2.0))/sqrt(PI*hbar/sy);
     float g = gx*gy;
-    float angle = -dot(p, x0);
-    complex phase = complex(cos(angle), sin(angle));
+    complex phase = complex(cos(dot(p, x0)), -sin(dot(p, x0)));
     return amplitude*g*phase
         *float(texelDimensions2D[0])*float(texelDimensions2D[1]);
 }
@@ -131,15 +130,15 @@ https://en.wikipedia.org/wiki/Pauli_matrices.
 complex2 getSpinUpState(vec3 orientation, float len) {
     float n = len;
     float nx = orientation.x, ny = orientation.y, nz = orientation.z;
-    complex az = complex(1.0, 0.0);
-    complex bz = complex(0.0, 0.0);
     complex a = frac(complex(n + nz, 0.0),
                      complex(nx, ny)*sqrt((nz + n)*(nz + n)/(nx*nx + ny*ny)
                                           + 1.0));
     complex b = complex(1.0/sqrt((nz + n)*(nz + n)/(nx*nx + ny*ny) + 1.0),
                         0.0);
     if ((nx*nx + ny*ny) == 0.0)
-        return complex2(az, bz);
+        return (nz >= 0.0)? 
+            complex2(complex(1.0, 0.0), complex(0.0)):
+            complex2(complex(0.0), complex(1.0, 0.0));
     return complex2(a, b);
 }
 
@@ -149,15 +148,15 @@ information.*/
 complex2 getSpinDownState(vec3 orientation, float len) {
     float n = len;
     float nx = orientation.x, ny = orientation.y, nz = orientation.z;
-    complex az = complex(0.0, 0.0);
-    complex bz = complex(1.0, 0.0);
     complex a = frac(complex(-n + nz, 0.0),
                      complex(nx, ny)*sqrt((nz - n)*(nz - n)/(nx*nx + ny*ny)
                                           + 1.0));
     complex b = complex(1.0/sqrt((nz - n)*(nz - n)/(nx*nx + ny*ny) + 1.0),
                         0.0);
     if ((nx*nx + ny*ny) == 0.0)
-        return complex2(az, bz);
+        return (nz >= 0.0)? 
+            complex2(complex(0.0), complex(1.0, 0.0)):
+            complex2(complex(1.0, 0.0), complex(0.0));
     return complex2(a, b);
 }
 
@@ -286,11 +285,11 @@ complex2 eigenvectorDiracRep(
             c0 = 1.0;
             c1 = c*absP/(m*c*c + E);
         } else if (isSpinDown && isPositiveE) {
-            c0 = -1.0;
-            c1 = c*absP/(m*c*c + E);
+            c0 = 1.0;
+            c1 = -c*absP/(m*c*c + E);
         } else if (isSpinUp && isNegativeE) {
-            c0 = c*absP/(m*c*c + E);
-            c1 = -1.0;
+            c0 = -c*absP/(m*c*c + E);
+            c1 = 1.0;
         } else if (isSpinDown && isNegativeE) {
             c0 = c*absP/(m*c*c + E);
             c1 = 1.0;

@@ -49,8 +49,5 @@ complex innerProd(complex2 w, complex2 z) {
 void main() {
     complex2 u = texture2D(uTex, UV);
     complex2 v = texture2D(vTex, UV);
-    if (representation == DIRAC_REP)
-        fragColor = vec4(innerProd(u, u).r - innerProd(v, v).r);
-    else
-        fragColor = vec4(-innerProd(u, u).r + innerProd(v, v).r);
+    fragColor = vec4((innerProd(u, v) - innerProd(v, u)).g);
 }

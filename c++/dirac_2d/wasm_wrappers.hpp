@@ -5,6 +5,7 @@ using namespace emscripten;
 #endif
 #include <functional>
 #include "gl_wrappers.hpp"
+#include <set>
 
 static std::function<void(int, Uniform)> s_sim_params_set;
 static std::function<void(int, int, std::string)> s_sim_params_set_string;
@@ -18,18 +19,33 @@ static std::function<void(int, int)> s_selection_set;
 static std::function<void(int, std::string, float)>
     s_sim_params_set_user_float_param;
 
-//////////////////////////////////////////////////////////////////////////////
 
-enum {
-    NEW_WAVE_FUNCTION=0, SKETCH_SCALAR_POTENTIAL, SKETCH_VECTOR_POTENTIAL,
-};
-static int s_input_type = NEW_WAVE_FUNCTION;
-
-void s_set_input_mode(int val) {
-    s_input_type = val;
+void edit_label_display(int c, std::string text_content) {
+    std::string string_val = "";
+    string_val += "editLabel(";
+    string_val += std::to_string(c);
+    string_val += ", ";
+    string_val += "\"" + text_content + "\"";
+    string_val += ");";
+    #ifdef __EMSCRIPTEN__
+    emscripten_run_script(&string_val[0]);
+    #endif
 }
 
-//////////////////////////////////////////////////////////////////////////////
+void display_parameters_as_sliders(
+    int c, std::set<std::string> variables) {
+    std::string string_val = "[";
+    for (auto &e: variables)
+        string_val += "\"" + e + "\", ";
+    string_val += "]";
+    string_val 
+        = "modifyUserSliders(" + std::to_string(c) + ", " + string_val + ");";
+    printf("%s\n", &string_val[0]);
+    #ifdef __EMSCRIPTEN__
+    emscripten_run_script(&string_val[0]);
+    #endif
+}
+
 
 /* Setters for the simulation parameters struct, where they act
 as the exposed entry point for JavaScript code in the WASM build.
@@ -124,7 +140,6 @@ EMSCRIPTEN_BINDINGS(my_module) {
     function("set_bool_param", set_bool_param);
     function("set_vec_param", set_vec_param);
     function("set_ivec_param", set_ivec_param);
-    // function("set_mouse_mode", set_mouse_mode);
     function("set_string_param", set_string_param);
     function("user_edit_get_value", user_edit_get_value);
     function("user_edit_set_value", user_edit_set_value);
@@ -133,8 +148,5 @@ EMSCRIPTEN_BINDINGS(my_module) {
     function("button_pressed", button_pressed);
     function("selection_set", selection_set);
     function("set_user_float_param", set_user_float_param);
-    //
-    function("set_mouse_mode", s_set_input_mode);
-    //
 }
 #endif

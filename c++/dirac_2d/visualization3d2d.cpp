@@ -46,6 +46,38 @@ static void compute_scalar(
     );
 }
 
+static void compute_electric(
+    Quad &electric,
+    const Quad &potential_prev, const Quad &potential_curr,
+    uint32_t electric_program, 
+    float dt, IVec2 texel_dimensions_2d, Vec2 dimensions_2d
+) {
+    electric.draw(
+        electric_program,
+        {
+            {"prevATex", &potential_prev},
+            {"currATex", &potential_curr},
+            {"texelDimensions2D", texel_dimensions_2d},
+            {"dimensions2D", dimensions_2d},
+            {"dt", float(dt)}
+        }
+    );
+}
+
+static void compute_magnetic(
+    Quad &magnetic, const Quad &potential, uint32_t magnetic_program,
+    IVec2 texel_dimensions_2d, Vec2 dimensions_2d
+) {
+    magnetic.draw(
+        magnetic_program,
+        {
+            {"vecPotentialTex", &potential},
+            {"texelDimensions2D", texel_dimensions_2d},
+            {"dimensions2D", dimensions_2d}
+        }
+    );
+}
+
 enum {
     REAL_DATA_TYPE = 0,
     COMPLEX_DATA_TYPE_FRONT = 1,
@@ -119,28 +151,56 @@ void visualization3d2d::scalar_or_single_component_quantities(
         );
         current_computed_stored = false;
     }
+    if (options.pseudoscalar) {
+        compute_scalar(
+            intermediate_quantity, psi, 
+            programs.pseudoscalar, 0
+        );
+        dst_render.draw(
+            programs.surface_domain_coloring, {
+                {"heightTex", &intermediate_quantity},
+                {"rotation", params.rotation},
+                {"screenDimensions", params.screen_dimensions},
+                {"translate", Vec3{.ind{0.0, 0.0, 0.0}}},
+                {"heightScale", 0.5F},
+                {"scale", params.scale},
+                {"dimensions2D", 
+                    IVec2{.ind{1024, 1024}}},
+                {"tex", &intermediate_quantity},
+                {"brightness", params.brightness},
+                {"heightDataType", int(COMPLEX_DATA_TYPE_FRONT)}
+            },
+            surface_wireframe
+        );
+        current_computed_stored = false;
+    }
     if (options.component_magnitude_w_phase[0] 
         || options.component_magnitude_w_phase[1]
         || options.component_magnitude_w_phase[2]
         || options.component_magnitude_w_phase[3]) {
         const Quad *height_tex;
         int data_type, index;
+        float phase_adjust;
         if (options.component_magnitude_w_phase[0]) {
             height_tex = &psi.u;
             index = 0;
             data_type = COMPLEX_DATA_TYPE_FRONT;
+            phase_adjust = params.c*params.c*params.m*params.t;
         } else if (options.component_magnitude_w_phase[1]) {
             height_tex = &psi.u;
             index = 1;
             data_type = COMPLEX_DATA_TYPE_BACK;
+            phase_adjust = params.c*params.c*params.m*params.t;
         } else if (options.component_magnitude_w_phase[2]) {
             height_tex = &psi.v;
             index = 0;
             data_type = COMPLEX_DATA_TYPE_FRONT;
+            phase_adjust = -params.c*params.c*params.m*params.t;
         } else {
             height_tex = &psi.v;
             index = 1;
             data_type = COMPLEX_DATA_TYPE_BACK;
+            phase_adjust = -params.c*params.c*params.m*params.t;
         }
         dst_render.draw(
             programs.surface_domain_coloring, {
@@ -155,7 +215,8 @@ void visualization3d2d::scalar_or_single_component_quantities(
                 {"tex", height_tex},
                 {"brightness", params.brightness},
                 {"index", int(index)},
-                {"heightDataType", int(data_type)}
+                {"heightDataType", int(data_type)},
+                {"phaseAdjust", phase_adjust}
             },
             surface_wireframe
         );
@@ -243,10 +304,20 @@ void visualization3d2d::vector_quantities(
             options, programs, params);
     }
     if (options.electric_field) {
-
+        compute_electric(intermediate_quantity,
+            potential, potential, programs.electric, 
+            params.dt, params.texel_dimensions, params.dimensions);
+        draw_arrows(
+            dst_render, arrows_wireframe, intermediate_quantity, 
+            options, programs, params);
     }
     if (options.magnetic_field) {
-
+        compute_magnetic(intermediate_quantity,
+            potential, programs.magnetic, 
+            params.texel_dimensions, params.dimensions);
+        draw_arrows(
+            dst_render, arrows_wireframe, intermediate_quantity, 
+            options, programs, params);
     }
 }
 

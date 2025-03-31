@@ -45,6 +45,38 @@ static void compute_scalar(
     );
 }
 
+static void compute_electric(
+    Quad &electric,
+    const Quad &potential_prev, const Quad &potential_curr,
+    uint32_t electric_program, 
+    float dt, IVec2 texel_dimensions_2d, Vec2 dimensions_2d
+) {
+    electric.draw(
+        electric_program,
+        {
+            {"prevATex", &potential_prev},
+            {"currATex", &potential_curr},
+            {"texelDimensions2D", texel_dimensions_2d},
+            {"dimensions2D", dimensions_2d},
+            {"dt", float(dt)}
+        }
+    );
+}
+
+static void compute_magnetic(
+    Quad &magnetic, const Quad &potential, uint32_t magnetic_program,
+    IVec2 texel_dimensions_2d, Vec2 dimensions_2d
+) {
+    magnetic.draw(
+        magnetic_program,
+        {
+            {"vecPotentialTex", &potential},
+            {"texelDimensions2D", texel_dimensions_2d},
+            {"dimensions2D", dimensions_2d}
+        }
+    );
+}
+
 void visualization2d::scalar_or_single_component_quantities(
     RenderTarget &dst_render, WireFrame &dst_wireframe,
     Quad &intermediate_quantity,
@@ -98,10 +130,21 @@ void visualization2d::scalar_or_single_component_quantities(
             dst_wireframe
         );
     }
-    // TODO!
-    /* if (options.pseudoscalar) {
+    if (options.pseudoscalar) {
+        compute_scalar(
+            intermediate_quantity, psi, programs.pseudoscalar, 0
+        );
         current_computed_stored = false;
-    }*/
+        dst_render.draw(
+            programs.domain_color,
+            {
+                {"tex", {&intermediate_quantity}},
+                {"index", {int(0)}},
+                {"brightness", {params.brightness}},
+            },
+            dst_wireframe
+        );
+    }
     if (options.total_magnitude_w_phase[0]) {
         if (!current_computed_stored)
             compute_current(
@@ -252,10 +295,38 @@ void visualization2d::vector_quantities(
         );
     }
     if (options.electric_field) {
-        // TODO
+        compute_electric(intermediate_quantity,
+            potential, potential, programs.electric, 
+            params.dt, params.texel_dimensions, params.dimensions);
+        dst_render.draw(
+            programs.arrows,
+            {
+                {"tex", {&intermediate_quantity}},
+                {"scale", {10.0F}},
+                {"vecTex", {&intermediate_quantity}},
+                {"arrowScale", {params.arrows_scale}},
+                {"maxLength", {params.arrows_max_length}},
+                {"color", {Vec4{.ind{2.0, 2.0, 2.0, 2.0}}}}
+            },
+            dst_wireframe
+        );
     }
     if (options.magnetic_field) {
-        // TODO
+        compute_magnetic(intermediate_quantity,
+            potential, programs.magnetic, 
+            params.texel_dimensions, params.dimensions);
+        dst_render.draw(
+            programs.arrows,
+            {
+                {"tex", {&intermediate_quantity}},
+                {"scale", {10.0F}},
+                {"vecTex", {&intermediate_quantity}},
+                {"arrowScale", {params.arrows_scale}},
+                {"maxLength", {params.arrows_max_length}},
+                {"color", {Vec4{.ind{2.0, 2.0, 2.0, 2.0}}}}
+            },
+            dst_wireframe
+        );
     }
 }
 

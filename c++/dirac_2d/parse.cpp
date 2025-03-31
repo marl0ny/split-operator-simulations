@@ -250,15 +250,16 @@ static bool check_if_parenthesis_are_balanced(const string &input) {
     return left_parenthesis_stack.empty();
 }
 
-vector<string> get_expression_stack(const string &input) {
+vector<string> get_expression_stack(const string &raw_input) {
     // std::string input = "";
     // for (auto &c: input_)
     //     if (c != ' ')
     //         input += c;
-    if (!check_if_parenthesis_are_balanced(input)) {
+    if (!check_if_parenthesis_are_balanced(raw_input)) {
         std::cerr << "Unbalanced parentheses.\n";
         return {};
     }
+    std::string input = handle_unary_operators(raw_input);
     vector<string> reversed_expr {};
     int i = 0;
     while(i < input.length()) {
@@ -459,6 +460,7 @@ string turn_rpn_expression_to_glsl_expression_string(
                 break;
                 case '/':
                 val = "div(" + l_val + ", " + r_val + ")";
+                break;
                 case '^':
                 val = "powC(" + l_val + ", " + r_val + ")";
                 break;

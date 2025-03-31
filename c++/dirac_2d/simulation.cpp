@@ -1,6 +1,7 @@
 #include "simulation.hpp"
 #include "arrows2d.hpp"
 #include "arrows3d2d.hpp"
+#include "dirac_split_step2d.hpp"
 #include "surface.hpp"
 #include "visualization2d.hpp"
 #include "visualization3d2d.hpp"
@@ -9,6 +10,11 @@
 #include <cmath>
 
 using namespace sim_2d;
+
+// static float norm_squared_cpu(
+//     dirac_split_step2d::BiSpinorQuad &psi) {
+    
+// }
 
 static Vec2 get_dimensions(float side_length) {
     return {.ind{side_length, side_length}};
@@ -127,6 +133,9 @@ GLSLPrograms::GLSLPrograms() {
     this->uniform_color = Quad::make_program_from_path(
         "./shaders/util/uniform-color.frag"
     );
+    this->add2 = Quad::make_program_from_path(
+        "./shaders/util/add2.frag"
+    );
     this->wave_packet = Quad::make_program_from_path(
         "./shaders/wavepacket/position-gaussian2d.frag"
     );
@@ -144,6 +153,9 @@ GLSLPrograms::GLSLPrograms() {
     );
     this->scalar = Quad::make_program_from_path(
         "./shaders/scalar/scalar.frag"
+    );
+    this->pseudoscalar = Quad::make_program_from_path(
+        "./shaders/scalar/pseudoscalar.frag"
     );
     this->arrows = make_program_from_paths(
         "./shaders/arrows/arrows2d.vert",
@@ -170,6 +182,9 @@ GLSLPrograms::GLSLPrograms() {
     this->sketch_potential = Quad::make_program_from_path(
         "./shaders/sketch/potential2d.frag"
     );
+    this->erase_vec_potential = Quad::make_program_from_path(
+        "./shaders/sketch/reduce-vec-potential2d.frag"
+    );
     this->surface_domain_coloring = make_program_from_paths(
         "./shaders/surface/surface.vert",
         "./shaders/surface/domain-coloring.frag");
@@ -179,6 +194,12 @@ GLSLPrograms::GLSLPrograms() {
     this->surface_single_color = make_program_from_paths(
         "./shaders/surface/surface.vert",
         "./shaders/surface/single-color.frag"
+    );
+    this->electric = Quad::make_program_from_path(
+        "./shaders/em-fields/electric2d.frag"
+    );
+    this->magnetic = Quad::make_program_from_path(
+        "./shaders/em-fields/magnetic2d.frag"
     );
 }
 
@@ -194,7 +215,9 @@ void Simulation::time_steps(const SimParams &params) {
     int texel_side_length = convert_side_length_selector_value(
         params.texelSideLengthSelector.selected
     );
-    for (int i = 0; i < params.stepsPerFrame; i++)
+    for (int i = 0; i < params.stepsPerFrame; i++) {
+        float dt = params.cdtdx 
+            * ((params.sideLength/float(texel_side_length))/params.c);
         dirac_split_step2d::split_step(
             m_frames.psi,
             m_frames.potential,
@@ -202,19 +225,21 @@ void Simulation::time_steps(const SimParams &params) {
             m_frames.temps,
             m_programs.split_operator,
             {
-                .dt=params.dt,
+                .dt=dt*(params.useNegativeTimeStep? -1.0F: 1.0F),
                 .m=params.m,
                 .c=params.c,
                 .hbar=params.hbar,
                 .dimensions2d=get_dimensions(params.sideLength),
                 .texel_dimensions2d
-                    =get_texel_dimensions(texel_side_length),
-
-    });
+                    =get_texel_dimensions(texel_side_length),});
+    }
 }
 
 const RenderTarget & Simulation::render_view(
     SimParams params, Vec2 cursor_pos) {
+    int texel_side_length 
+        = convert_side_length_selector_value(
+            params.texelSideLengthSelector.selected);
     m_frames.view.clear();
     visualization2d::Options options {};
     options.current_time_component=params.showCurrent0;
@@ -231,6 +256,8 @@ const RenderTarget & Simulation::render_view(
     options.vector_potential = params.showVectorPotential;
     options.spin[0] = params.showPsi01Spin;
     options.spin[1] = params.showPsi23Spin;
+    options.electric_field = params.showElectric;
+    options.magnetic_field = params.showMagnetic;
     visualization2d::scalar_or_single_component_quantities(
         m_frames.view,
         m_frames.quad, 
@@ -280,12 +307,18 @@ const RenderTarget & Simulation::render_view(
             .arrows=m_programs.arrows,
             .current=m_programs.current,
             .pseudocurrent=m_programs.pseudocurrent,
+            .electric=m_programs.electric,
+            .magnetic=m_programs.magnetic
         },
         {
             .hbar=params.hbar,
+            .dt=params.cdtdx 
+                * ((params.sideLength/float(texel_side_length))/params.c),
             .representation=0,
             .arrows_max_length=params.arrowMaxLength,
-            .arrows_scale=params.arrowScale
+            .arrows_scale=params.arrowScale,
+            .texel_dimensions=get_texel_dimensions(texel_side_length),
+            .dimensions=get_dimensions(params.sideLength)
         }
     );
     return m_frames.view;
@@ -297,6 +330,9 @@ const RenderTarget & Simulation::render_view(
     Quaternion rotation, float scale) {
     if (!params.show3D)
         return this->render_view(params, cursor_pos);
+    int texel_side_length 
+        = convert_side_length_selector_value(
+            params.texelSideLengthSelector.selected);
     m_frames.view.clear();
     visualization3d2d::Options options {};
     options.current_time_component=params.showCurrent0;
@@ -313,6 +349,8 @@ const RenderTarget & Simulation::render_view(
     options.vector_potential = params.showVectorPotential;
     options.spin[0] = params.showPsi01Spin;
     options.spin[1] = params.showPsi23Spin;
+    options.electric_field = params.showElectric;
+    options.magnetic_field = params.showMagnetic;
     IVec2 screen_dimensions {.ind{
         (int)m_frames.view_tex_params.width,
         (int)m_frames.view_tex_params.height
@@ -343,7 +381,10 @@ const RenderTarget & Simulation::render_view(
             .pseudoscalar=m_programs.pseudoscalar}, 
         {
             .hbar=params.hbar,
-            .brightness=params.brightness, 
+            .brightness=params.brightness,
+            .m=params.m,
+            .c=params.c,
+            .t=params.t,
             .potential_brightness=params.potentialBrightness,
             .rotation=rotation,
             .scale=scale,
@@ -360,15 +401,21 @@ const RenderTarget & Simulation::render_view(
             .arrows=m_programs.arrows3d,
             .current=m_programs.current,
             .pseudocurrent=m_programs.pseudocurrent,
+            .electric=m_programs.electric,
+            .magnetic=m_programs.magnetic
         },
         {
             .hbar=params.hbar,
+            .dt=params.cdtdx 
+                * ((params.sideLength/float(texel_side_length))/params.c),
             .representation=0,
             .arrows_max_length=params.arrowMaxLength,
             .arrows_scale=params.arrowScale,
             .rotation=rotation,
             .scale=scale,
-            .screen_dimensions=screen_dimensions
+            .screen_dimensions=screen_dimensions,
+            .texel_dimensions=get_texel_dimensions(texel_side_length),
+            .dimensions=get_dimensions(params.sideLength)
         });
     visualization3d2d::spin_quantities(
         m_frames.view,
@@ -392,18 +439,15 @@ const RenderTarget & Simulation::render_view(
     return m_frames.view;
 }
 
-void Simulation::new_wave_function(
+void Simulation::new_momentum_space_wave_function(
     const SimParams &params,
     const Vec2 &tex_pos, const Vec2 &wave_num) {
     int texel_side_length 
         = convert_side_length_selector_value(
             params.texelSideLengthSelector.selected);
-    Vec3 pos_spin_dir = Vec3{.ind{
-        params.posX, params.posY, params.posZ
-    }}.normalized();
-    Vec3 neg_spin_dir = Vec3{.ind{
-        params.negX, params.negY, params.negZ
-    }}.normalized();
+    Vec3 pos_spin_dir = params.posSpinDir.normalized();
+    // Vec3 pos_spin_dir = Vec3{.x=0.0, .y=0.0, .z=1.0};
+    Vec3 neg_spin_dir = params.negSpinDir.normalized();
     spinors::Spinor pos_state = spinors::get_spin_up_state(pos_spin_dir, 1.0);
     spinors::Spinor neg_state = spinors::get_spin_up_state(neg_spin_dir, 1.0);
     Vec2 p_xy = gaussian_wave_packet2d::wave_number_to_momentum(
@@ -414,12 +458,18 @@ void Simulation::new_wave_function(
         = spinors::get_spin_up_state(p, length_p);
     spinors::Spinor p_d
         = spinors::get_spin_down_state(p, length_p);
-    float pos_amount = params.posE;
+    float pos_amount = sqrt(params.posE);
     float neg_amount = negative_coeff(pos_amount);
-    std::complex<float> c0 = neg_amount*inner_prod(neg_state, p_u);
-    std::complex<float> c1 = pos_amount*inner_prod(pos_state, p_u);
-    std::complex<float> c2 = neg_amount*inner_prod(neg_state, p_d);
-    std::complex<float> c3 = pos_amount*inner_prod(pos_state, p_d);
+    std::complex<float> c0 = neg_amount*inner_prod(p_u, neg_state);
+    std::complex<float> c1 = pos_amount*inner_prod(p_u, pos_state);
+    std::complex<float> c2 = neg_amount*inner_prod(p_d, neg_state);
+    std::complex<float> c3 = pos_amount*inner_prod(p_d, pos_state);
+    // std::complex<float> c1 = {1.0, 0.0};
+    // std::complex<float> c2 = {0.0, 0.0};
+    // std::complex<float> c3 = {0.0, 0.0};
+    // std::complex<float> c0 = {0.0, 0.0};
+    printf("+ spin up direction: (%g, %g, %g)",
+        pos_spin_dir.x, pos_spin_dir.y, pos_spin_dir.z);
     printf("p/|p| = (%g, %g, %g)\n", 
         p.normalized().x, p.normalized().y, p.normalized().z);
     printf("|+> = [\n\t%g + (%g) i,\n\t%g + (%g) i\n] \n", 
@@ -431,18 +481,14 @@ void Simulation::new_wave_function(
     printf("c1 = %g + (%g) i\n", c1.real(), c1.imag());
     printf("c2 = %g + (%g) i\n", c2.real(), c2.imag());
     printf("c3 = %g + (%g) i\n", c3.real(), c3.imag());
-    // std::complex<float> imag_unit (0.0, 1.0);
+    std::complex<float> imag_unit (0.0, 1.0);
     // spinors::Spinor neg_d = get_spin_down_state(neg_spin_dir, 1.0);
     gaussian_wave_packet2d::momentum_init(
         m_frames.psi, m_frames.temps.fft,
         m_programs.split_operator.fft,
         m_programs.momentum_init, {
-            .amplitude=1.0,
-            .sigma={
-                gaussian_wave_packet2d::tex_to_sim_coordinates(
-                    Vec2{.x=params.sigma, .y=params.sigma},
-                    get_dimensions(params.sideLength))
-            },
+            .amplitude=1.0F,
+            .sigma={.x=params.sigma, .y=params.sigma},
             .p0 {
                 gaussian_wave_packet2d::wave_number_to_momentum(
                     wave_num, get_dimensions(params.sideLength))},
@@ -469,18 +515,116 @@ void Simulation::new_wave_function(
             .hbar=params.hbar});
 }
 
+void Simulation::new_position_space_wave_function(
+    const SimParams &params,
+    const Vec2 &tex_pos,
+    const Vec2 &wave_num) {
+    int texel_side_length 
+        = convert_side_length_selector_value(
+            params.texelSideLengthSelector.selected);
+    Vec3 pos_spin_dir = params.posSpinDir.normalized();
+    Vec3 neg_spin_dir = params.negSpinDir.normalized();
+    spinors::Spinor pos_state = spinors::get_spin_up_state(pos_spin_dir, 1.0);
+    spinors::Spinor neg_state = spinors::get_spin_up_state(neg_spin_dir, 1.0);
+    Vec2 p_xy = gaussian_wave_packet2d::wave_number_to_momentum(
+        wave_num, get_dimensions(params.sideLength));
+    Vec3 p {.ind{p_xy.x, p_xy.y, 0.0F}};
+    float length_p = p.length();
+    spinors::Spinor p_u
+        = spinors::get_spin_up_state(p, length_p);
+    spinors::Spinor p_d
+        = spinors::get_spin_down_state(p, length_p);
+    float pos_amount = sqrt(params.posE);
+    float neg_amount = negative_coeff(pos_amount);
+    std::complex<float> c0 = neg_amount*inner_prod(p_u, neg_state);
+    std::complex<float> c1 = pos_amount*inner_prod(p_u, pos_state);
+    std::complex<float> c2 = neg_amount*inner_prod(p_d, neg_state);
+    std::complex<float> c3 = pos_amount*inner_prod(p_d, pos_state);
+    Vec2 d_2d = get_dimensions(params.sideLength);
+    printf("+ spin up direction: (%g, %g, %g)",
+        pos_spin_dir.x, pos_spin_dir.y, pos_spin_dir.z);
+    printf("p/|p| = (%g, %g, %g)\n", 
+        p.normalized().x, p.normalized().y, p.normalized().z);
+    printf("|+> = [\n\t%g + (%g) i,\n\t%g + (%g) i\n] \n", 
+        pos_state[0].real(), pos_state[0].imag(), 
+        pos_state[1].real(), pos_state[1].imag());
+    printf("|p up> = [\n\t%g + (%g) i,\n\t%g + (%g) i\n] \n", 
+        p_u[0].real(), p_u[0].imag(), p_u[1].real(), p_u[1].imag());
+    printf("c0 = %g + (%g) i\n", c0.real(), c0.imag());
+    printf("c1 = %g + (%g) i\n", c1.real(), c1.imag());
+    printf("c2 = %g + (%g) i\n", c2.real(), c2.imag());
+    printf("c3 = %g + (%g) i\n", c3.real(), c3.imag());
+    gaussian_wave_packet2d::spatial_init(
+        m_frames.psi, m_programs.wave_packet,
+        {
+            .wave_number=wave_num,
+            .offset_tex_coord=tex_pos,
+            .amplitude=0.5,
+            .sigma_tex_coord={
+                .x=params.sigma/d_2d.x, .y=params.sigma/d_2d.y},
+            .s {
+                spinors::BiSpinor(
+                    spinors::Spinor(0.0, 0.0),
+                    spinors::Spinor(0.0, 0.0))
+            },
+            .use_energy_states_combinations=int(1),
+            .dimensions2d=get_dimensions(params.sideLength),
+            .texel_dimensions2d=get_texel_dimensions(texel_side_length),
+            .coefficients={c0, c1, c2, c3},
+            .m=params.m,
+            .c=params.c
+        });
+    // m_frames.temps.psi_x[1].u.draw(
+    //     m_programs.add2,
+    //     {
+    //         {"tex1", &m_frames.temps.psi_x[0][0]},
+    //         {"tex2", &m_frames.psi[0]},
+    //     }
+    // );
+    // m_frames.temps.psi_x[1].v.draw(
+    //     m_programs.add2,
+    //     {
+    //         {"tex1", &m_frames.temps.psi_x[0][1]},
+    //         {"tex2", &m_frames.psi[1]},
+    //     }
+    // );
+    // m_frames.psi.u.draw(
+    //     m_programs.copy,
+    //     {{"tex", &m_frames.temps.psi_x[1].u}}
+    // );
+    // m_frames.psi.v.draw(
+    //     m_programs.copy,
+    //     {{"tex", &m_frames.temps.psi_x[1].v}}
+    // );
+}
+
+void Simulation::new_wave_function(
+    const SimParams &params,
+    const Vec2 &tex_pos, const Vec2 &wave_num) {
+    if (params.momentumSpaceInit)
+        new_momentum_space_wave_function(params, tex_pos, wave_num);
+    else
+        new_position_space_wave_function(params, tex_pos, wave_num);
+}
+
 void Simulation::sketch_modify_scalar_potential(
     const SimParams &sim_params, const Vec2 &pos) {
     m_frames.visual_intermediate.draw(
         m_programs.copy,
         {{"tex", {&m_frames.potential}}}
     );
+    Vec2 sigma = Vec2{
+        .ind{
+            sim_params.sketchSize/sim_params.sideLength,
+            sim_params.sketchSize/sim_params.sideLength,
+        }
+    };
     m_frames.potential.draw(
         m_programs.sketch_potential,
         {
             {"tex", {&m_frames.visual_intermediate}},
             {"offsetTexCoord", {pos}},
-            {"sigmaTexCoord", {Vec2{.x=0.01, .y=0.01}}},
+            {"sigmaTexCoord", sigma},
             {"amplitude", {Vec4{.x=0.0, .y=0.0, .z=0.0, .w=10.0}}},
             {"maxScalarValue", {80.0F}},
             {"maxVectorMag", {80.0F}},
@@ -494,15 +638,69 @@ void Simulation::sketch_modify_vector_potential(
         m_programs.copy,
         {{"tex", {&m_frames.potential}}}
     );
+    Vec2 sigma = Vec2{
+        .ind{
+            sim_params.sketchSize/sim_params.sideLength,
+            sim_params.sketchSize/sim_params.sideLength,
+        }
+    };
     m_frames.potential.draw(
         m_programs.sketch_potential,
         {
             {"tex", {&m_frames.visual_intermediate}},
             {"offsetTexCoord", {pos}},
-            {"sigmaTexCoord", {Vec2{.x=0.01, .y=0.01}}},
+            {"sigmaTexCoord", sigma},
             {"amplitude", {Vec4{.x=dir.x, .y=dir.y, .z=0.0, .w=0.0}}},
             {"maxScalarValue", {80.0F}},
             {"maxVectorMag", {80.0F}},
+        }
+    );
+}
+
+void Simulation::erase_modify_scalar_potential(
+    const SimParams &sim_params, const Vec2 &pos) {
+    m_frames.visual_intermediate.draw(
+        m_programs.copy,
+        {{"tex", {&m_frames.potential}}}
+    );
+    Vec2 sigma = Vec2{
+        .ind{
+            sim_params.sketchSize/sim_params.sideLength,
+            sim_params.sketchSize/sim_params.sideLength,
+        }
+    };
+    m_frames.potential.draw(
+        m_programs.sketch_potential,
+        {
+            {"tex", {&m_frames.visual_intermediate}},
+            {"offsetTexCoord", {pos}},
+            {"sigmaTexCoord", sigma},
+            {"amplitude", {Vec4{.x=0.0, .y=0.0, .z=0.0, .w=-10.0}}},
+            {"maxScalarValue", {80.0F}},
+            {"maxVectorMag", {80.0F}},
+        }
+    );
+}
+
+void Simulation::erase_modify_vector_potential(
+    const SimParams &sim_params, const Vec2 &pos, const Vec2 &dir) {
+    m_frames.visual_intermediate.draw(
+        m_programs.copy,
+        {{"tex", {&m_frames.potential}}}
+    );
+    Vec2 sigma = Vec2{
+        .ind{
+            sim_params.sketchSize/sim_params.sideLength,
+            sim_params.sketchSize/sim_params.sideLength,
+        }
+    };
+    m_frames.potential.draw(
+        m_programs.erase_vec_potential,
+        {
+            {"tex", {&m_frames.visual_intermediate}},
+            {"offsetTexCoord", {pos}},
+            {"sigmaTexCoord", sigma},
+            {"amplitude", 80.0F},
         }
     );
 }
@@ -522,6 +720,17 @@ void Simulation::modify_potential_with_user_program(
         printf("%s, %g\n", &e.first[0], e.second.f32);
     }
     m_frames.potential.draw(program, uniforms);
+}
+
+void Simulation::increment_time(SimParams &params) {
+    int texel_side_length 
+        = convert_side_length_selector_value(
+            params.texelSideLengthSelector.selected);
+    float dt = params.cdtdx
+        * ((params.sideLength/float(texel_side_length))/params.c);
+    float time_elapsed = params.stepsPerFrame*dt
+            * (params.useNegativeTimeStep? -1.0: 1.0);
+    params.t += time_elapsed;
 }
 
 void Simulation::change_simulation_dimensions(const SimParams &params) {

@@ -67,6 +67,7 @@ void main() {
     float ratio = position[2];
     float arrowScale = position[3];
     vec3 direction = texture2D(vecTex, UV).xyz;
+    direction.z = -direction.z;
     if (length(direction) > maxLength)
         direction = normalize(direction)*maxLength;
     vec3 arrowRelPoint = arrowScale*direction - vec3(0.0, 0.0, 0.1);

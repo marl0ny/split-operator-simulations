@@ -22,9 +22,9 @@ DATA_DEPENDENCIES = parameters.json
 GENERATION_SCRIPTS = make_parameter_files.py
 GENERATED_DEPENDENCIES = parameters.hpp
 C_SOURCES =
-CPP_SOURCES = main.cpp simulation.cpp gl_wrappers.cpp spinors.cpp arrows2d.cpp arrows3d2d.cpp gaussian_wavepacket2d.cpp visualization2d.cpp visualization3d2d.cpp fft2d.cpp dirac_split_step2d.cpp glfw_window.cpp interactor.cpp parse.cpp user_edit_glsl.cpp surface.cpp
+CPP_SOURCES = main.cpp simulation.cpp gl_wrappers.cpp spinors.cpp arrows2d.cpp arrows3d2d.cpp gaussian_wavepacket2d.cpp visualization2d.cpp visualization3d2d.cpp fft2d.cpp dirac_split_step2d.cpp glfw_window.cpp interactor.cpp parse.cpp user_edit_glsl.cpp surface.cpp matrix.cpp
 SOURCES = ${C_SOURCES} ${CPP_SOURCES}
-OBJECTS = main.o simulation.o gl_wrappers.o spinors.o arrows2d.o arrows3d2d.o gaussian_wavepacket2d.o visualization2d.o visualization3d2d.o fft2d.o dirac_split_step2d.o glfw_window.o interactor.o parse.o user_edit_glsl.o surface.o
+OBJECTS = main.o simulation.o gl_wrappers.o spinors.o arrows2d.o arrows3d2d.o gaussian_wavepacket2d.o visualization2d.o visualization3d2d.o fft2d.o dirac_split_step2d.o glfw_window.o interactor.o parse.o user_edit_glsl.o surface.o matrix.o
 # SHADERS = ./shaders/*
 
 

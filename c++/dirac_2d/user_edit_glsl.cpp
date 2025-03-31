@@ -1,7 +1,7 @@
 #include "user_edit_glsl.hpp"
 #include "parse.hpp"
-#include <complex>
 #include <regex>
+#include <iostream>
 
 /* The shader used for the program at the start, or if inputs are invalid. */
 static const std::string ZERO_SHADER 
@@ -235,8 +235,6 @@ static void remove_reserved_variables(
         variables.erase(v);
 }
 
-#include <iostream>
-
 std::set<std::string>
 initialize_glsl_program_from_strings(
     int &dst_program, std::vector<std::string> texts) {
@@ -286,6 +284,47 @@ initialize_glsl_program_from_strings(
     if (status == GL_TRUE)
         dst_program = program;
     return expression_variables;
+}
+
+void UserProgramsManager::add_new_program(
+    int program, std::set<std::string> variables_set) {
+    std::map<std::string, float> variables {};
+    for (std::string variable: variables_set) {
+        if (this->all_seen_variables.count(variable))
+            variables.insert({variable, all_seen_variables.at(variable)});
+        else
+            variables.insert({variable, 1.0F});
+    }
+    this->program = {
+        .is_time_dependent=(bool)variables.count("t"),
+        .program=program,
+        .uniforms=variables,
+    };
+    this->programs_queue.clear();
+    this->programs_queue.push_back(this->program.program);
+}
+
+void UserProgramsManager::add_seen_variable(
+    std::string variable, float value) {
+    // while (this->all_seen_variables.at(variable) != value) {
+    this->all_seen_variables[variable] = value;
+    this->program.uniforms[variable] = value;
+    // this->all_seen_variables.insert({variable, value});
+    // this->program.uniforms.insert({variable, value});
+
+}
+
+void UserProgramsManager::queue_current() {
+    this->programs_queue.push_back(this->program.program);
+}
+
+bool UserProgramsManager::program_queued() {
+    return this->programs_queue.size() != 0;
+}
+
+UserDefinedProgram UserProgramsManager::expend_program() {
+    this->programs_queue.pop_back();
+    return this->program;
 }
 
 

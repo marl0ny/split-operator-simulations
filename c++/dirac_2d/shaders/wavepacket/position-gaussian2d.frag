@@ -33,7 +33,6 @@ uniform vec2 sigmaTexCoord;
 uniform complex2 spinor;
 
 uniform bool useEnergyStatesCombinations;
-uniform vec3 momentum;
 uniform vec2 dimensions2D;
 uniform ivec2 texelDimensions2D;
 uniform int spinorIndex;
@@ -65,8 +64,7 @@ complex mul(complex a, complex b) {
 complex2 c1C2(complex c1, complex2 c2) {
     complex a = complex(c2[0], c2[1]);
     complex b = complex(c2[2], c2[3]);
-    return complex2(complex(c1.x*a.x - c1.y*a.y, c1.x*a.y + c1.y*a.x),
-                    complex(c1.x*b.x - c1.y*b.y, c1.x*b.y + c1.y*b.x));
+    return complex2(mul(c1, a), mul(c1, b));
 }
 
 complex2 innerProd(complex2 a, complex2 b) {
@@ -81,9 +79,11 @@ complex frac(complex z1, complex z2) {
 complex wavepacket(vec2 r) {
     float sx = sigmaTexCoord.x;
     float sy = sigmaTexCoord.y;
+    float width = dimensions2D[0];
+    float height = dimensions2D[1];
     float gx = exp(-0.25*pow(r.x/sx, 2.0))/sqrt(sx*sqrt(2.0*PI));
     float gy = exp(-0.25*pow(r.y/sy, 2.0))/sqrt(sy*sqrt(2.0*PI));
-    float g = gx*gy;
+    float g = gx*gy/(width*height);
     float nx = waveNumber.x;
     float ny = waveNumber.y;
     complex phase = complex(cos(2.0*PI*(nx*r.x + ny*r.y)),
@@ -117,15 +117,15 @@ https://en.wikipedia.org/wiki/Pauli_matrices.
 complex2 getSpinUpState(vec3 orientation, float len) {
     float n = len;
     float nx = orientation.x, ny = orientation.y, nz = orientation.z;
-    complex az = complex(1.0, 0.0);
-    complex bz = complex(0.0, 0.0);
     complex a = frac(complex(n + nz, 0.0),
                      complex(nx, ny)*sqrt((nz + n)*(nz + n)/(nx*nx + ny*ny)
                                           + 1.0));
     complex b = complex(1.0/sqrt((nz + n)*(nz + n)/(nx*nx + ny*ny) + 1.0),
                         0.0);
     if ((nx*nx + ny*ny) == 0.0)
-        return complex2(az, bz);
+        return (nz >= 0.0)? 
+            complex2(complex(1.0, 0.0), complex(0.0)):
+            complex2(complex(0.0), complex(1.0, 0.0));
     return complex2(a, b);
 }
 
@@ -135,15 +135,15 @@ information.*/
 complex2 getSpinDownState(vec3 orientation, float len) {
     float n = len;
     float nx = orientation.x, ny = orientation.y, nz = orientation.z;
-    complex az = complex(0.0, 0.0);
-    complex bz = complex(1.0, 0.0);
     complex a = frac(complex(-n + nz, 0.0),
                      complex(nx, ny)*sqrt((nz - n)*(nz - n)/(nx*nx + ny*ny)
                                           + 1.0));
     complex b = complex(1.0/sqrt((nz - n)*(nz - n)/(nx*nx + ny*ny) + 1.0),
                         0.0);
     if ((nx*nx + ny*ny) == 0.0)
-        return complex2(az, bz);
+        return (nz >= 0.0)? 
+            complex2(complex(0.0), complex(1.0, 0.0)):
+            complex2(complex(1.0, 0.0), complex(0.0));
     return complex2(a, b);
 }
 
@@ -255,16 +255,67 @@ vec2 eigenvectorRealSymmetric2x2(int i, float d0, float d1, float nd) {
         );
 }
 
-complex2 getEnergyStatesCombinations() {
-    vec3 pVec = momentum;
-    float px = pVec.x, py = pVec.y, pz = pVec.z;
-    float p2 = px*px + py*py + pz*pz;
+complex2 eigenvectorDiracRep(
+    int spinorIndex, bool isPositiveE, bool isSpinUp, vec3 p) {
+    bool isNegativeE = !isPositiveE, isSpinDown = !isSpinUp;
+    float E = sqrt(m*m*c*c*c*c + c*c*dot(p, p));
+    float absP = length(p);
+    complex2 spin = (isSpinUp)? 
+        getSpinUpState(p, absP): getSpinDownState(p, absP);
+    float c0, c1;
+    if (absP == 0.0) {
+        c0 = (isPositiveE)? 1.0: 0.0;
+        c1 = (isNegativeE)? 0.0: 1.0; 
+        return (spinorIndex == 0)? c0*spin: c1*spin;
+    } else {
+        if (isSpinUp && isPositiveE) {
+            c0 = 1.0;
+            c1 = c*absP/(m*c*c + E);
+        } else if (isSpinDown && isPositiveE) {
+            c0 = 1.0;
+            c1 = -c*absP/(m*c*c + E);
+        } else if (isSpinUp && isNegativeE) {
+            c0 = -c*absP/(m*c*c + E);
+            c1 = 1.0;
+        } else if (isSpinDown && isNegativeE) {
+            c0 = c*absP/(m*c*c + E);
+            c1 = 1.0;
+        }
+        return sqrt((m*c*c + E)/(2.0*E))
+            *((spinorIndex == 0)? c0*spin: c1*spin);
+    }
+}
+
+complex2 getEnergyStatesCombinationsDiracRep(
+    vec3 p, complex c0, complex c1, complex c2, complex c3) {
+    complex2 psi0 = 
+          c1C2(c0, eigenvectorDiracRep(0, false, true, p))
+        + c1C2(c1, eigenvectorDiracRep(0, true, true, p))
+        + c1C2(c2, eigenvectorDiracRep(0, false, false, p))
+        + c1C2(c3, eigenvectorDiracRep(0, true, false, p));
+    complex2 psi1 = 
+          c1C2(c0, eigenvectorDiracRep(1, false, true, p))
+        + c1C2(c1, eigenvectorDiracRep(1, true, true, p))
+        + c1C2(c2, eigenvectorDiracRep(1, false, false, p)) 
+        + c1C2(c3, eigenvectorDiracRep(1, true, false, p));
+    return (spinorIndex == TOP)? psi0: psi1;
+
+}
+
+complex2 getEnergyStatesCombinations(
+    vec3 pVector, float pSquared,
+    complex c0, complex c1, complex c2, complex c3) {
+    if (representation == DIRAC_REP)
+        return getEnergyStatesCombinationsDiracRep(
+            pVector, c0, c1, c2, c3);
+    float px = pVector.x, py = pVector.y, pz = pVector.z;
+    float p2 = pSquared;
     float p = sqrt(p2);
     float mc = m*c;
     // Get the eigenvectors of that Pauli matrix that is
     // orientated in the same direction as the momentum
-    complex2 up = getSpinUpState(pVec, p);
-    complex2 down = getSpinDownState(pVec, p);
+    complex2 up = getSpinUpState(pVector, p);
+    complex2 down = getSpinDownState(pVector, p);
     // Scaled eigenvalues of the kinetic energy matrix for the given momenta.
     float e0, e1, e2, e3;
     // These will be used to compute the actual corresponding eigenvectors
@@ -312,7 +363,6 @@ complex2 getEnergyStatesCombinations() {
 
 //////////////////////////////////////////////////////////////////////////////
 
-
 void main() {
     float x = UV.x;
     float y = UV.y;
@@ -331,7 +381,12 @@ void main() {
     if (!useEnergyStatesCombinations) {
         fragColor = c1C2(w, spinor);
     } else {
-        complex2 spinor2 = getEnergyStatesCombinations();
+        vec3 pVector = 2.0*PI*vec3(
+            waveNumber.x/dimensions2D.x,
+            waveNumber.y/dimensions2D.y, 0.0);
+        float pSquared = dot(pVector, pVector);
+        complex2 spinor2 = getEnergyStatesCombinations(
+            pVector, pSquared, c0, c1, c2, c3);
         fragColor = c1C2(w, spinor2);
     }
 }

@@ -234,7 +234,7 @@ function createButton(
 }
 
 function createLabel(
-    controls, labelName, style=''
+    controls, enumCode, labelName, style=''
 ) {
     let label = document.createElement("label");
     if (style === '')
@@ -242,8 +242,15 @@ function createLabel(
     else
         label.style = style;
     label.textContent = `${labelName}`;
+    label.id = `label-${enumCode}`;
     controls.appendChild(label);
     controls.appendChild(document.createElement("br"));
+}
+
+function editLabel(enumCode, textContent) {
+    let idVal = `label-${enumCode}`;
+    let label = document.getElementById(idVal);
+    label.textContent = textContent;
 }
 
 function createLineDivider(controls) {
@@ -295,10 +302,10 @@ def write_sliders_js(parameters, dst_file_name):
         if parameter['type'] == 'Label':
             if "style" in parameter:
                 file_contents += \
-                    f'createLabel(controls, ' \
+                    f'createLabel(controls, {i}, ' \
                         + f'\"{name}\", \"{parameter["style"]}\");\n'
             else:
-                file_contents += f'createLabel(controls, \"{name}\", \"\");\n'
+                file_contents += f'createLabel(controls, {i}, \"{name}\", \"\");\n'
         if parameter['type'] == 'LineDivider':
             file_contents += f'createLineDivider(controls);\n'
         if 'min' in parameter and 'max' in parameter:

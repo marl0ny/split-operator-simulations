@@ -1,14 +1,12 @@
 ## Issues
 
 ### Dirac 2D
- - Insert the appropriate sub-scripts and superscripts.
- - Include mouse selection in the simulation parameters instead of a separate thing. Add 3D mouse zoom/rotation as an option.
- - Set the time step controls as a percentage of the CFL condition instead. Display the actual time step in a label at the bottom.
+ - Include mouse selection in the simulation parameters instead of making it separate. Add 3D mouse zoom/rotation as an option.
+ - Discrepancy in the two different options for wave function initialization: the position space option produces an amplitude roughly twice that of the momentum space one. Find the cause of this issue and fix it.
+ - When using the scalar wave function visualization option, selecting one of the "show component with phase" options then switching back to scalar causes it to change its colour scheme. This only happens when the number of steps per frame is greater than zero.
  - Complete the pseudoscalar shader and add it as a visualization option.
- - For the gaussian wave packet standard deviation slider in the wave function initialization group, make sure to display it in the units that simulation uses.
- - When modifying the positive energy proportion slider, get the negative energy proportion label to actually display its amount. Base these proportions off of the magnitude squared instead of the magnitude, so that adding the positive and negative proportions gives one.
-  - For wave function initialization, group the positive spin direction sliders together: instead of each slider controlling a single floating point parameter, apply a single Vec3 that encompasses all sliders. Do this as well for the negative spin direction sliders. 
-  - Fix issues with how the 3D potential is displayed.
+  - Fix issues with 3D display of the potential.
   - Fix issues with how 2D vector plots are displayed, particularly for vector magnitudes that are close to zero.
-  - Add preset potentials.
   - Add time-dependent potentials
+  - Place each of the 3D vector field views at separate z offsets.
+  - Since the E and B fields are computed at staggered offsets, display these at staggered offsets as well.

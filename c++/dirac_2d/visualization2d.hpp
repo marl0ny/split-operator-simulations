@@ -54,16 +54,20 @@ void scalar_or_single_component_quantities(
 );
 
 struct VectorQuantitiesParams {
-    float hbar;
+    float hbar, dt;
     int representation;
     float arrows_max_length;
     float arrows_scale;
+    IVec2 texel_dimensions;
+    Vec2 dimensions;
 };
 
 struct VectorQuantitiesPrograms {
     uint32_t arrows;
     uint32_t current;
     uint32_t pseudocurrent;
+    uint32_t electric;
+    uint32_t magnetic;
 };
 
 void vector_quantities(

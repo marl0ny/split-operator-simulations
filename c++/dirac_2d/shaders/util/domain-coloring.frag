@@ -31,6 +31,7 @@ out vec4 fragColor;
 #endif
 
 #define complex vec2
+#define complex2 vec4
 
 #define PI 3.141592653589793
 
@@ -73,7 +74,8 @@ vec3 argumentToColor(float argVal) {
 }
 
 void main() {
-    complex z1 = (index == 0)? texture2D(tex, UV).xy: texture2D(tex, UV).zw;
+    complex2 s = texture2D(tex, UV);
+    complex z1 = (index == 0)? s.xy: s.zw;
     complex phaseFactor = complex(cos(phaseAdjust), sin(phaseAdjust));
     complex z2 = mul(phaseFactor, z1);
     vec3 color = brightness*length(z2)*argumentToColor(atan(z2.y, z2.x));

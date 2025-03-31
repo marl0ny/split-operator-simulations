@@ -104,30 +104,30 @@ https://en.wikipedia.org/wiki/Pauli_matrices.
 complex2 getSpinDownState(vec3 orientation, float len) {
     float n = len;
     float nx = orientation.x, ny = orientation.y, nz = orientation.z;
-    complex az = complex(0.0, 0.0);
-    complex bz = complex(1.0, 0.0);
     complex a = frac(complex(-n + nz, 0.0),
                      complex(nx, ny)*sqrt((nz - n)*(nz - n)/(nx*nx + ny*ny)
                                           + 1.0));
     complex b = complex(1.0/sqrt((nz - n)*(nz - n)/(nx*nx + ny*ny) + 1.0),
                         0.0);
     if ((nx*nx + ny*ny) == 0.0)
-        return complex2(az, bz);
+        return (nz >= 0.0)? 
+            complex2(complex(0.0), complex(1.0, 0.0)):
+            complex2(complex(1.0, 0.0), complex(0.0));
     return complex2(a, b);
 }
 
 complex2 getSpinUpState(vec3 orientation, float len) {
     float n = len;
     float nx = orientation.x, ny = orientation.y, nz = orientation.z;
-    complex az = complex(1.0, 0.0);
-    complex bz = complex(0.0, 0.0);
     complex a = frac(complex(n + nz, 0.0),
                      complex(nx, ny)*sqrt((nz + n)*(nz + n)/(nx*nx + ny*ny)
                                           + 1.0));
     complex b = complex(1.0/sqrt((nz + n)*(nz + n)/(nx*nx + ny*ny) + 1.0),
                         0.0);
     if ((nx*nx + ny*ny) == 0.0)
-        return complex2(az, bz);
+        return (nz >= 0.0)? 
+            complex2(complex(1.0, 0.0), complex(0.0)):
+            complex2(complex(0.0), complex(1.0, 0.0));
     return complex2(a, b);
 }
 
