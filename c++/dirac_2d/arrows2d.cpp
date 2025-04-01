@@ -40,7 +40,7 @@ static std::vector<float> get_vertices(IVec2 d_2d) {
     return vertices;
 }
 
-WireFrame get_2d_vector_field_wire_frame(IVec2 d_2d) {
+WireFrame arrows2d::get_2d_vector_field_wire_frame(IVec2 d_2d) {
     Attributes attributes = {
         {"position", {
             .size=4, .type=GL_FLOAT, .normalized=false, .stride=0, .offset=0

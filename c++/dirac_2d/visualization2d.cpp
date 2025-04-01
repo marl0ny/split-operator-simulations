@@ -38,9 +38,41 @@ static void compute_scalar(
     scalar.draw(
         draw_scalar_program,
         {
-            {"uTex", &psi.u},
-            {"vTex", &psi.v},
+            {"uTex", {&psi.u}},
+            {"vTex", {&psi.v}},
             {"representation", {int(0)}}
+        }
+    );
+}
+
+static void compute_electric(
+    Quad &electric,
+    const Quad &potential_prev, const Quad &potential_curr,
+    uint32_t electric_program, 
+    float dt, IVec2 texel_dimensions_2d, Vec2 dimensions_2d
+) {
+    electric.draw(
+        electric_program,
+        {
+            {"prevATex", &potential_prev},
+            {"currATex", &potential_curr},
+            {"texelDimensions2D", texel_dimensions_2d},
+            {"dimensions2D", dimensions_2d},
+            {"dt", float(dt)}
+        }
+    );
+}
+
+static void compute_magnetic(
+    Quad &magnetic, const Quad &potential, uint32_t magnetic_program,
+    IVec2 texel_dimensions_2d, Vec2 dimensions_2d
+) {
+    magnetic.draw(
+        magnetic_program,
+        {
+            {"vecPotentialTex", &potential},
+            {"texelDimensions2D", texel_dimensions_2d},
+            {"dimensions2D", dimensions_2d}
         }
     );
 }
@@ -92,15 +124,27 @@ void visualization2d::scalar_or_single_component_quantities(
             programs.domain_color,
             {
                 {"tex", {&intermediate_quantity}},
+                {"index", {int(0)}},
                 {"brightness", {params.brightness}},
             },
             dst_wireframe
         );
     }
-    // TODO!
-    /* if (options.pseudoscalar) {
+    if (options.pseudoscalar) {
+        compute_scalar(
+            intermediate_quantity, psi, programs.pseudoscalar, 0
+        );
         current_computed_stored = false;
-    }*/
+        dst_render.draw(
+            programs.domain_color,
+            {
+                {"tex", {&intermediate_quantity}},
+                {"index", {int(0)}},
+                {"brightness", {params.brightness}},
+            },
+            dst_wireframe
+        );
+    }
     if (options.total_magnitude_w_phase[0]) {
         if (!current_computed_stored)
             compute_current(
@@ -131,6 +175,7 @@ void visualization2d::scalar_or_single_component_quantities(
                 {"tex", {&psi.u}},
                 {"index", {int(0)}},
                 {"brightness", {params.brightness}},
+                {"phaseAdjust", params.c*params.c*params.m*params.t}
             },
             dst_wireframe
         );
@@ -142,6 +187,7 @@ void visualization2d::scalar_or_single_component_quantities(
                 {"tex", {&psi.u}},
                 {"index", {int(1)}},
                 {"brightness", {params.brightness}},
+                {"phaseAdjust", params.c*params.c*params.m*params.t}
             },
             dst_wireframe
         );
@@ -153,6 +199,7 @@ void visualization2d::scalar_or_single_component_quantities(
                 {"tex", {&psi.v}},
                 {"index", {int(0)}},
                 {"brightness", {params.brightness}},
+                {"phaseAdjust", -params.c*params.c*params.m*params.t}
             },
             dst_wireframe
         );
@@ -164,6 +211,7 @@ void visualization2d::scalar_or_single_component_quantities(
                 {"tex", {&psi.v}},
                 {"index", {int(1)}},
                 {"brightness", {1.0F}},
+                {"phaseAdjust", -params.c*params.c*params.m*params.t}
             },
             dst_wireframe
         );
@@ -213,7 +261,8 @@ void visualization2d::vector_quantities(
             },
             dst_wireframe
         );
-    } else if (options.spatial_pseudocurrent) {
+    }
+    if (options.spatial_pseudocurrent) {
         compute_current(
             intermediate_quantity, psi, 
             programs.pseudocurrent, {
@@ -230,11 +279,29 @@ void visualization2d::vector_quantities(
             },
             dst_wireframe
         );
-    } else if (options.vector_potential) {
+    }
+    if (options.vector_potential) {
         dst_render.draw(
             programs.arrows,
             {
                 {"tex", {&potential}},
+                {"scale", {10.0F}},
+                {"vecTex", {&potential}},
+                {"arrowScale", {params.arrows_scale}},
+                {"maxLength", {params.arrows_max_length}},
+                {"color", {Vec4{.ind{2.0, 2.0, 2.0, 2.0}}}}
+            },
+            dst_wireframe
+        );
+    }
+    if (options.electric_field) {
+        compute_electric(intermediate_quantity,
+            potential, potential, programs.electric, 
+            params.dt, params.texel_dimensions, params.dimensions);
+        dst_render.draw(
+            programs.arrows,
+            {
+                {"tex", {&intermediate_quantity}},
                 {"scale", {10.0F}},
                 {"vecTex", {&intermediate_quantity}},
                 {"arrowScale", {params.arrows_scale}},
@@ -243,10 +310,23 @@ void visualization2d::vector_quantities(
             },
             dst_wireframe
         );
-    } else if (options.electric_field) {
-        // TODO
-    } else if (options.magnetic_field) {
-        // TODO
+    }
+    if (options.magnetic_field) {
+        compute_magnetic(intermediate_quantity,
+            potential, programs.magnetic, 
+            params.texel_dimensions, params.dimensions);
+        dst_render.draw(
+            programs.arrows,
+            {
+                {"tex", {&intermediate_quantity}},
+                {"scale", {10.0F}},
+                {"vecTex", {&intermediate_quantity}},
+                {"arrowScale", {params.arrows_scale}},
+                {"maxLength", {params.arrows_max_length}},
+                {"color", {Vec4{.ind{2.0, 2.0, 2.0, 2.0}}}}
+            },
+            dst_wireframe
+        );
     }
 }
 
@@ -282,7 +362,7 @@ void visualization2d::spin_quantities(
         intermediate_quantity.draw(
             programs.spin,
             {
-                {"psiTex", {&psi.ind[1]}},
+                {"psiTex", {&psi.v}},
             }
         );
         dst_render.draw(

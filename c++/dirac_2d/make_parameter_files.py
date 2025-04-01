@@ -46,6 +46,45 @@ function createScalarParameterSlider(
     });
 };
 
+gCheckboxXorLists = {};
+
+function createCheckbox(controls, enumCode, name, value, xorListName='') {
+    let label = document.createElement("label");
+    // label.for = spec['id']
+    label.style = "color:white; font-family:Arial, Helvetica, sans-serif";
+    label.textContent = `${name}`
+    let checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.id = `checkbox-${enumCode}`;
+    if (xorListName !== '') {
+        if (!(xorListName in gCheckboxXorLists))
+            gCheckboxXorLists[xorListName] = [checkbox.id];
+        else
+            gCheckboxXorLists[xorListName].push(checkbox.id);
+    }
+    // slider.style ="width: 95%;"
+    // checkbox.value = value;
+    checkbox.checked = value;
+    // controls.appendChild(document.createElement("br"));
+    controls.appendChild(checkbox);
+    controls.appendChild(label);
+    controls.appendChild(document.createElement("br"));
+    checkbox.addEventListener("input", e => {
+        console.log(e.target.checked);
+        Module.set_bool_param(enumCode, e.target.checked);
+        if (e.target.checked === true && xorListName !== '') {
+            for (let id_ of gCheckboxXorLists[xorListName]) {
+                if (id_ !== checkbox.id) {
+                    let enumCode2 = parseInt(id_.split('-')[1]);
+                    Module.set_bool_param(enumCode2, false);
+                    document.getElementById(id_).checked = false;
+                }
+            }
+        }
+    }
+    );
+}
+
 let gVecParams = {};
 
 function createVectorParameterSliders(
@@ -87,8 +126,68 @@ function createVectorParameterSliders(
     }
 };
 
+function createSelectionList(
+    controls, enumCode, defaultVal, selectionBoxName, textOptions
+) {
+    let label = document.createElement("label");
+    label.style = "color:white; font-family:Arial, Helvetica, sans-serif";
+    label.textContent = selectionBoxName;
+    controls.appendChild(label);
+    controls.appendChild(document.createElement("br"));
+    let selector = document.createElement("select");
+    for (let i = 0; i < textOptions.length; i++) {
+        let option = document.createElement("option");
+        option.value = i;
+        option.textContent = textOptions[i];
+        selector.add(option);
+    }
+    selector.value = defaultVal;
+    selector.addEventListener("change", e =>
+        Module.selection_set(
+            enumCode, Number.parseInt(e.target.value))
+    );
+    controls.appendChild(selector);
+    controls.appendChild(document.createElement("br"));
+}
+
+let gUserParams = {};
+
+function modifyUserSliders(enumCode, variableList) {
+    if (!(`${enumCode}` in gUserParams))
+        gUserParams[`${enumCode}`] = {}; 
+    for (let c of variableList) {
+        if (!( c in gUserParams[`${enumCode}`]))
+            gUserParams[`${enumCode}`][c] = 1.0;
+    }
+    let userSliders 
+        = document.getElementById(`user-sliders-${enumCode}`);
+    userSliders.textContent = ``;
+    for (let v of variableList) {
+        let label = document.createElement("label");
+        label.style = "color:white; font-family:Arial, Helvetica, sans-serif";
+        label.textContent = `${v} = ${gUserParams[`${enumCode}`][v]}`;
+        userSliders.appendChild(label);
+        let slider = document.createElement("input");
+        slider.type = "range";
+        slider.style = "width: 95%;"
+        slider.min = "-5";
+        slider.max = "5";
+        slider.step = "0.01";
+        slider.value = gUserParams[`${enumCode}`][v];
+        slider.addEventListener("input", e => {
+            let value = Number.parseFloat(e.target.value);
+            label.textContent = `${v} = ${value}`;
+            gUserParams[`${enumCode}`][v] = value;
+            Module.set_user_float_param(enumCode, v, value);
+        });
+        userSliders.appendChild(document.createElement("br"));
+        userSliders.appendChild(slider);
+        userSliders.appendChild(document.createElement("br"));
+    }
+}
+
 function createEntryBoxes(
-    controls, enumCode, entryBoxName, count
+    controls, enumCode, entryBoxName, count, subLabels
 ) {
     let label = document.createElement("label");
     label.style = "color:white; font-family:Arial, Helvetica, sans-serif";
@@ -104,9 +203,11 @@ function createEntryBoxes(
         entryBox.style = "width: 95%;";
         let label = document.createElement("label");
         label.style = "color:white; font-family:Arial, Helvetica, sans-serif";
-        label.textContent = `${i}`;
-        controls.appendChild(label);
-        controls.appendChild(document.createElement("br"));
+        label.textContent = `${subLabels[i]}`;
+        if (count >= 2) {
+            controls.appendChild(label);
+            controls.appendChild(document.createElement("br"));
+        }
         controls.appendChild(entryBox);
         controls.appendChild(document.createElement("br"));
         entryBoxes.push(entryBox);
@@ -114,8 +215,49 @@ function createEntryBoxes(
             Module.set_string_param(enumCode, i, `${e.target.value}`)
         );
     }
+    let userSlidersDiv = document.createElement("div");
+    userSlidersDiv.id = `user-sliders-${enumCode}`
+    controls.appendChild(userSlidersDiv);
+
 }
 
+function createButton(
+    controls, enumCode, buttonName, style=''
+) {
+    let button = document.createElement("button");
+    button.innerText = buttonName;
+    if (style !== '')
+        button.style = style;
+    controls.appendChild(button);
+    controls.appendChild(document.createElement("br"));
+    button.addEventListener("click", e => Module.button_pressed(enumCode));
+}
+
+function createLabel(
+    controls, enumCode, labelName, style=''
+) {
+    let label = document.createElement("label");
+    if (style === '')
+        label.style = "color:white; font-family:Arial, Helvetica, sans-serif";
+    else
+        label.style = style;
+    label.textContent = `${labelName}`;
+    label.id = `label-${enumCode}`;
+    controls.appendChild(label);
+    controls.appendChild(document.createElement("br"));
+}
+
+function editLabel(enumCode, textContent) {
+    let idVal = `label-${enumCode}`;
+    let label = document.getElementById(idVal);
+    label.textContent = textContent;
+}
+
+function createLineDivider(controls) {
+    let hr = document.createElement("hr");
+    hr.style = "color:white;"
+    controls.appendChild(hr);
+}
 
 """
 
@@ -131,11 +273,41 @@ def write_sliders_js(parameters, dst_file_name):
         if 'float' in type_:
             value_str += 'F'
         name = parameter["name"] if "name" in parameter.keys() else k
-        if parameter['type'] in ['std::vector<std::string>']:
+        if parameter['type'] == 'EntryBoxes':
             list_val = value.strip('{').strip('}').split(',')
+            print(parameter["subLabels"])
+            labels = parameter["subLabels"] if "subLabels" in parameter \
+                else [f"{i}" for i in range(len(list_val))]
             file_contents += \
                 f'createEntryBoxes('\
-                f'controls, {i}, \"{name}\", {len(list_val)});\n'
+                f'controls, {i}, \"{name}\", {len(list_val)}, {str(labels)});\n'
+        if parameter['type'] == 'SelectionList':
+            val2 = ''.join([c for c in value if (c != '}' and c != '{')])
+            list_val = val2.split(',')[1:]
+            print(val2)
+            file_contents += f'createSelectionList(controls'
+            file_contents += f', {i}, {val2[0]}, \"{name}\", '
+            file_contents += '['
+            for i, val in enumerate(list_val):
+                file_contents += f'{val}' \
+                    + (', ' if i != len(list_val) - 1 else '')
+            file_contents += ']);\n'
+        if parameter['type'] == 'Button':
+            if "style" in parameter:
+                file_contents += \
+                    f'createButton(controls, {i}, ' + \
+                        f' \"{name}\", \"{parameter["style"]}\");\n'
+            else:
+                file_contents += f'createButton(controls, {i}, \"{name}\");\n'
+        if parameter['type'] == 'Label':
+            if "style" in parameter:
+                file_contents += \
+                    f'createLabel(controls, {i}, ' \
+                        + f'\"{name}\", \"{parameter["style"]}\");\n'
+            else:
+                file_contents += f'createLabel(controls, {i}, \"{name}\", \"\");\n'
+        if parameter['type'] == 'LineDivider':
+            file_contents += f'createLineDivider(controls);\n'
         if 'min' in parameter and 'max' in parameter:
             p = {k: parameter[k] for k in parameter.keys() 
                      if k in {'min', 'max', 'value', 'step'}}
@@ -150,6 +322,13 @@ def write_sliders_js(parameters, dst_file_name):
                     'createScalarParameterSlider(controls, '\
                         f'{i}, "{name}", "{type_}", '\
                             + f'{str(p)});\n'
+        if parameter['type'] == 'bool':
+            p = parameter['value']
+            file_contents += f'createCheckbox('\
+                  + f'controls, {i}, "{name}", {"true" if p else "false"}'\
+                  + (f', "{parameter["xorListName"]}"' if 
+                        "xorListName" in parameter else "") \
+                  + f');\n'
     file_contents += '\n'
     with open(dst_file_name, "w") as f:
         f.write(file_contents)
@@ -232,7 +411,14 @@ def uniform_member_type(type_: str) -> str:
 def write_typed_sim_parameters_hpp(parameters, name_space, dst_file_name):
     file_contents = HEADER_START.format(name_space, '{')
     file_contents += "\n#ifndef _PARAMETERS_\n#define _PARAMETERS_\n"
+    file_contents += "\nstruct Button {};\n"
+    file_contents += "\ntypedef std::string Label;\n"
+    file_contents += "\ntypedef std::vector<std::string> EntryBoxes;\n"
+    file_contents += "\nstruct SelectionList {\n"
+    file_contents += "    int selected;\n"
+    file_contents += "    std::vector<std::string> options;\n};\n"
     file_contents += "\nstruct SimParams {\n"
+    file_contents += "\nstruct LineDivider {};\n"
     for k in parameters.keys():
         parameter = parameters[k]
         type_ = parameter["type"]
@@ -294,7 +480,7 @@ def write_typed_sim_parameters_hpp(parameters, name_space, dst_file_name):
     file_contents += '        switch(enum_val) {\n'
     for i, k in enumerate(parameters.keys()):
         type_ = parameters[k]['type']
-        if type_ in ["std::vector<std::string>"]:
+        if type_ in ["EntryBoxes"]:
             file_contents += \
                 12*" " + f"case {camel_to_snake(k, scream=True)}:\n"
             file_contents += 12*" " + f"{k}[index] = val;\n"

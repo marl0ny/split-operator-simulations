@@ -8,7 +8,7 @@
  For the gamma matrices in the Dirac representation, this is obtained from
  the alpha matrices and beta matrix as presented in 20.1.12 on
  pg 565 of Principles of Quantum Mechanics by Shankar. 
- For computing the the elements of \gamma^{5} in the Dirac representation,
+ For computing the elements of \gamma^{5} in the Dirac representation,
  the involutory property of the Pauli matrix are used which are given in 
  the Pauli matrices Wikipedia page.
 */
@@ -30,8 +30,8 @@ in vec2 UV;
 out vec4 fragColor;
 #endif
 
-/* The type hermitian2x2 corresponds to a two by two
-Hermitian matrix. The first two components are the diagonals.
+/* The type hermitian2x2 corresponds to a 2x2 Hermitian matrix.
+The first two components are the diagonals.
 The last two components store the complex off-diagonal element
 that's in the first row.*/
 #define hermitian2x2 vec4
@@ -90,10 +90,10 @@ void main() {
     complex2 v = texture2D(vTex, UV);
     if (representation == DIRAC_REP)
         fragColor = vec4(
-            expectationValue(sigmaX, u) - expectationValue(sigmaX, v),
-            expectationValue(sigmaY, u) - expectationValue(sigmaY, v),
-            expectationValue(sigmaZ, u) - expectationValue(sigmaZ, v),
-            (-innerProd(u, v) - innerProd(v, u)).r);
+            -expectationValue(sigmaX, u) + expectationValue(sigmaX, v),
+            -expectationValue(sigmaY, u) + expectationValue(sigmaY, v),
+            -expectationValue(sigmaZ, u) + expectationValue(sigmaZ, v),
+            (innerProd(u, v) + innerProd(v, u)).r);
     else
         fragColor = vec4(
             expectationValue(sigmaX, u) + expectationValue(sigmaX, v),

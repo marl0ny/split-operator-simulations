@@ -96,7 +96,7 @@ Spinor get_spin_up_state(const Vec3 &orientation, float length) {
     float n = length, nz = orientation.z;
     complex n_xy {orientation.x, orientation.y};
     if (norm(n_xy) == 0.0)
-        return Spinor(1.0, 0.0);
+        return (nz >= 0.0)? Spinor(1.0, 0.0): Spinor(0.0, 1.0);
     return Spinor(
         (n + nz)/(n_xy*sqrtf((nz + n)*(nz + n)/norm(n_xy) + 1.0)),
         1.0/sqrtf((nz + n)*(nz + n)/norm(n_xy) + 1.0)
@@ -107,7 +107,7 @@ Spinor get_spin_down_state(const Vec3 &orientation, float length) {
     float n = length, nz = orientation.z;
     complex n_xy {orientation.x, orientation.y};
     if (norm(n_xy) == 0.0)
-        return Spinor(0.0, 1.0);
+        return (nz >= 0.0)? Spinor(0.0, 1.0): Spinor(1.0, 0.0);
     return Spinor(
         (-n + nz)/(n_xy*sqrtf((nz - n)*(nz - n)/norm(n_xy) + 1.0)),
         1.0F/sqrt((nz - n)*(nz - n)/norm(n_xy) + 1.0)

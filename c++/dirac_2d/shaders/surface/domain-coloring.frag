@@ -1,15 +1,5 @@
-/* Interpret the first two channels of a texel as a complex value
+/* Interpret the first two channels of a texel as complex value
 and convert it to a colour
-
-References:
-
-Wikipedia - Domain coloring
-https://en.wikipedia.org/wiki/Domain_coloring
-
-Wikipedia - Hue
-https://en.wikipedia.org/wiki/Hue
-
-https://en.wikipedia.org/wiki/Hue#/media/File:HSV-RGB-comparison.svg
 
 */
 #if (__VERSION__ >= 330) || (defined(GL_ES) && __VERSION__ >= 300)
@@ -24,14 +14,15 @@ precision highp float;
     
 #if __VERSION__ <= 120
 varying vec2 UV;
+varying vec3 NORMAL;
 #define fragColor gl_FragColor
 #else
 in vec2 UV;
+in vec3 NORMAL;
 out vec4 fragColor;
 #endif
 
 #define complex vec2
-#define complex2 vec4
 
 #define PI 3.141592653589793
 
@@ -74,10 +65,16 @@ vec3 argumentToColor(float argVal) {
 }
 
 void main() {
-    complex2 s = texture2D(tex, UV);
-    complex z1 = (index == 0)? s.xy: s.zw;
+    complex z1 = (index == 0)? texture2D(tex, UV).xy: texture2D(tex, UV).zw;
     complex phaseFactor = complex(cos(phaseAdjust), sin(phaseAdjust));
     complex z2 = mul(phaseFactor, z1);
-    vec3 color = brightness*length(z2)*argumentToColor(atan(z2.y, z2.x));
-    fragColor = vec4(color, brightness);
+    float ambient = 0.01;
+    // float diffuse = abs(dot(NORMAL, vec3(0.0, 0.0, -1.0)));
+    float brightness2 = brightness*length(z2);
+    vec3 color = ambient 
+        + (
+            1.0 // + diffuse
+        )*brightness2*argumentToColor(atan(z2.y, z2.x));
+    // fragColor = vec4(color, min(1.0, 10.0*brightness2));
+    fragColor = vec4(color, 1.0);
 }

@@ -17,10 +17,9 @@ in vec2 UV;
 out vec4 fragColor;
 #endif
 
-uniform sampler2D tex;
-uniform float scale;
+uniform sampler2D tex1;
+uniform sampler2D tex2;
 
 void main() {
-    fragColor = scale*vec4(abs(texture2D(tex, UV).a));
-    // fragColor = vec4(1.0);
+    fragColor = texture2D(tex1, UV) + texture2D(tex2, UV);
 }
