@@ -54,8 +54,8 @@ void dirac_split_step2d::split_step_momentum(
                         {split_step_params.texel_dimensions2d}},
                 {"dimensions2D", 
                         {split_step_params.dimensions2d}},
-                {"uTex", {&temps.psi_p[0].u}},
-                {"vTex", {&temps.psi_p[0].v}},
+                {"psiUpperTex", {&temps.psi_p[0].upper}},
+                {"psiLowerTex", {&temps.psi_p[0].lower}},
                 {"dt", {split_step_params.dt}},
                 {"m", {split_step_params.m}},
                 {"c", {split_step_params.c}},
@@ -68,6 +68,55 @@ void dirac_split_step2d::split_step_momentum(
         temps.fft, 
         programs.fft, 
         split_step_params.texel_dimensions2d);
+}
+
+void dirac_split_step2d::split_step_momentum_alt(
+    BiSpinorQuad &psi_final,
+    const BiSpinorQuad &psi_init,
+    QuadTemps &temps,
+    Programs programs,
+    SplitStepParameters split_step_params,
+    int propagation_dir) {
+    if (propagation_dir == 1)
+        fft(temps.psi_p[0], psi_init, 
+            temps.fft, 
+            programs.fft, 
+            split_step_params.texel_dimensions2d);
+    else
+        ifft(temps.psi_p[0], psi_init, 
+            temps.fft, 
+            programs.fft, 
+            split_step_params.texel_dimensions2d);
+    for (int spinor_index = 0; spinor_index < 2; spinor_index++)
+        temps.psi_p[1][spinor_index].draw(
+            programs.momentum_step,
+            {
+                {"numberOfDimensions", {int(2)}},
+                {"texelDimensions2D", 
+                        {split_step_params.texel_dimensions2d}},
+                {"dimensions2D", 
+                        {split_step_params.dimensions2d}},
+                {"psiUpperTex", {&temps.psi_p[0].upper}},
+                {"psiLowerTex", {&temps.psi_p[0].lower}},
+                {"dt", {split_step_params.dt}},
+                {"m", {split_step_params.m}},
+                {"c", {split_step_params.c}},
+                {"hbar", {split_step_params.hbar}},
+                {"spinorIndex", {int(spinor_index)}},
+                {"representation", {int(0)}},
+                {"isPropagatingForward", {int(propagation_dir)}}
+            }
+        );
+    if (propagation_dir == 1)
+        ifft(psi_final, temps.psi_p[1],
+            temps.fft, 
+            programs.fft, 
+            split_step_params.texel_dimensions2d);
+    else
+        fft(psi_final, temps.psi_p[1],
+            temps.fft, 
+            programs.fft, 
+            split_step_params.texel_dimensions2d);
 }
 
 void dirac_split_step2d::split_step_spatial(
@@ -84,8 +133,8 @@ void dirac_split_step2d::split_step_spatial(
                 {"dt", {params.dt}},
                 {"c", {params.c}},
                 {"hbar", {params.hbar}},
-                {"uTex", {&psi_init.u}},
-                {"vTex", {&psi_init.v}},
+                {"psiUpperTex", {&psi_init.upper}},
+                {"psiLowerTex", {&psi_init.lower}},
                 {"potentialTex", {&potential}},
                 {"spinorIndex", {int(spinor_index)}},
                 {"representation", {int(0)}}
@@ -105,8 +154,27 @@ void dirac_split_step2d::split_step(
     spatial_params.dt /= 2.0;
     split_step_spatial(
         temps.psi_x[0], potential, psi_init, temps, programs, spatial_params);
+    // split_step_momentum_alt(
+    //     temps.psi_x[1], temps.psi_x[0], temps, programs, params, 0);
+    // split_step_momentum_alt(
+    //     temps.psi_x[2], temps.psi_x[0], temps, programs, params, 1);
+    // temps.psi_x[3].upper.draw(
+    //     programs.add,
+    //     {
+    //         {"tex1", &temps.psi_x[1].upper}, 
+    //         {"tex2", &temps.psi_x[2].upper}
+    //     }
+    // );
+    // temps.psi_x[3].lower.draw(
+    //     programs.add, 
+    //     {
+    //         {"tex1", &temps.psi_x[1].lower},
+    //         {"tex2", &temps.psi_x[2].lower}
+    //     }
+    // );
     split_step_momentum(
         temps.psi_x[1], temps.psi_x[0], temps, programs, params);
+
     split_step_spatial(
         psi_final, potential, temps.psi_x[1], temps, programs, spatial_params);
 }

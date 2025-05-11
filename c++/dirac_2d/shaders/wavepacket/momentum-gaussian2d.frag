@@ -90,8 +90,6 @@ complex wavepacket(vec2 p, vec2 x0) {
         *float(texelDimensions2D[0])*float(texelDimensions2D[1]);
 }
 
-
-
 //////////////////////////////////////////////////////////////////////////////
 
 vec3 getMomentum() {

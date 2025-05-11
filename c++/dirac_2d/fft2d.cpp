@@ -12,7 +12,7 @@ static Quad &fft_iter_square(
         float angle_sign = (is_inverse)? 1.0: -1.0;
         float tex_block_size = double(block_size)/double(size);
         float scale = 
-            (is_inverse && block_size == size)? (1.0/double(size)): 1.0;
+            (block_size == size)? sqrt(1.0/double(size)): 1.0;
         iter_quads.ind[indices[1]].draw(
             program,
             {

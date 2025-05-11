@@ -95,6 +95,13 @@ complex innerProd(complex2 z1, complex2 z2) {
     return mul(conj(z1.rg), z2.rg) + mul(conj(z1.ba), z2.ba);
 }
 
+complex diracProd(complex2 z1, complex2 z2, complex2 w1, complex2 w2) {
+    if (representation == DIRAC_REP)
+        return innerProd(z1, w1) - innerProd(z2, w2);
+    else if (representation == WEYL_REP)
+        return innerProd(z2, w1) + innerProd(z1, w2);
+}
+
 /* Multiply a complex scalar c1 with a two-component complex vector c2.*/
 complex2 c1C2(complex c1, complex2 c2) {
     complex a = complex(c2[0], c2[1]);
@@ -252,41 +259,47 @@ void main() {
     // shader program is currently using.
     vec3 p = getMomentum(UV);
 
+    // Compute energy divided by c^2 from the previously computed momenta.
+    float scaledE = sqrt(m*m + dot(p/c, p/c));  // E/c^2
+
     // Declare then define the eigenvectors of the kinetic energy matrix
     // in momentum space.
     complex2 uUp0, uUp1;  // Positive energy, and spin up w.r.t. momentum axis
     complex2 uDown0, uDown1;  // Positive energy, spin down "    "
-    complex2 vUp0, vUp1;  // Negative energy, spin up "    "
-    complex2 vDown0, vDown1;  // Negative energy, spin down "   "
+    complex2 nuUp0, nuUp1;  // Negative energy, spin up "    "
+    complex2 nuDown0, nuDown1;  // Negative energy, spin down "   "
     uUp0 = getEigenvector(0, POSITIVE_E, SPIN_UP, p),
     uUp1 = getEigenvector(1, POSITIVE_E, SPIN_UP, p);
     uDown0 = getEigenvector(0, POSITIVE_E, SPIN_DOWN, p),
     uDown1 = getEigenvector(1, POSITIVE_E, SPIN_DOWN, p);
-    vUp0 = getEigenvector(0, NEGATIVE_E, SPIN_UP, -p),
-    vUp1 = getEigenvector(1, NEGATIVE_E, SPIN_UP, -p);
-    vDown0 = getEigenvector(0, NEGATIVE_E, SPIN_DOWN, -p),
-    vDown1 = getEigenvector(1, NEGATIVE_E, SPIN_DOWN, -p);
+    nuUp0 = getEigenvector(0, NEGATIVE_E, SPIN_UP, p),
+    nuUp1 = getEigenvector(1, NEGATIVE_E, SPIN_UP, p);
+    nuDown0 = getEigenvector(0, NEGATIVE_E, SPIN_DOWN, p),
+    nuDown1 = getEigenvector(1, NEGATIVE_E, SPIN_DOWN, p);
 
     // Express the wave function in terms of the eigenvectors of the 
     // kinetic energy matrix
-    complex psiUUp = innerProd(uUp0, psi0) + innerProd(uUp1, psi1);
-    complex psiUDown = innerProd(uDown0, psi0) + innerProd(uDown1, psi1);
-    complex psiVUp = innerProd(vUp0, psi0) + innerProd(vUp1, psi1);
-    complex psiVDown = innerProd(vDown0, psi0) + innerProd(vDown1, psi1);
+    complex psiUUp = diracProd(uUp0, uUp1, psi0, psi1);
+    complex psiUDown = diracProd(uDown0, uDown1, psi0, psi1);
+    complex psiNuUp = diracProd(nuUp0, nuUp1, psi0, psi1);
+    complex psiNuDown = diracProd(nuDown0, nuDown1, psi0, psi1);
+    // complex psiNuUp = innerProd(nuUp0, psi0) + innerProd(nuUp1, psi1);
+    // complex psiNuDown = innerProd(nuDown0, psi0) + innerProd(nuDown1, psi1);
+    psiUUp *= (scaledE/m), psiUDown *= (scaledE/m);
+    psiNuUp *= -(scaledE/m), psiNuDown *= -(scaledE/m); 
 
     // Time evolve the wave function using the energy eigenvalues of
     // the kinetic energy matrix.
-    float scaledE = sqrt(m*m + dot(p/c, p/c));  // E/c^2
     psiUUp = mul(expI(-scaledE*(c*c*dt)/hbar), psiUUp);
     psiUDown = mul(expI(-scaledE*(c*c*dt)/hbar), psiUDown);
-    psiVUp = mul(expI(scaledE*(c*c*dt)/hbar), psiVUp);
-    psiVDown = mul(expI(scaledE*(c*c*dt)/hbar), psiVDown);
+    psiNuUp = mul(expI(-scaledE*(c*c*dt)/hbar), psiNuUp);
+    psiNuDown = mul(expI(-scaledE*(c*c*dt)/hbar), psiNuDown);
 
     // Transform the wave function back to its initial representation.
     psi0 = c1C2(psiUUp, uUp0) + c1C2(psiUDown, uDown0);
     psi1 = c1C2(psiUUp, uUp1) + c1C2(psiUDown, uDown1);
-    psi0 += c1C2(psiVUp, vUp0) + c1C2(psiVDown, vDown0);
-    psi1 += c1C2(psiVUp, vUp1) + c1C2(psiVDown, vDown1);
+    psi0 += c1C2(psiNuUp, nuUp0) + c1C2(psiNuDown, nuDown0);
+    psi1 += c1C2(psiNuUp, nuUp1) + c1C2(psiNuDown, nuDown1);
 
     fragColor = (spinorIndex == 0)? psi0: psi1;
 

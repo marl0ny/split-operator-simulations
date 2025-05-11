@@ -19,17 +19,17 @@ struct SelectionList {
 struct SimParams {
 
 struct LineDivider {};
-    int stepsPerFrame = (int)(0);
+    int stepsPerFrame = (int)(1);
     float brightness = (float)(1.0F);
     float potentialBrightness = (float)(0.1F);
     float sideLength = (float)(2.0F);
-    SelectionList mouseSelector = SelectionList{0, {"New wave function", "Sketch modify scalar potential", "Erase modify scalar potential", "Sketch modify vector potential", "Erase modify vector potential", "Rotate only (`3D view` enabled)"}};
+    SelectionList mouseSelector = SelectionList{0, {"New wave function", "Sketch modify scalar potential", "Erase modify scalar potential", "Sketch modify vector potential", "Erase modify vector potential", "Rotations only for 3D view"}};
     float sketchSize = (float)(0.02F);
     bool show3D = (bool)(false);
     Label simulationDomainLabel = Label{};
     Label xRangeLabel = Label{};
     Label yRangeLabel = Label{};
-    SelectionList texelSideLengthSelector = SelectionList{0, {"128x128", "256x256", "512x512", "1024x1024", "2048x2048"}};
+    SelectionList texelSideLengthSelector = SelectionList{1, {"128x128", "256x256", "512x512", "1024x1024", "2048x2048"}};
     Label dtLabel = Label{};
     float cdtdx = (float)(0.99F);
     bool useNegativeTimeStep = (bool)(false);

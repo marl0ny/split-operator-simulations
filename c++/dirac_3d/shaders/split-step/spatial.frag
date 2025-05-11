@@ -82,7 +82,7 @@ complex complexExp(complex z) {
 
 /* 
 Compute the eigenvectors for a Pauli matrix oriented in an
-arbitrary dimension. Although easily double by pencil and paper,
+arbitrary dimension. Although easily accomplishable by pencil and paper,
 this was instead done using 
 Python with [Sympy](https://www.sympy.org/en/index.html).
 The representation used for the Pauli matrices are found here:

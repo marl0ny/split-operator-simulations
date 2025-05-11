@@ -242,16 +242,16 @@ function createLineDivider(controls) {
 }
 
 let controls = document.getElementById('controls');
-createScalarParameterSlider(controls, 0, "Steps/frame", "int", {'value': 0, 'min': 0, 'max': 20});
+createScalarParameterSlider(controls, 0, "Steps/frame", "int", {'value': 1, 'min': 0, 'max': 20});
 createScalarParameterSlider(controls, 1, "Wave function brightness", "float", {'value': 1.0, 'min': 0.0, 'max': 20.0, 'step': 0.01});
 createScalarParameterSlider(controls, 2, "Potential brightness", "float", {'value': 0.1, 'min': 0.0, 'max': 1.0, 'step': 0.001});
-createSelectionList(controls, 4, 0, "Mouse usage", [ "New wave function",  "Sketch modify scalar potential",  "Erase modify scalar potential",  "Sketch modify vector potential",  "Erase modify vector potential",  "Rotate only (`3D view` enabled)"]);
+createSelectionList(controls, 4, 0, "Mouse usage", [ "New wave function",  "Sketch modify scalar potential",  "Erase modify scalar potential",  "Sketch modify vector potential",  "Erase modify vector potential",  "Rotations only for 3D view"]);
 createScalarParameterSlider(controls, 5, "Sketch size", "float", {'value': 0.02, 'min': 0.0, 'max': 0.05, 'step': 0.001});
 createCheckbox(controls, 6, "3D view", false);
 createLabel(controls, 7, "Simulation domain", "");
 createLabel(controls, 8, "-1 a.u. ≤ x < 1 a.u.", "");
 createLabel(controls, 9, "-1 a.u. ≤ y < 1 a.u.", "");
-createSelectionList(controls, 10, 0, "Grid discretization size", [ "128x128",  "256x256",  "512x512",  "1024x1024",  "2048x2048"]);
+createSelectionList(controls, 10, 1, "Grid discretization size", [ "128x128",  "256x256",  "512x512",  "1024x1024",  "2048x2048"]);
 createLabel(controls, 11, "Time step Δt (a.u.) = 0.000028", "");
 createScalarParameterSlider(controls, 12, "c|Δt|/Δx", "float", {'value': 0.99, 'min': 0.0, 'max': 1.0, 'step': 0.001});
 createCheckbox(controls, 13, "Negative time step", false);
@@ -261,11 +261,11 @@ createLabel(controls, 19, "Initialize wave function options", "color:white; font
 createLabel(controls, 20, "Compute new wave function from: ", "");
 createCheckbox(controls, 21, "Product of a real-valued Gaussian with a single free (zero potential) plane wave solution", true, "waveFuncInitOptions");
 createCheckbox(controls, 22, "Superposition of free plane wave solutions that form a Gaussian wave packet", false, "waveFuncInitOptions");
-createScalarParameterSlider(controls, 23, "Size (standard deviation)", "float", {'value': 0.1, 'min': 0.03, 'max': 0.3, 'step': 0.001});
-createScalarParameterSlider(controls, 24, "Positive energy (+E) content", "float", {'value': 1.0, 'min': 0.0, 'max': 1.0, 'step': 0.01});
-createLabel(controls, 25, "Negative energy (-E) content = 0", "");
-createVectorParameterSliders(controls, 26, "Spin up orientation for +E solutions", "Vec3", {'value': [0.0, 0.0, 1.0], 'min': [-1.0, -1.0, -1.0], 'max': [1.0, 1.0, 1.0], 'step': [0.01, 0.01, 0.01]});
-createVectorParameterSliders(controls, 27, "Spin up orientation for -E solutions", "Vec3", {'value': [0.0, 0.0, 1.0], 'min': [-1.0, -1.0, -1.0], 'max': [1.0, 1.0, 1.0], 'step': [0.01, 0.01, 0.01]});
+createScalarParameterSlider(controls, 23, "Size (standard deviation)", "float", {'value': 0.1, 'min': 0.01, 'max': 0.3, 'step': 0.001});
+createScalarParameterSlider(controls, 24, "Proportion of +E solutions", "float", {'value': 1.0, 'min': 0.0, 'max': 1.0, 'step': 0.01});
+createLabel(controls, 25, "Proportion of -E solutions = 0", "");
+createVectorParameterSliders(controls, 26, "(𝜓₁, 𝜓₂) spin up axis for +E solutions", "Vec3", {'value': [0.0, 0.0, 1.0], 'min': [-1.0, -1.0, -1.0], 'max': [1.0, 1.0, 1.0], 'step': [0.01, 0.01, 0.01]});
+createVectorParameterSliders(controls, 27, "(𝜓₃, 𝜓₄) spin up axis for -E solutions", "Vec3", {'value': [0.0, 0.0, 1.0], 'min': [-1.0, -1.0, -1.0], 'max': [1.0, 1.0, 1.0], 'step': [0.01, 0.01, 0.01]});
 createLineDivider(controls);
 createLabel(controls, 29, "Wave function visualization options", "color:white; font-family:Arial, Helvetica, sans-serif; font-weight: bold;");
 createLabel(controls, 30, "(Please note: bar(𝜓) = 𝜓†γ⁰)", "");
@@ -287,8 +287,8 @@ createLineDivider(controls);
 createLabel(controls, 46, "Potential visualization options", "color:white; font-family:Arial, Helvetica, sans-serif; font-weight: bold;");
 createCheckbox(controls, 47, "Scalar potential - V(r)", true);
 createCheckbox(controls, 48, "3-Vector potential - 𝐀(r)", true);
-createCheckbox(controls, 49, "External Electric - 𝐄(r) = -∇V(r) - ∂𝐀(r)/∂t", false);
-createCheckbox(controls, 50, "External Magnetic - 𝐁(r) = ∇×𝐀(r)", false);
+createCheckbox(controls, 49, "𝐄(r) = -∇V(r) - ∂𝐀(r)/∂t", false);
+createCheckbox(controls, 50, "𝐁(r) = ∇×𝐀(r)", false);
 createLineDivider(controls);
 createScalarParameterSlider(controls, 52, "Arrows max length", "float", {'value': 0.05, 'min': 0.0, 'max': 1.0, 'step': 0.01});
 createScalarParameterSlider(controls, 53, "Arrows scale", "float", {'value': 1.0, 'min': 0.0, 'max': 20.0, 'step': 0.1});

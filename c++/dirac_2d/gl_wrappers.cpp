@@ -1558,15 +1558,15 @@ void Quad::reset(const TextureParams &new_tex_params) {
     }
 }
 
-uint32_t Quad::width() {
+uint32_t Quad::width() const {
     return this->params.width;
 }
 
-uint32_t Quad::height() {
+uint32_t Quad::height() const {
     return this->params.height;
 }
 
-uint32_t Quad::format() {
+uint32_t Quad::format() const {
     return this->params.format;
 }
 

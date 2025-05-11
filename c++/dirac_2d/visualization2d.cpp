@@ -23,8 +23,8 @@ static void compute_current(
             {"sigmaX", {encode_2x2(0.0, 0.0, hbar/2.0F)}},
             {"sigmaY", {encode_2x2(0.0, 0.0, -i*hbar/2.0F)}},
             {"sigmaZ", {encode_2x2(hbar/2.0F, -hbar/2.0F, 0.0)}},
-            {"uTex", {&psi.u}},
-            {"vTex", {&psi.v}},
+            {"psiUpperTex", {&psi.upper}},
+            {"psiLowerTex", {&psi.lower}},
             {"representation", {params.representation}}
         }
     );
@@ -38,8 +38,8 @@ static void compute_scalar(
     scalar.draw(
         draw_scalar_program,
         {
-            {"uTex", {&psi.u}},
-            {"vTex", {&psi.v}},
+            {"psiUpperTex", {&psi.upper}},
+            {"psiLowerTex", {&psi.lower}},
             {"representation", {int(0)}}
         }
     );
@@ -172,7 +172,7 @@ void visualization2d::scalar_or_single_component_quantities(
         dst_render.draw(
             programs.domain_color,
             {
-                {"tex", {&psi.u}},
+                {"tex", {&psi.upper}},
                 {"index", {int(0)}},
                 {"brightness", {params.brightness}},
                 {"phaseAdjust", params.c*params.c*params.m*params.t}
@@ -184,7 +184,7 @@ void visualization2d::scalar_or_single_component_quantities(
         dst_render.draw(
             programs.domain_color,
             {
-                {"tex", {&psi.u}},
+                {"tex", {&psi.upper}},
                 {"index", {int(1)}},
                 {"brightness", {params.brightness}},
                 {"phaseAdjust", params.c*params.c*params.m*params.t}
@@ -196,7 +196,7 @@ void visualization2d::scalar_or_single_component_quantities(
         dst_render.draw(
             programs.domain_color,
             {
-                {"tex", {&psi.v}},
+                {"tex", {&psi.lower}},
                 {"index", {int(0)}},
                 {"brightness", {params.brightness}},
                 {"phaseAdjust", -params.c*params.c*params.m*params.t}
@@ -208,7 +208,7 @@ void visualization2d::scalar_or_single_component_quantities(
         dst_render.draw(
             programs.domain_color,
             {
-                {"tex", {&psi.v}},
+                {"tex", {&psi.lower}},
                 {"index", {int(1)}},
                 {"brightness", {1.0F}},
                 {"phaseAdjust", -params.c*params.c*params.m*params.t}
@@ -252,7 +252,7 @@ void visualization2d::vector_quantities(
         dst_render.draw(
             programs.arrows,
             {
-                {"tex", {&psi.u}},
+                {"tex", {&psi.upper}},
                 {"scale", {10.0F}},
                 {"vecTex", {&intermediate_quantity}},
                 {"arrowScale", {params.arrows_scale}},
@@ -270,7 +270,7 @@ void visualization2d::vector_quantities(
         dst_render.draw(
             programs.arrows,
             {
-                {"tex", {&psi.u}},
+                {"tex", {&psi.upper}},
                 {"scale", {10.0F}},
                 {"vecTex", {&intermediate_quantity}},
                 {"arrowScale", {params.arrows_scale}},
@@ -348,7 +348,7 @@ void visualization2d::spin_quantities(
         dst_render.draw(
             programs.arrows,
             {
-                {"tex", {&psi.u}},
+                {"tex", {&psi.upper}},
                 {"scale", {10.0F}},
                 {"vecTex", {&intermediate_quantity}},
                 {"arrowScale", {params.arrows_scale}},
@@ -362,13 +362,13 @@ void visualization2d::spin_quantities(
         intermediate_quantity.draw(
             programs.spin,
             {
-                {"psiTex", {&psi.v}},
+                {"psiTex", {&psi.lower}},
             }
         );
         dst_render.draw(
             programs.arrows,
             {
-                {"tex", {&psi.v}},
+                {"tex", {&psi.lower}},
                 {"scale", {10.0F}},
                 {"vecTex", {&intermediate_quantity}},
                 {"arrowScale", {params.arrows_scale}},

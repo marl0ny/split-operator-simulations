@@ -42,13 +42,13 @@ that's in the first row.*/
 uniform hermitian2x2 sigmaX;
 uniform hermitian2x2 sigmaY;
 uniform hermitian2x2 sigmaZ;
-uniform sampler2D uTex;
-uniform sampler2D vTex;
+uniform sampler2D psiUpperTex;
+uniform sampler2D psiLowerTex;
+
 
 const int DIRAC_REP = 0;
 const int WEYL_REP = 1;
 uniform int representation;
-
 
 float real(complex z) {
     return z[0];
@@ -81,23 +81,110 @@ complex2 matrixMul(hermitian2x2 m, complex2 v) {
                     mul(m10, v0) + mul(m11, v1));
 }
 
-float expectationValue(hermitian2x2 operator, complex2 state) {
-    return real(innerProd(state, matrixMul(operator, state)));
+complex2 matrixMul(int index,
+                   hermitian2x2 m00, hermitian2x2 m01, complex2 v0,
+                   hermitian2x2 m10, hermitian2x2 m11, complex2 v1) {
+    if (index == 0)
+        return matrixMul(m00, v0) + matrixMul(m01, v1);
+    else
+        return matrixMul(m10, v0) + matrixMul(m11, v1);
+}
+
+complex diracProd(complex2 psi0, complex2 psi1, 
+                  complex2 phi0, complex2 phi1) {
+    if (representation == DIRAC_REP)
+        return innerProd(psi0, phi0) - innerProd(psi1, phi1);
+    else
+        return innerProd(psi1, phi0) + innerProd(psi0, phi1);
+}
+
+vec4 computePseudoCurrentDiracRep(complex2 psi0, complex2 psi1) {
+    hermitian2x2 zeros = hermitian2x2(0.0);
+    hermitian2x2 id = hermitian2x2(1.0, 1.0, complex(0.0));
+    complex2 gamma5Psi0 = matrixMul(0, 
+        zeros, id, psi0, 
+        id, zeros, psi1);
+    complex2 gamma5Psi1 = matrixMul(1, 
+        zeros, id, psi0, 
+        id, zeros, psi1);
+    vec4 pseudoCurrent;
+    pseudoCurrent.x = diracProd(psi0, psi1,
+        matrixMul(0, 
+            zeros, sigmaX, gamma5Psi0, 
+            -sigmaX, zeros, gamma5Psi1),
+        matrixMul(1, 
+            zeros, sigmaX, gamma5Psi0, 
+            -sigmaX, zeros, gamma5Psi1)).r;
+    pseudoCurrent.y = diracProd(psi0, psi1,
+        matrixMul(0, 
+            zeros, sigmaY, gamma5Psi0, 
+            -sigmaY, zeros, gamma5Psi1),
+        matrixMul(1, 
+            zeros, sigmaY, gamma5Psi0, 
+            -sigmaY, zeros, gamma5Psi1)).r;
+    pseudoCurrent.z = diracProd(psi0, psi1,
+        matrixMul(0,
+            zeros, sigmaZ, gamma5Psi0,
+            -sigmaZ, zeros, gamma5Psi1),
+        matrixMul(1,
+            zeros, sigmaZ, gamma5Psi0,
+            -sigmaZ, zeros, gamma5Psi1)).r;
+    pseudoCurrent.w = diracProd(psi0, psi1,
+        matrixMul(0,
+            id, zeros, gamma5Psi0, 
+            zeros, -id, gamma5Psi1),
+        matrixMul(1, 
+            id, zeros, gamma5Psi0, 
+            zeros, -id, gamma5Psi1)).r;
+    return pseudoCurrent;
+}
+
+vec4 computePseudoCurrentWeylRep(complex2 psi0, complex2 psi1) {
+    hermitian2x2 zeros = hermitian2x2(0.0);
+    hermitian2x2 id = hermitian2x2(1.0, 1.0, complex(0.0));
+    complex2 gamma5Psi0 = matrixMul(0, 
+        -id, zeros, psi0, 
+        zeros, id, psi1);
+    complex2 gamma5Psi1 = matrixMul(1, 
+        -id, zeros, psi0, 
+        zeros, id, psi1);
+    vec4 pseudoCurrent;
+    pseudoCurrent.x = diracProd(psi0, psi1,
+        matrixMul(0, 
+            zeros, sigmaX, gamma5Psi0, 
+            -sigmaX, zeros, gamma5Psi1),
+        matrixMul(1, 
+            zeros, sigmaX, gamma5Psi0, 
+            -sigmaX, zeros, gamma5Psi1)).r;
+    pseudoCurrent.y = diracProd(psi0, psi1,
+        matrixMul(0, 
+            zeros, sigmaY, gamma5Psi0, 
+            -sigmaY, zeros, gamma5Psi1),
+        matrixMul(1, 
+            zeros, sigmaY, gamma5Psi0, 
+            -sigmaY, zeros, gamma5Psi1)).r;
+    pseudoCurrent.z = diracProd(psi0, psi1,
+        matrixMul(0,
+            zeros, sigmaZ, gamma5Psi0,
+            -sigmaZ, zeros, gamma5Psi1),
+        matrixMul(1,
+            zeros, sigmaZ, gamma5Psi0,
+            -sigmaZ, zeros, gamma5Psi1)).r;
+    pseudoCurrent.w = diracProd(psi0, psi1,
+        matrixMul(0,
+            zeros, id, gamma5Psi0, 
+            id, zeros, gamma5Psi1),
+        matrixMul(1, 
+            zeros, id, gamma5Psi0, 
+            id, zeros, gamma5Psi1)).r;
+    return pseudoCurrent;
 }
 
 void main() {
-    complex2 u = texture2D(uTex, UV);
-    complex2 v = texture2D(vTex, UV);
+    complex2 psi0 = texture2D(psiUpperTex, UV);
+    complex2 psi1 = texture2D(psiLowerTex, UV);
     if (representation == DIRAC_REP)
-        fragColor = vec4(
-            -expectationValue(sigmaX, u) + expectationValue(sigmaX, v),
-            -expectationValue(sigmaY, u) + expectationValue(sigmaY, v),
-            -expectationValue(sigmaZ, u) + expectationValue(sigmaZ, v),
-            (innerProd(u, v) + innerProd(v, u)).r);
+        fragColor = computePseudoCurrentDiracRep(psi0, psi1);
     else
-        fragColor = vec4(
-            expectationValue(sigmaX, u) + expectationValue(sigmaX, v),
-            expectationValue(sigmaY, u) + expectationValue(sigmaY, v),
-            expectationValue(sigmaZ, u) + expectationValue(sigmaZ, v),
-            (innerProd(u, v) + innerProd(v, -u)).r);
+        fragColor = computePseudoCurrentWeylRep(psi0, psi1);
 }

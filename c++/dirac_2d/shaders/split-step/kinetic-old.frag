@@ -1,4 +1,15 @@
-/* Generate a new wavepacket. */
+/* The Dirac equation using an arbitrary four-vector potential and
+with constants like c and hbar explicitly written out can be found
+on pg 566 (eq. 20.2.2) of Principles of Quantum Mechanics by Shankar.
+
+ The Split Operator momentum space propagator for the Dirac equation 
+ in the Dirac representation is derived in II.3 of this article
+ by Bauke and Keitel: https://arxiv.org/abs/1012.3911.
+ To derive the momentum space propagator in the Weyl representation,
+ the gamma matrices as given on (3.25) in pg. 41 of 
+ An Introduction to Quantum Field Theory 
+ by Michael Peskin and Daniel Schroeder are used.
+*/
 #if (__VERSION__ >= 330) || (defined(GL_ES) && __VERSION__ >= 300)
 #define texture2D texture
 #else
@@ -8,7 +19,7 @@
 #if (__VERSION__ > 120) || defined(GL_ES)
 precision highp float;
 #endif
-    
+ 
 #if __VERSION__ <= 120
 varying vec2 UV;
 #define fragColor gl_FragColor
@@ -17,95 +28,108 @@ in vec2 UV;
 out vec4 fragColor;
 #endif
 
+uniform int numberOfDimensions;
+uniform ivec2 texelDimensions2D;
+uniform vec2 dimensions2D;
+uniform ivec3 texelDimensions3D;
+uniform vec3 dimensions3D;
+
+// The following represents the first two complex components of the bispinor
+// psi, where these two components require four real numbers in total, which
+// is the max number of channels that a texture can support.
+uniform sampler2D psiUpperTex;
+// Last two components of psi.
+uniform sampler2D psiLowerTex;
+
+uniform float dt;
+uniform float m;
+uniform float c;
+uniform float hbar;
+
+uniform int spinorIndex;
+const int TOP = 0;
+const int BOTTOM = 1;
+
+const int DIRAC_REP = 0;
+const int WEYL_REP = 1;
+uniform int representation;
+
 #define complex vec2
 #define complex2 vec4
 
-#define PI 3.141592653589793
+const float PI = 3.141592653589793;
 
-// wave number of the wave packet (w.r.t. simulation domains)
-uniform vec2 waveNumber;
-// Position offset of the wave packet in texture coordinates
-uniform vec2 offsetTexCoord;
-// Amplitude of the wave packet
-uniform float amplitude;
-// Standard deviation of the wave packet, in texture coordinates
-uniform vec2 sigmaTexCoord;
-uniform complex2 spinor;
 
-uniform bool useEnergyStatesCombinations;
-uniform bool invertNegativeEnergyMomentum;
-uniform vec2 dimensions2D;
-uniform ivec2 texelDimensions2D;
-uniform int spinorIndex;
-uniform int representation;
-uniform complex c0;
-uniform complex c1;
-uniform complex c2;
-uniform complex c3;
-uniform float m;
-uniform float c;
-const int TOP = 0;
-const int BOTTOM = 1;
-const int DIRAC_REP = 0;
-const int WEYL_REP = 1;
+vec3 to3DTextureCoordinates(vec2 uv) {
+    int width3D = texelDimensions3D[0];
+    int height3D = texelDimensions3D[1];
+    int length3D = texelDimensions3D[2];
+    int width2D = texelDimensions2D[0];
+    int height2D = texelDimensions2D[1];
+    float wStack = float(width2D)/float(width3D);
+    float hStack = float(height2D)/float(height3D);
+    float u = mod(uv[0]*wStack, 1.0);
+    float v = mod(uv[1]*hStack, 1.0);
+    float w = (floor(uv[1]*hStack)*wStack
+               + floor(uv[0]*wStack) + 0.5)/float(length3D);
+    return vec3(u, v, w);
+}
+
+complex mul(complex z1, complex z2) {
+    return complex(z1.x*z2.x - z1.y*z2.y, 
+                   z1.x*z2.y + z1.y*z2.x);
+}
 
 complex conj(complex z) {
-    return complex(z.x, -z.y);
+    return vec2(z.x, -z.y);
 }
 
-complex2 conj(complex2 z) {
-    return complex2(conj(z.rg), conj(z.ba));
-}
-
-complex mul(complex a, complex b) {
-    return complex(a.x*b.x - a.y*b.y, a.x*b.y + a.y*b.x);
+complex innerProd(complex2 z1, complex2 z2) {
+    return mul(conj(z1.rg), z2.rg) + mul(conj(z1.ba), z2.ba);
 }
 
 /* Multiply a complex scalar c1 with a two-component complex vector c2.*/
 complex2 c1C2(complex c1, complex2 c2) {
     complex a = complex(c2[0], c2[1]);
     complex b = complex(c2[2], c2[3]);
-    return complex2(mul(c1, a), mul(c1, b));
+    return complex2(complex(c1.x*a.x - c1.y*a.y, c1.x*a.y + c1.y*a.x),
+                    complex(c1.x*b.x - c1.y*b.y, c1.x*b.y + c1.y*b.x));
 }
 
-complex2 innerProd(complex2 a, complex2 b) {
-    return complex2(mul(conj(a.xy), b.xy), mul(conj(a.zw), b.zw));
-}
 
 complex frac(complex z1, complex z2) {
     complex invZ2 = conj(z2)/(z2.x*z2.x + z2.y*z2.y);
     return mul(z1, invZ2);
 }
 
-complex wavepacket(vec2 r, vec2 wn) {
-    float sx = sigmaTexCoord.x;
-    float sy = sigmaTexCoord.y;
-    float width = dimensions2D[0];
-    float height = dimensions2D[1];
-    float gx = exp(-0.25*pow(r.x/sx, 2.0))/sqrt(sx*sqrt(2.0*PI));
-    float gy = exp(-0.25*pow(r.y/sy, 2.0))/sqrt(sy*sqrt(2.0*PI));
-    float g = gx*gy/(width*height);
-    float nx = wn.x;
-    float ny = wn.y;
-    complex phase = complex(cos(2.0*PI*(nx*r.x + ny*r.y)),
-                            sin(2.0*PI*(nx*r.x + ny*r.y)));
-    return amplitude*g*phase;
+vec3 getMomentum() {
+    float u, v, w;
+    float width, height, length_;
+    int texelWidth, texelHeight, texelLength;
+    if (numberOfDimensions == 3) {
+        width = dimensions3D[0];
+        height = dimensions3D[1];
+        length_ = dimensions3D[2];
+        texelWidth = texelDimensions3D[0];
+        texelHeight = texelDimensions3D[1];
+        texelLength = texelDimensions3D[2];
+        vec3 uvw = to3DTextureCoordinates(UV);
+        u = uvw[0], v = uvw[1], w = uvw[2];
+    } else {
+        width = dimensions2D[0];
+        height = dimensions2D[1];
+        length_ = 1.0;
+        texelWidth = texelDimensions2D[0];
+        texelHeight = texelDimensions2D[1];
+        texelLength = 0;
+        u = UV[0], v = UV[1], w = 0.0;
+    }
+    float freqU = ((u < 0.5)? u: -1.0 + u)*float(texelWidth) - 0.5;
+    float freqV = ((v < 0.5)? v: -1.0 + v)*float(texelHeight) - 0.5;
+    float freqW = ((w < 0.5)? w: -1.0 + w)*float(texelLength) - 0.5;
+    return vec3(2.0*PI*freqU/width, 2.0*PI*freqV/height, 
+                2.0*PI*freqW/length_);
 }
-
-complex wavepacketPeriodic(vec2 r, vec2 wn) {
-    return wavepacket(r, wn)
-        + wavepacket(vec2(r.x + 1.0, r.y), wn) 
-        + wavepacket(vec2(r.x - 1.0, r.y), wn) 
-        + wavepacket(vec2(r.x, r.y + 1.0), wn)
-        + wavepacket(vec2(r.x, r.y - 1.0), wn)
-        + wavepacket(vec2(r.x - 1.0, r.y - 1.0), wn)
-        + wavepacket(vec2(r.x + 1.0, r.y + 1.0), wn)
-        + wavepacket(vec2(r.x + 1.0, r.y - 1.0), wn)
-        + wavepacket(vec2(r.x - 1.0, r.y + 1.0), wn);
-}
-
-
-//////////////////////////////////////////////////////////////////////////////
 
 /* Compute the spin up eigenvector for a Pauli matrix oriented in an
 arbitrary direction. Although easily accomplishable by pencil and paper,
@@ -268,73 +292,28 @@ vec2 eigenvectorRealSymmetric2x2(int i, float d0, float d1, float nd) {
         );
 }
 
-complex2 eigenvectorDiracRep(
-    int spinorIndex, bool isPositiveE, bool isSpinUp, vec3 p) {
-    bool isNegativeE = !isPositiveE, isSpinDown = !isSpinUp;
-    float scaledE = sqrt(m*m + dot(p/c, p/c));  // Energy divided by c^2
-    float absP = length(p);
-    complex2 spin = (isSpinUp)? 
-        getSpinUpState(p, absP): getSpinDownState(p, absP);
-    float c0, c1;
-    if (absP == 0.0) {
-        c0 = (isPositiveE)? 1.0: 0.0;
-        c1 = (isNegativeE)? 0.0: 1.0; 
-        return (spinorIndex == 0)? c0*spin: c1*spin;
-    } else {
-        if (isSpinUp && isPositiveE) {
-            c0 = 1.0;
-            c1 = (absP/c)/(m + scaledE);
-        } else if (isSpinDown && isPositiveE) {
-            c0 = 1.0;
-            c1 = -(absP/c)/(m + scaledE);
-        } else if (isSpinUp && isNegativeE) {
-            c0 = -(absP/c)/(m + scaledE);
-            c1 = 1.0;
-        } else if (isSpinDown && isNegativeE) {
-            c0 = (absP/c)/(m + scaledE);
-            c1 = 1.0;
-        }
-        return sqrt((m + scaledE)/(2.0*scaledE))
-            *((spinorIndex == 0)? c0*spin: c1*spin);
-    }
-}
+void main() {
 
-complex2 getEnergyStatesCombinationsDiracRep(
-    vec3 p, complex c0, complex c1, complex c2, complex c3) {
-    complex2 psi0 = 
-          c1C2(c0, eigenvectorDiracRep(0, false, true, p))
-        + c1C2(c1, eigenvectorDiracRep(0, true, true, p))
-        + c1C2(c2, eigenvectorDiracRep(0, false, false, p))
-        + c1C2(c3, eigenvectorDiracRep(0, true, false, p));
-    complex2 psi1 = 
-          c1C2(c0, eigenvectorDiracRep(1, false, true, p))
-        + c1C2(c1, eigenvectorDiracRep(1, true, true, p))
-        + c1C2(c2, eigenvectorDiracRep(1, false, false, p)) 
-        + c1C2(c3, eigenvectorDiracRep(1, true, false, p));
-    return (spinorIndex == TOP)? psi0: psi1;
-
-}
-
-complex2 getEnergyStatesCombinations(
-    vec3 pVector, float pSquared,
-    complex c0, complex c1, complex c2, complex c3) {
-    if (representation == DIRAC_REP)
-        return getEnergyStatesCombinationsDiracRep(
-            pVector, c0, c1, c2, c3);
-    float px = pVector.x, py = pVector.y, pz = pVector.z;
-    float p2 = pSquared;
+    vec3 pVec = getMomentum();
+    float px = pVec.x, py = pVec.y, pz = pVec.z;
+    float p2 = px*px + py*py + pz*pz;
     float p = sqrt(p2);
     float mc = m*c;
+
     // Get the eigenvectors of that Pauli matrix that is
     // orientated in the same direction as the momentum
-    complex2 up = getSpinUpState(pVector, p);
-    complex2 down = getSpinDownState(pVector, p);
+    complex2 up = getSpinUpState(pVec, p);
+    complex2 down = getSpinDownState(pVec, p);
+
     // Scaled eigenvalues of the kinetic energy matrix for the given momenta.
     float e0, e1, e2, e3;
+
+    vec2 vUp0, vUp1, vDown0, vDown1;
     // These will be used to compute the actual corresponding eigenvectors
     // of the eigenvalues declared previously.
-    vec2 vUp0, vUp1, vDown0, vDown1;
+
     if (representation == DIRAC_REP) {
+
         // Suggestion: note that for the second and third arguments 
         // of the function eigenvalueRealSymmetric2x2, d0 and d1,
         // the relation d0 + d1 = 0 always holds for this system.
@@ -348,7 +327,9 @@ complex2 getEnergyStatesCombinations(
         vDown0 = eigenvectorRealSymmetric2x2(0, mc, -mc, -p);
         e3 = eigenvalueRealSymmetric2x2(1, mc, -mc, -p);
         vDown1 = eigenvectorRealSymmetric2x2(1, mc, -mc, -p);
+
     } else if (representation == WEYL_REP) {
+
         e0 = eigenvalueRealSymmetric2x2(0, -p, p, mc);
         vUp0 = eigenvectorRealSymmetric2x2(0, -p, p, mc);
         e1 = eigenvalueRealSymmetric2x2(1, -p, p, mc);
@@ -358,6 +339,7 @@ complex2 getEnergyStatesCombinations(
         e3 = eigenvalueRealSymmetric2x2(1, p, -p, mc);
         vDown1 = eigenvectorRealSymmetric2x2(1, p, -p, mc);
     }
+
     // Compute the eigenvectors of the kinetic energy matrix for
     // the given momentum.
     // Note that v00 denotes the first 2 components of the v0 eigenvector,
@@ -367,44 +349,30 @@ complex2 getEnergyStatesCombinations(
     complex2 v10 = vUp1[0]*up,     v11 = vUp1[1]*up;
     complex2 v20 = vDown0[0]*down, v21 = vDown0[1]*down;
     complex2 v30 = vDown1[0]*down, v31 = vDown1[1]*down;
-    complex2 psi0 
-        = c1C2(c0, v00) + c1C2(c1, v10) + c1C2(c2, v20) + c1C2(c3, v30);
-    complex2 psi1
-        = c1C2(c0, v01) + c1C2(c1, v11) + c1C2(c2, v21) + c1C2(c3, v31);
-    return (spinorIndex == TOP)? psi0: psi1;
+
+    // Get each bispinor component of the wave function
+    complex2 psi0 = texture2D(psiUpperTex, UV);
+    complex2 psi1 = texture2D(psiLowerTex, UV);
+
+    // Using the eigenvectors of the kinetic energy matrix
+    // for the given momenta, express the wave function in terms
+    // of it.
+    complex d0 = innerProd(v00, psi0) + innerProd(v01, psi1);
+    complex d1 = innerProd(v10, psi0) + innerProd(v11, psi1);
+    complex d2 = innerProd(v20, psi0) + innerProd(v21, psi1);
+    complex d3 = innerProd(v30, psi0) + innerProd(v31, psi1);
+
+    // Advance the wave function in time
+    d0 = mul(complex(cos(e0*c*dt/hbar), -sin(e0*c*dt/hbar)), d0);
+    d1 = mul(complex(cos(e1*c*dt/hbar), -sin(e1*c*dt/hbar)), d1);
+    d2 = mul(complex(cos(e2*c*dt/hbar), -sin(e2*c*dt/hbar)), d2);
+    d3 = mul(complex(cos(e3*c*dt/hbar), -sin(e3*c*dt/hbar)), d3); 
+
+    // Transform the wave function back to its initial representation
+    psi0 = c1C2(d0, v00) + c1C2(d1, v10) + c1C2(d2, v20) + c1C2(d3, v30);
+    psi1 = c1C2(d0, v01) + c1C2(d1, v11) + c1C2(d2, v21) + c1C2(d3, v31);
+
+    fragColor = (spinorIndex == TOP)? psi0: psi1;
+
 }
 
-//////////////////////////////////////////////////////////////////////////////
-
-void main() {
-    float x = UV.x;
-    float y = UV.y;
-    float x0 = offsetTexCoord.x;
-    float y0 = offsetTexCoord.y;
-    vec2 r = vec2(x - x0, y - y0);
-    complex w = wavepacketPeriodic(r, waveNumber);
-    if (!useEnergyStatesCombinations) {
-        fragColor = c1C2(w, spinor);
-    } else {
-        vec3 pVector = 2.0*PI*vec3(
-            waveNumber.x/dimensions2D.x,
-            waveNumber.y/dimensions2D.y, 0.0);
-        float pSquared = dot(pVector, pVector);
-        complex2 spinor2 = getEnergyStatesCombinations(
-            pVector, pSquared, c0, c1, c2, c3);
-        complex2 spinorPos = getEnergyStatesCombinations(
-            pVector, pSquared,
-            complex(0.0), c1, complex(0.0), c3);
-        complex2 spinorNeg = getEnergyStatesCombinations(
-            -pVector, pSquared,
-            c0, complex(0.0), c2, complex(0.0));
-        complex wPos = wavepacketPeriodic(r, waveNumber);
-        complex wNeg = wavepacketPeriodic(r, -waveNumber);
-        if (invertNegativeEnergyMomentum) {
-            fragColor = c1C2(wPos, spinorPos) 
-                        + c1C2(wNeg, spinorNeg);
-        } else {
-            fragColor = c1C2(w, spinor2);
-        }
-    }
-}

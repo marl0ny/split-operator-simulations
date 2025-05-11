@@ -1,5 +1,3 @@
-/*Get alpha components of an input texture and make all channels of
-the output the alpha values.*/
 #if (__VERSION__ >= 330) || (defined(GL_ES) && __VERSION__ >= 300)
 #define texture2D texture
 #else
@@ -18,10 +16,5 @@ in vec2 UV;
 out vec4 fragColor;
 #endif
 
-uniform sampler2D tex;
 uniform float scale;
-
-void main() {
-    fragColor = scale*vec4(abs(texture2D(tex, UV).a));
-    // fragColor = vec4(1.0);
-}
+uniform sampler2D tex;

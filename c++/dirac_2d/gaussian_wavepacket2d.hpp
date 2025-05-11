@@ -42,6 +42,7 @@ struct SpatialInitParams {
     Vec2 sigma_tex_coord;
     spinors::BiSpinor s;
     bool use_energy_states_combinations;
+    bool invert_negative_energy_momentum;
     Vec2 dimensions2d;
     IVec2 texel_dimensions2d;
     std::complex<float> coefficients[4];

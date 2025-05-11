@@ -33,6 +33,7 @@ uniform ivec2 texelDimensions2D;
 uniform vec2 dimensions2D;
 uniform ivec3 texelDimensions3D;
 uniform vec3 dimensions3D;
+uniform bool isPropagatingForward;
 
 // The following represents the first two complex components of the bispinor
 // psi, where these two components require four real numbers in total, which
@@ -52,8 +53,8 @@ const int DIRAC_REP = 0;
 const int WEYL_REP = 1;
 uniform int representation;
 
-const bool POSITIVE_E = true;
-const bool NEGATIVE_E = !POSITIVE_E;
+const bool FORWARD_PROP = true;
+const bool BACKWARD_PROP = !FORWARD_PROP;
 const bool SPIN_UP = true;
 const bool SPIN_DOWN = !SPIN_UP;
 
@@ -93,6 +94,13 @@ complex conj(complex z) {
 
 complex innerProd(complex2 z1, complex2 z2) {
     return mul(conj(z1.rg), z2.rg) + mul(conj(z1.ba), z2.ba);
+}
+
+complex adjProd(complex2 z1, complex2 z2, complex2 w1, complex2 w2) {
+    if (representation == DIRAC_REP)
+        return innerProd(z1, w1) - innerProd(z2, w2);
+    else if (representation == WEYL_REP)
+        return innerProd(z2, w1) + innerProd(z1, w2);
 }
 
 /* Multiply a complex scalar c1 with a two-component complex vector c2.*/
@@ -198,32 +206,32 @@ complex2 getWeylRepresentationEigenvector(
 }
 
 complex2 getDiracRepresentationEigenvector(
-    int spinorIndex, bool isPositiveE, bool isSpinUp, vec3 p) {
-    bool isNegativeE = !isPositiveE, isSpinDown = !isSpinUp;
-    float scaledE = sqrt(m*m + dot(p/c, p/c));  // Energy divided by c^2
+    int spinorIndex, bool isForwardProp, bool isSpinUp, vec3 p) {
+    bool isBackwardProp = !isForwardProp, isSpinDown = !isSpinUp;
+    float E = c*sqrt(m*m*c*c + dot(p, p));
     float absP = length(p);
     complex2 spin = (isSpinUp)? 
         getSpinUpState(p, absP): getSpinDownState(p, absP);
     float c0, c1;
     if (absP == 0.0) {
-        c0 = (isPositiveE)? 1.0: 0.0;
-        c1 = (isNegativeE)? 0.0: 1.0; 
+        c0 = (isForwardProp)? 1.0: 0.0;
+        c1 = (isBackwardProp)? 0.0: 1.0; 
         return (spinorIndex == 0)? c0*spin: c1*spin;
     } else {
-        if (isSpinUp && isPositiveE) {
+        if (isSpinUp && isForwardProp) {
             c0 = 1.0;
-            c1 = (absP/c)/(m + scaledE);
-        } else if (isSpinDown && isPositiveE) {
+            c1 = c*absP/(m*c*c + E);
+        } else if (isSpinDown && isForwardProp) {
             c0 = 1.0;
-            c1 = -(absP/c)/(m + scaledE);
-        } else if (isSpinUp && isNegativeE) {
-            c0 = (absP/c)/(m + scaledE);
+            c1 = -c*absP/(m*c*c + E);
+        } else if (isSpinUp && isBackwardProp) {
+            c0 = c*absP/(m*c*c + E);
             c1 = 1.0;
-        } else if (isSpinDown && isNegativeE) {
-            c0 = -(absP/c)/(m + scaledE);
+        } else if (isSpinDown && isBackwardProp) {
+            c0 = -c*absP/(m*c*c + E);
             c1 = 1.0;
         }
-        return sqrt((m + scaledE)/(2.0*scaledE))
+        return sqrt((m*c*c + E)/(2.0*E))
             *((spinorIndex == 0)? c0*spin: c1*spin);
     }
 }
@@ -232,62 +240,76 @@ complex2 getDiracRepresentationEigenvector(
 momentum space. For a free particle this is the same as
 the eigenvectors of the momentum space Hamiltonian. */
 complex2 getEigenvector(
-    int spinorIndex, bool isPositiveE, bool isSpinUp, vec3 p
+    int spinorIndex, bool isForwardProp, bool isSpinUp, vec3 p
 ) {
     if (representation == DIRAC_REP)
         return getDiracRepresentationEigenvector(
-            spinorIndex, isPositiveE, isSpinUp, p);
+            spinorIndex, isForwardProp, isSpinUp, p);
     else if (representation == WEYL_REP)
         return getWeylRepresentationEigenvector(
-            spinorIndex, isPositiveE, isSpinUp, p);
+            spinorIndex, isForwardProp, isSpinUp, p);
 }
 
 void main() {
+
+    // Compute the 3-momentum from the texture coordinates UV that this
+    // shader program is currently using.
+    vec3 p = getMomentum(UV);
+    // Get the energy as a function of the 3-momentum.
+    float E = sqrt(m*m*c*c*c*c + c*c*dot(p, p));
 
     // Get each bispinor component of the wave function.
     complex2 psi0 = texture2D(psiUpperTex, UV);
     complex2 psi1 = texture2D(psiLowerTex, UV);
 
-    // Compute the 3-momentum from the texture coordinates UV that this
-    // shader program is currently using.
-    vec3 p = getMomentum(UV);
+    if (isPropagatingForward) {
 
-    // Declare then define the eigenvectors of the kinetic energy matrix
-    // in momentum space.
-    complex2 uUp0, uUp1;  // Positive energy, and spin up w.r.t. momentum axis
-    complex2 uDown0, uDown1;  // Positive energy, spin down "    "
-    complex2 vUp0, vUp1;  // Negative energy, spin up "    "
-    complex2 vDown0, vDown1;  // Negative energy, spin down "   "
-    uUp0 = getEigenvector(0, POSITIVE_E, SPIN_UP, p),
-    uUp1 = getEigenvector(1, POSITIVE_E, SPIN_UP, p);
-    uDown0 = getEigenvector(0, POSITIVE_E, SPIN_DOWN, p),
-    uDown1 = getEigenvector(1, POSITIVE_E, SPIN_DOWN, p);
-    vUp0 = getEigenvector(0, NEGATIVE_E, SPIN_UP, -p),
-    vUp1 = getEigenvector(1, NEGATIVE_E, SPIN_UP, -p);
-    vDown0 = getEigenvector(0, NEGATIVE_E, SPIN_DOWN, -p),
-    vDown1 = getEigenvector(1, NEGATIVE_E, SPIN_DOWN, -p);
+        // Declare then define the eigenvectors of the kinetic energy matrix
+        // in momentum space.
+        complex2 uUp0, uUp1;  // Spin up w.r.t. momentum axis
+        complex2 uDown0, uDown1; // Spin down "    "
+        uUp0 = getEigenvector(0, FORWARD_PROP, SPIN_UP, p),
+        uUp1 = getEigenvector(1, FORWARD_PROP, SPIN_UP, p);
+        uDown0 = getEigenvector(0, FORWARD_PROP, SPIN_DOWN, p),
+        uDown1 = getEigenvector(1, FORWARD_PROP, SPIN_DOWN, p);
 
-    // Express the wave function in terms of the eigenvectors of the 
-    // kinetic energy matrix
-    complex psiUUp = innerProd(uUp0, psi0) + innerProd(uUp1, psi1);
-    complex psiUDown = innerProd(uDown0, psi0) + innerProd(uDown1, psi1);
-    complex psiVUp = innerProd(vUp0, psi0) + innerProd(vUp1, psi1);
-    complex psiVDown = innerProd(vDown0, psi0) + innerProd(vDown1, psi1);
+        // Express the wave function in terms of the eigenvectors of
+        // the kinetic energy matrix.
+        complex psiUUp = adjProd(uUp0, uUp1, psi0, psi1)*E/(m*c*c);
+        complex psiUDown = adjProd(uDown0, uDown1, psi0, psi1)*E/(m*c*c);
 
-    // Time evolve the wave function using the energy eigenvalues of
-    // the kinetic energy matrix.
-    float scaledE = sqrt(m*m + dot(p/c, p/c));  // E/c^2
-    psiUUp = mul(expI(-scaledE*(c*c*dt)/hbar), psiUUp);
-    psiUDown = mul(expI(-scaledE*(c*c*dt)/hbar), psiUDown);
-    psiVUp = mul(expI(scaledE*(c*c*dt)/hbar), psiVUp);
-    psiVDown = mul(expI(scaledE*(c*c*dt)/hbar), psiVDown);
+        // Time evolve the wave function using the energy eigenvalues
+        // of the kinetic energy matrix.
+        psiUUp = mul(expI(-E*dt/hbar), psiUUp);
+        psiUDown = mul(expI(-E*dt/hbar), psiUDown);
 
-    // Transform the wave function back to its initial representation.
-    psi0 = c1C2(psiUUp, uUp0) + c1C2(psiUDown, uDown0);
-    psi1 = c1C2(psiUUp, uUp1) + c1C2(psiUDown, uDown1);
-    psi0 += c1C2(psiVUp, vUp0) + c1C2(psiVDown, vDown0);
-    psi1 += c1C2(psiVUp, vUp1) + c1C2(psiVDown, vDown1);
+        // Transform this part of the wave function back to its initial
+        // representation.
+        psi0 = c1C2(psiUUp, uUp0) + c1C2(psiUDown, uDown0);
+        psi1 = c1C2(psiUUp, uUp1) + c1C2(psiUDown, uDown1);
+
+    } else {
+
+        complex2 nuUp0, nuUp1;  // Backward propagating, spin up "   "
+        complex2 nuDown0, nuDown1;  // Backward propagating, spin down "   "
+        nuUp0 = getEigenvector(0, BACKWARD_PROP, SPIN_UP, p),
+        nuUp1 = getEigenvector(1, BACKWARD_PROP, SPIN_UP, p);
+        nuDown0 = getEigenvector(0, BACKWARD_PROP, SPIN_DOWN, p),
+        nuDown1 = getEigenvector(1, BACKWARD_PROP, SPIN_DOWN, p);
+
+        // float normVal = sqrt(dot(psi0, psi0) + dot(psi1, psi1));
+        complex psiNuUp = 0.5*adjProd(nuUp0, nuUp1, psi0, psi1)*E/(m*c*c);
+        complex psiNuDown = 0.5*adjProd(nuDown0, nuDown1, psi0, psi1)*E/(m*c*c);
+        // float normVal2 = 
+
+        psiNuUp = complex(0.0); // mul(expI(E*dt/hbar), psiNuUp);
+        psiNuDown = complex(0.0); // mul(expI(E*dt/hbar), psiNuDown);
+
+        // Transform this part of the wave function back to its initial
+        // representation.
+        psi0 = c1C2(psiNuUp, nuUp0) + c1C2(psiNuDown, nuDown0);
+        psi1 = c1C2(psiNuUp, nuUp1) + c1C2(psiNuDown, nuDown1);
+    }
 
     fragColor = (spinorIndex == 0)? psi0: psi1;
-
 }

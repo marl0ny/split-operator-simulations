@@ -38,8 +38,8 @@ that's in the first row.*/
 uniform hermitian2x2 sigmaX;
 uniform hermitian2x2 sigmaY;
 uniform hermitian2x2 sigmaZ;
-uniform sampler2D uTex;
-uniform sampler2D vTex;
+uniform sampler2D psiUpperTex;
+uniform sampler2D psiLowerTex;
 
 const int DIRAC_REP = 0;
 const int WEYL_REP = 1;
@@ -82,17 +82,17 @@ float expectationValue(hermitian2x2 operator, complex2 state) {
 }
 
 void main() {
-    complex2 u = texture2D(uTex, UV);
-    complex2 v = texture2D(vTex, UV);
+    complex2 psi0 = texture2D(psiUpperTex, UV);
+    complex2 psi1 = texture2D(psiLowerTex, UV);
     if (representation == DIRAC_REP)
-        fragColor = vec4(2.0*real(innerProd(u, matrixMul(sigmaX, v))),
-                         2.0*real(innerProd(u, matrixMul(sigmaY, v))),
-                         2.0*real(innerProd(u, matrixMul(sigmaZ, v))),
-                         dot(u, u) + dot(v, v));
+        fragColor = vec4(2.0*real(innerProd(psi0, matrixMul(sigmaX, psi1))),
+                         2.0*real(innerProd(psi0, matrixMul(sigmaY, psi1))),
+                         2.0*real(innerProd(psi0, matrixMul(sigmaZ, psi1))),
+                         dot(psi0, psi0) + dot(psi1, psi1));
     else
         fragColor = vec4(
-            -expectationValue(sigmaX, u) + expectationValue(sigmaX, v),
-            -expectationValue(sigmaY, u) + expectationValue(sigmaY, v),
-            -expectationValue(sigmaZ, u) + expectationValue(sigmaZ, v),
-            dot(u, u) + dot(v, v));
+            -expectationValue(sigmaX, psi0) + expectationValue(sigmaX, psi1),
+            -expectationValue(sigmaY, psi0) + expectationValue(sigmaY, psi1),
+            -expectationValue(sigmaZ, psi0) + expectationValue(sigmaZ, psi1),
+            dot(psi0, psi0) + dot(psi1, psi1));
 }
