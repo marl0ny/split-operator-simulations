@@ -13,7 +13,8 @@ William Press et al.
 https://websites.pmc.ucsc.edu/~fnimmo/eart290c_17/NumericalRecipesinF77.pdf
 
 */
-import {gl, TextureParams, IScalar, Quad} from "./gl-wrappers.js";
+import {gl, TextureParams, IScalar, Quad, 
+    DEFAULT_MIN_FILTER, DEFAULT_MAG_FILTER} from "./gl-wrappers.js";
 import SHADERS, { getShader } from "./shaders.js";
 
 let gPrograms = {
@@ -161,7 +162,8 @@ function refreshIterQuads(format, width, height) {
         let texParams = new TextureParams(
             format, 
             width, height, true, 
-            gl.REPEAT, gl.REPEAT, gl.LINEAR, gl.LINEAR);
+            gl.REPEAT, gl.REPEAT, 
+            DEFAULT_MIN_FILTER, DEFAULT_MAG_FILTER);
         // let texParams = new TextureParams(
         //     gl.RGBA32F, width, height, false, 
         //     gl.REPEAT, gl.REPEAT, gl.NEAREST, gl.NEAREST);

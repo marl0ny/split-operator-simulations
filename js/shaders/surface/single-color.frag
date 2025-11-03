@@ -24,6 +24,10 @@ out vec4 fragColor;
 uniform vec4 color;
 
 void main() {
+    if (abs(FINAL_VERTEX_POSITION.x) > 2.0 || 
+        abs(FINAL_VERTEX_POSITION.y) > 2.0 ||
+        abs(FINAL_VERTEX_POSITION.z) > 2.0)
+        discard;
     vec3 lightSourceLoc = vec3(0.0, 0.0, -3.0);
     vec3 vertexToLightSource = lightSourceLoc - FINAL_VERTEX_POSITION;
     float diffuse1 = max(dot(NORMAL, normalize(vertexToLightSource)), 0.0);

@@ -16,7 +16,9 @@ import { gl, IVec2, IVec3, Vec3, Vec4, Attribute, Quad, TrianglesFrame,
     get2DFrom3DTextureCoordinates,
     get2DFrom3DDimensions,
     IScalar, MultidimensionalDataQuad, LinesFrame,
-    get3DFrom2DTextureCoordinates, withConfig} from "./gl-wrappers.js";
+    get3DFrom2DTextureCoordinates, withConfig,
+    DEFAULT_MIN_FILTER,
+    DEFAULT_MAG_FILTER} from "./gl-wrappers.js";
 import { getShader } from "./shaders.js"
 
 function getCubeOutlineVerticesAndElements() {
@@ -158,7 +160,7 @@ class Frames {
             volumeTexelDimensions2D.ind[1],
             true,
             gl.CLAMP_TO_EDGE, gl.CLAMP_TO_EDGE,
-            gl.LINEAR, gl.LINEAR
+            DEFAULT_MIN_FILTER, DEFAULT_MAG_FILTER
         );
         const TEX_PARAMS_VOLUME_U8 = new TextureParams(
             gl.RGBA8,
@@ -166,7 +168,7 @@ class Frames {
             volumeTexelDimensions2D.ind[1],
             true,
             gl.CLAMP_TO_EDGE, gl.CLAMP_TO_EDGE,
-            gl.LINEAR, gl.LINEAR
+            DEFAULT_MIN_FILTER, DEFAULT_MAG_FILTER
         );
         const TEX_PARAMS_VOLUME_F32 = new TextureParams(
             gl.RGBA32F,
@@ -174,7 +176,7 @@ class Frames {
             volumeTexelDimensions2D.ind[1],
             true,
             gl.CLAMP_TO_EDGE, gl.CLAMP_TO_EDGE,
-            gl.LINEAR, gl.LINEAR
+            DEFAULT_MIN_FILTER, DEFAULT_MAG_FILTER
         );
         if (this.volume === null && this.volumeGrad === null) {
             this.volume = new Quad(TEX_PARAMS_VOLUME_F16);
@@ -195,7 +197,7 @@ class Frames {
             dataTexelDimensions2D.ind[1],
             true,
             gl.CLAMP_TO_EDGE, gl.CLAMP_TO_EDGE,
-            gl.LINEAR, gl.LINEAR
+            DEFAULT_MIN_FILTER, DEFAULT_MAG_FILTER
         );
         const TEX_PARAMS_DATA_F16 = new TextureParams(
             gl.RGBA16F,
@@ -203,7 +205,7 @@ class Frames {
             dataTexelDimensions2D.ind[1],
             true,
             gl.CLAMP_TO_EDGE, gl.CLAMP_TO_EDGE,
-            gl.LINEAR, gl.LINEAR
+            DEFAULT_MIN_FILTER, DEFAULT_MAG_FILTER
         );
         const TEX_PARAMS_DATA_U8 = new TextureParams(
             gl.RGBA8,
@@ -211,7 +213,7 @@ class Frames {
             dataTexelDimensions2D.ind[1],
             true,
             gl.CLAMP_TO_EDGE, gl.CLAMP_TO_EDGE,
-            gl.LINEAR, gl.LINEAR
+            DEFAULT_MIN_FILTER, DEFAULT_MAG_FILTER
         );
         if (this.data === null || 
             this.gradientData === null || 
@@ -236,16 +238,8 @@ class Frames {
             viewDimensions.ind[1],
             true,
             gl.CLAMP_TO_EDGE, gl.CLAMP_TO_EDGE,
-            gl.LINEAR, gl.LINEAR
+            DEFAULT_MIN_FILTER, DEFAULT_MAG_FILTER
         );
-        /*const TEX_PARAMS_VIEW_UI8_MIPMAP_FILTER = new TextureParams(
-            gl.RGBA8,
-            viewDimensions.width,
-            viewDimensions.height,
-            true,
-            gl.CLAMP_TO_EDGE, gl.CLAMP_TO_EDGE,
-            gl.LINEAR, gl.LINEAR
-        );*/
         this.view = new RenderTarget(TEX_PARAMS_VIEW_F16_MIPMAP_FILTER);
     }
 }

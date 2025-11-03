@@ -48,13 +48,15 @@ function initializeWebGL2(gl) {
     gl.version = 2;
     let ext1 = gl.getExtension('EXT_color_buffer_float');
     let ext2 = gl.getExtension('OES_texture_float_linear');
-    if (ext1 === null || ext2 === null) {
+    if (ext1 === null 
+        // || ext2 === null
+    ) {
         let msg = "Your browser does not support "
                     + "the necessary WebGL2 extensions:\n";
         msg += (ext1 === null)? 
             "\tFailed to get EXT_color_buffer_float.\n": "";
-        msg += (ext2 === null)? 
-            "\tFailed to get OES_texture_float_linear.\n": "";
+        // msg += (ext2 === null)? 
+        //     "\tFailed to get OES_texture_float_linear.\n": "";
         msg += "\nYour user agent:\n";
         msg += window.navigator.userAgent;
         // msg += "\n\nWill try WebGL1 instead."
@@ -62,6 +64,9 @@ function initializeWebGL2(gl) {
         throw msg;
         // initializeWebGL1(gl);
     }
+    if (ext2 === null)
+        console.warn("OES_texture_float_linear not available: "
+                     + "using NEAREST for filtering.");
     return gl;
 }
 
@@ -92,6 +97,19 @@ class Scalar {
 
 export class IScalar extends Scalar {}
 export class FScalar extends Scalar {}
+
+
+function getDefaultFiltering() {
+    if ((window.navigator.userAgent.includes('iPhone')
+         && window.navigator.userAgent.includes('Safari'))
+        || window.navigator.userAgent.includes('Android'))
+        return gl.NEAREST;
+    // return gl.NEAREST;
+    return gl.LINEAR;
+}
+
+export const DEFAULT_MIN_FILTER = getDefaultFiltering();
+export const DEFAULT_MAG_FILTER = getDefaultFiltering();
 
 class AbstractVec {
     ind;
@@ -758,10 +776,6 @@ export class RenderTarget {
     }
     _initTexture() {
         if (this._id === 0) {
-            // this._texture = gl.createTexture();
-            // gl.activeTexture(gl.TEXTURE0);
-            // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-            // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
             return;
         }
         // console.log(this._id);
@@ -1064,10 +1078,6 @@ export class Quad {
     }
     _initTexture() {
         if (this._id === 0) {
-            // this._texture = gl.createTexture();
-            // gl.activeTexture(gl.TEXTURE0);
-            // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-            // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
             return;
         }
         /* console.log(
@@ -1299,7 +1309,8 @@ export class MultidimensionalDataQuad extends Quad {
 
 export const gMainRenderWindow = new Quad(
     new TextureParams(gl.RGBA, gCanvas.width, gCanvas.height, 
-    gl.CLAMP_TO_EDGE, gl.CLAMP_TO_EDGE, gl.LINEAR, gl.LINEAR));
+    gl.CLAMP_TO_EDGE, gl.CLAMP_TO_EDGE,
+    DEFAULT_MIN_FILTER, DEFAULT_MAG_FILTER));
 
 
 export function withConfig(config, closure) {

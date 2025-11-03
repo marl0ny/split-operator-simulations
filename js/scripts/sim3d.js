@@ -7,7 +7,9 @@ import {gl, gMainRenderWindow, TextureParams, Quad,
     get2DFrom3DDimensions,
     add, mul, sub, div,
     Vec4,
-    saveQuadAsBMPImage} from "./gl-wrappers.js";
+    saveQuadAsBMPImage,
+    DEFAULT_MIN_FILTER,
+    DEFAULT_MAG_FILTER} from "./gl-wrappers.js";
 import { getShader } from "./shaders.js";
 import splitStep3D, {SimulationParameters} from "./split-step3d.js";
 import { VolumeRender } from "./volume-render.js";
@@ -17,6 +19,7 @@ import {
     UserEditable3DKEProgramContainer} from "./user-editable-program.js";
 import { sumPowerOfTwo } from "./sum.js";
 import { PlanarSlices } from "./planar-slice.js";
+// import Touches from "./touch-manager.js";
 
 // console.log('2D from 3D (128^3): ', get2DFrom3DDimensions(new IVec3(128, 128, 128)));
 // console.log('2D from 3D (256^3): ', get2DFrom3DDimensions(new IVec3(256, 256, 256)));
@@ -203,7 +206,7 @@ const TEX_PARAMS_SIM = new TextureParams(
     get2DFrom3DDimensions(gSimParams.gridDimensions).ind[0],
     get2DFrom3DDimensions(gSimParams.gridDimensions).ind[1],
     true, gl.CLAMP_TO_EDGE, gl.CLAMP_TO_EDGE,
-    gl.LINEAR, gl.LINEAR
+    DEFAULT_MIN_FILTER, DEFAULT_MAG_FILTER
 );
 
 class Frames {
@@ -334,6 +337,32 @@ let gVolRenderSliceWidth
     = parseInt(document.getElementById(
         "sliceSideWidth"
     ).value);
+
+
+function adjustInitialVolumeRenderDimensionsIfWayTooBigToHandle() {
+    try {
+        get2DFrom3DDimensions(
+            new IVec3(gVolRenderSliceWidth, gVolRenderSliceWidth,
+                    gVolRenderNumberOfSlices));
+    } catch {
+        gVolRenderSliceWidth /= 2;
+        gVolRenderNumberOfSlices /= 2;
+        document.getElementById("numberOfSlicesLabel").textContent
+            = `Number of slices: ${gVolRenderNumberOfSlices}`;
+        document.getElementById("sliceSideWidthLabel").textContent
+            = `Slice size: ${gVolRenderSliceWidth}x${gVolRenderSliceWidth}`;
+    }
+    try {
+        get2DFrom3DDimensions(
+            new IVec3(gVolRenderSliceWidth, gVolRenderSliceWidth,
+                    gVolRenderNumberOfSlices));
+    } catch {
+        adjustInitialVolumeRenderDimensionsIfWayTooBigToHandle();
+    }
+}
+
+adjustInitialVolumeRenderDimensionsIfWayTooBigToHandle();
+
 let gVolRender = new VolumeRender(
     new IVec2(gCanvas.height, gCanvas.height),
     new IVec3(gVolRenderSliceWidth, gVolRenderSliceWidth,
@@ -343,7 +372,8 @@ let gVolRender = new VolumeRender(
 let gPlanarSlices = new PlanarSlices(
     new TextureParams(
         gl.RGBA32F, gCanvas.width, gCanvas.height, true,
-        gl.CLAMP_TO_EDGE, gl.CLAMP_TO_EDGE, gl.LINEAR, gl.LINEAR
+        gl.CLAMP_TO_EDGE, gl.CLAMP_TO_EDGE,
+        DEFAULT_MIN_FILTER, DEFAULT_MAG_FILTER
     )
 );
 
@@ -519,6 +549,8 @@ let gRotation = mul(Quaternion.rotator(Math.PI/4.0, 0.0, 0.0, 1.0),
                     Quaternion.rotator(-Math.PI/4.0, 1.0, 0.0, 0.0));
 let gMouseIdlePosition = [];
 let gMouseInteractPosition = [];
+// let gTouchIdlePosition = [];
+// let gTouchInteractPosition = [];
 
 
 function setRotation(x0, y0, x1, y1) {
@@ -701,6 +733,35 @@ gCanvas.addEventListener("mousemove", e => {
 gCanvas.addEventListener("mousedown", e => mouseInputFunc(e));
 
 gCanvas.addEventListener("mouseup", () => {
+    gMouseInteractPosition = [];
+});
+
+gCanvas.addEventListener("touchmove", e => {
+    let touches = e.changedTouches;
+    if (touches.length === 1) {
+        let mouseEv = {
+            clientX: touches[0].pageX,
+            clientY: touches[0].pageY
+        };
+        gMouseIdlePosition = equalizeXYScaling(getMouseXY(mouseEv));
+        console.log(gMouseIdlePosition);
+        updateTextPosition(...gMouseIdlePosition);
+        mouseInputFunc(mouseEv);
+    }
+});
+
+gCanvas.addEventListener("touchstart", e => {
+    let touches = e.changedTouches;
+    if (touches.length === 1) {
+        let mouseEv = {
+            clientX: touches[0].pageX,
+            clientY: touches[0].pageY
+        };
+        mouseInputFunc(mouseEv);
+    }
+});
+
+gCanvas.addEventListener("touchend", () => {
     gMouseInteractPosition = [];
 });
 

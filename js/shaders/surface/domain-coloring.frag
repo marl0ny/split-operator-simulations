@@ -15,10 +15,12 @@ precision highp float;
 #if __VERSION__ <= 120
 varying vec2 UV;
 varying vec3 NORMAL;
+varying vec3 FINAL_VERTEX_POSITION;
 #define fragColor gl_FragColor
 #else
 in vec2 UV;
 in vec3 NORMAL;
+in vec3 FINAL_VERTEX_POSITION;
 out vec4 fragColor;
 #endif
 
@@ -64,6 +66,10 @@ vec3 argumentToColor(float argVal) {
 }
 
 void main() {
+    if (abs(FINAL_VERTEX_POSITION.x) > 2.0 || 
+        abs(FINAL_VERTEX_POSITION.y) > 2.0 ||
+        abs(FINAL_VERTEX_POSITION.z) > 2.0)
+        discard;
     complex z1 = texture2D(tex, UV).xy;
     complex phaseFactor = complex(cos(phaseAdjust), sin(phaseAdjust));
     complex z2 = mul(phaseFactor, z1);

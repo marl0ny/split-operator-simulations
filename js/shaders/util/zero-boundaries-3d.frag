@@ -1,5 +1,5 @@
 /* For the 3D array data that's stored in the source texture,
-    set those values along the 3D array boundaries to zero. */
+set those values along the 3D array boundaries to zero. */
 #if (__VERSION__ >= 330) || (defined(GL_ES) && __VERSION__ >= 300)
 #define texture2D texture
 #else

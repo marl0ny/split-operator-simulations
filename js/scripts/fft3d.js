@@ -15,7 +15,8 @@ https://websites.pmc.ucsc.edu/~fnimmo/eart290c_17/NumericalRecipesinF77.pdf
 */
 import {gl, TextureParams, 
         IScalar, MultidimensionalDataQuad, Quad,
-        get2DFrom3DDimensions} from "./gl-wrappers.js";
+        get2DFrom3DDimensions,
+        DEFAULT_MIN_FILTER, DEFAULT_MAG_FILTER} from "./gl-wrappers.js";
 import SHADERS, { getShader } from "./shaders.js";
 
 let gPrograms = {
@@ -176,7 +177,7 @@ function refreshIterQuads(format, texDimensions3D) {
         let texParams = new TextureParams(
             format, 
             dimensions2D.ind[0], dimensions2D.ind[1], true, 
-            gl.REPEAT, gl.REPEAT, gl.LINEAR, gl.LINEAR);
+            gl.REPEAT, gl.REPEAT, DEFAULT_MIN_FILTER, DEFAULT_MAG_FILTER);
         if (gIterQuads.length !== 0) {
             // console.log('Resetting dimensions of fft iteration quads');
             gIterQuads[0].reset([...texDimensions3D.ind], texParams);

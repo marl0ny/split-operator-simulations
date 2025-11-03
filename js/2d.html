@@ -1,29 +1,45 @@
 <!DOCTYPE html>
 <meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
 <html>
 	<head>
+		<!--
+			Originally, I had numerous issues trying to get consistent and proper scaling
+			on mobile devices. To fix this, it turns out that the viewport throught the meta tag 
+			needs to be explicitly set to use the device's screen width,
+			as this is not done by defualt. 
+			As well as this, some browser specific adjustments need to be turned off.
+			I personally found this blog post by S. Sutoris helpful:
+			https://www.rismosch.com/article?id=css-on-mobile-and-the-most-important-header-tag
+			And of course I looked at the MDN documentation:
+			https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/meta/name/viewport
+		-->
         <style>
+			body {
+				text-size-adjust: none; 
+				-moz-text-size-adjust: none;}
             h2 {font-family:Arial, Helvetica, sans-serif; }
             label {font-family:Arial, Helvetica, sans-serif; }
 			text {font-family:Arial, Helvetica, sans-serif; }
+            @media (orientation: landscape) {
+               .outer-div {display: grid; grid-template-columns: 1fr 1fr 1fr; }
+               .inner-div1 {grid-column: 1;}
+               .inner-div2 {grid-column: 2;}
+               .inner-div3 {grid-column: 3; resize: vertical; padding: 10px;} 
+            }
+            @media (orientation: portrait) { 
+               .outer-div {display: grid; grid-template-rows: repeat(3, auto); } 
+               .inner-div1 {grid-row: 1;}
+               .inner-div2 {grid-row: 2;} 
+               .inner-div3 {grid-row: 3;} 
+            } 
         </style>
+		<title>Interactive Schrödinger Equation Solver Using the Split-Operator Method in 2D</title>
     </head>
 	<body style="background-color: rgb(255, 255, 255);">
-		<!--
-			How to get floating divs to work:
-			https://stackoverflow.com/q/2006134 by eric-d-bari
-			https://stackoverflow.com/a/2006162 by marcgg
-		!-->
-		<!--
-			<div id="hoveringElements" style="position: relative; z-index: 10;">
-				<div id="stats" style="position: absolute; top: 0px; right: 0px">
-					<label id="hoveringStats" 
-						style="color: white;", hidden: true>This is some text.</label>
-			</div>
-		!-->
 		</div>
-			 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr;">
-				<div style="grid-column: 1; /*background-color: rgb(200, 200, 200);*/">
+			 <div class="outer-div">
+				<div class="inner-div1">
 					<label><a id="aLink" style="color: rgb(100, 100, 100); text-align: center; /*text-decoration-line: none;*/">Source</a></label><br>
 					<!--<hr style="width: 95%; justify-self: left;"></hr>!-->
 					<label for="stepsPerFrame" id="stepsPerFrameLabel">Updates/frame
@@ -93,14 +109,15 @@
 					<label id="displayInitialMomentum", style="opacity: 0;"> &lt;px&gt;: 0, &lt;py&gt;: 0</label>
 					<!--<label style="text-align: center;"> at each frame</label><br>!-->
 				</div>
-				<div style="grid-column: 2">
+				<div class="inner-div2">
 					<canvas style="
 									touch-action: none; background-color: rgb(50, 50, 50);
 								   text-align: center;"
 						id="sketchCanvas"></canvas>
 				</div>
 				<!--<div style="grid-column: 3; width: 0%"></div>!-->
-				<div style="grid-column: 3; resize: vertical; padding: 10px">
+
+				<div class="inner-div3">
 					<label>Simulation domain</label><br>
 					<label id="xRangeLabel"> -128 &leq; x &lt; 128</label><br>
 					<label id="yRangeLabel"> -128 &leq; y &lt; 128</label><br>

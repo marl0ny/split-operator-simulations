@@ -5,7 +5,8 @@ import { gl, gMainRenderWindow, TextureParams, RenderTarget,
          Quaternion, mul, add, div,
          withConfig,
          sub,
-         saveQuadAsBMPImage} from "./gl-wrappers.js";
+         saveQuadAsBMPImage,
+         DEFAULT_MIN_FILTER, DEFAULT_MAG_FILTER} from "./gl-wrappers.js";
 import splitStep, { 
     SimulationParameters 
 } from "./split-step.js";
@@ -78,7 +79,7 @@ const GLSL_PROGRAMS = new MainGLSLPrograms();
 const TEX_PARAMS_CANVAS_F32 = new TextureParams(
     (gl.version === 2)? gl.RG32F: gl.RGBA32F, gCanvas.width, gCanvas.height,
     true, gl.CLAMP_TO_EDGE, gl.CLAMP_TO_EDGE,
-    gl.LINEAR, gl.LINEAR
+    DEFAULT_MIN_FILTER, DEFAULT_MAG_FILTER
 );
 
 const TEX_PARAMS_SQUARE_F32 = new TextureParams(
@@ -86,7 +87,7 @@ const TEX_PARAMS_SQUARE_F32 = new TextureParams(
     (gCanvas.width > gCanvas.height)? gCanvas.height: gCanvas.width,
     (gCanvas.width > gCanvas.height)? gCanvas.height: gCanvas.width,
     true, gl.CLAMP_TO_EDGE, gl.CLAMP_TO_EDGE,
-    gl.LINEAR, gl.LINEAR
+    DEFAULT_MIN_FILTER, DEFAULT_MAG_FILTER
 );
 
 const WIDTH = LENGTH;
@@ -95,14 +96,14 @@ const TEX_PARAMS_SIM = new TextureParams(
     (gl.version === 2)? gl.RG32F: gl.RGBA32F, 
     WIDTH, HEIGHT,
     true, gl.REPEAT, gl.REPEAT,
-    gl.LINEAR, gl.LINEAR
+    DEFAULT_MIN_FILTER, DEFAULT_MAG_FILTER
 )
 
 const TEX_PARAMS_SIM2 = new TextureParams(
     (gl.version === 2)? gl.RG32F: gl.RGBA32F, 
     WIDTH, HEIGHT,
     true, gl.REPEAT, gl.REPEAT,
-    gl.LINEAR, gl.LINEAR
+    DEFAULT_MIN_FILTER, DEFAULT_MAG_FILTER
 )
 // console.log('texture test', TEX_PARAMS_SIM.equals(TEX_PARAMS_SIM2));
 
