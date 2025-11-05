@@ -725,6 +725,62 @@ function mouseInputFunc(e) {
     }
 }
 
+let gDoubleTouches = {
+    isActive: false,
+    finger1: [],
+    finger2: [],
+    fingerDistances: [],
+};
+
+function emptyDoubleTouches() {
+    gDoubleTouches.finger1 = [];
+    gDoubleTouches.finger2 = [];
+    gDoubleTouches.fingerDistances = [];
+}
+
+function beginTouchZoomRotate(e) {
+    let touches = e.changedTouches;
+    if (touches.length < 2)
+        return;
+    gDoubleTouches.isActive = true;
+    let t1X = touches[0].pageX;
+    let t1Y = touches[0].pageY;
+    let t2X = touches[1].pageX;
+    let t2Y = touches[1].pageY;
+    let fingerDistance = Math.sqrt(
+        (t2X - t1X)*(t2X - t1X) + (t2Y - t1Y)*(t2Y - t1Y));
+    gDoubleTouches.finger1.push([t1X, t1Y]);
+    gDoubleTouches.finger2.push([t2X, t2Y]);
+    gDoubleTouches.fingerDistances.push(fingerDistance);
+}
+
+function continueTouchZoomRotate(e) {
+    let touches = e.changedTouches;
+    if (touches.length < 2)
+        return;
+    gDoubleTouches.isActive = true;
+    let t1X = touches[0].pageX;
+    let t1Y = touches[0].pageY;
+    let t2X = touches[1].pageX;
+    let t2Y = touches[1].pageY;
+    /* let delta1X = t1X - gDoubleTouches.finger1[0];
+    let delta1Y = t1Y - gDoubleTouches.finger1[1];
+    let delta2X = t2X - gDoubleTouches.finger2[0];
+    let delta2Y = t2Y - gDoubleTouches.finger2[1];*/
+    let fingerDistance = Math.sqrt(
+        (t2X - t1X)*(t2X - t1X) + (t2Y - t1Y)*(t2Y - t1Y)); 
+    gDoubleTouches.finger1.push([t1X, t1Y]);
+    gDoubleTouches.finger2.push([t2X, t2Y]);
+    if (gDoubleTouches.fingerDistances.length > 1)
+        gScale *= fingerDistance/gDoubleTouches.fingerDistances.pop();
+    gDoubleTouches.fingerDistances.push(fingerDistance);
+}
+
+function endTouchZoomRotate() {
+    gDoubleTouches.isActive = false;
+    emptyDoubleTouches();
+}
+
 gCanvas.addEventListener("mousemove", e => {
     gMouseIdlePosition = equalizeXYScaling(getMouseXY(e));
     updateTextPosition(...gMouseIdlePosition);
@@ -738,7 +794,10 @@ gCanvas.addEventListener("mouseup", () => {
 
 gCanvas.addEventListener("touchmove", e => {
     let touches = e.changedTouches;
-    if (touches.length === 1) {
+    // When double touches has been activated,
+    // just never respond to single touch movement.
+    if (!gDoubleTouches.isActive && touches.length === 1) {
+        endTouchZoomRotate();
         let mouseEv = {
             clientX: touches[0].pageX,
             clientY: touches[0].pageY
@@ -747,22 +806,33 @@ gCanvas.addEventListener("touchmove", e => {
         console.log(gMouseIdlePosition);
         updateTextPosition(...gMouseIdlePosition);
         mouseInputFunc(mouseEv);
+    } else {
+        continueTouchZoomRotate(e);
     }
 });
 
 gCanvas.addEventListener("touchstart", e => {
     let touches = e.changedTouches;
-    if (touches.length === 1) {
-        let mouseEv = {
-            clientX: touches[0].pageX,
-            clientY: touches[0].pageY
-        };
-        mouseInputFunc(mouseEv);
+    if (!gDoubleTouches.isActive && touches.length === 1) {
+        // Don't respond to single touch movement here,
+        // or else during a double touch this will interfere
+        // with it, causing unwanted rotations.
+        // endTouchZoomRotate();
+        // let mouseEv = {
+        //     clientX: touches[0].pageX,
+        //     clientY: touches[0].pageY
+        // };
+        // mouseInputFunc(mouseEv);
+    } else {
+        beginTouchZoomRotate(e);
     }
 });
 
-gCanvas.addEventListener("touchend", () => {
+gCanvas.addEventListener("touchend", e => {
     gMouseInteractPosition = [];
+    let touches = e.changedTouches;
+    if (touches.length === 1 && gDoubleTouches.isActive)
+        endTouchZoomRotate();
 });
 
 document.getElementById("potentialEntry").addEventListener(
