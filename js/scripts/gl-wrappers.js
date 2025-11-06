@@ -99,10 +99,17 @@ export class IScalar extends Scalar {}
 export class FScalar extends Scalar {}
 
 
+const IS_ON_MOBILE = (
+    (window.navigator.userAgent.includes('iPhone')
+        && window.navigator.userAgent.includes('Safari'))
+        || window.navigator.userAgent.includes('Android'));
+
+export function isOnMobile() {
+    return IS_ON_MOBILE;
+}
+
 function getDefaultFiltering() {
-    if ((window.navigator.userAgent.includes('iPhone')
-         && window.navigator.userAgent.includes('Safari'))
-        || window.navigator.userAgent.includes('Android'))
+    if (isOnMobile())
         return gl.NEAREST;
     // return gl.NEAREST;
     return gl.LINEAR;

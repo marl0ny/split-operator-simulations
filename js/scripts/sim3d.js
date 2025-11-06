@@ -9,7 +9,8 @@ import {gl, gMainRenderWindow, TextureParams, Quad,
     Vec4,
     saveQuadAsBMPImage,
     DEFAULT_MIN_FILTER,
-    DEFAULT_MAG_FILTER} from "./gl-wrappers.js";
+    DEFAULT_MAG_FILTER,
+    isOnMobile} from "./gl-wrappers.js";
 import { getShader } from "./shaders.js";
 import splitStep3D, {SimulationParameters} from "./split-step3d.js";
 import { VolumeRender } from "./volume-render.js";
@@ -144,8 +145,10 @@ let gSimParams = new SimulationParameters(
     1.0, 1.0, new Complex(0.64, 0.0),
     // new Vec3(64.0, 64.0, 64.0),
     // new IVec3(64, 64, 64),
-    new Vec3(128.0, 128.0, 128.0),
-    new IVec3(128, 128, 128)
+    // new Vec3(128.0, 128.0, 128.0),
+    // new IVec3(128, 128, 128),
+    (isOnMobile())? new Vec3(64.0, 64.0, 64.0): new Vec3(128.0, 128.0, 128.0),
+    (isOnMobile())? new IVec3(64, 64, 64): new IVec3(128, 128, 128),
 );
 
 function timeStepRealCallback(value) {
@@ -340,6 +343,14 @@ let gVolRenderSliceWidth
 
 
 function adjustInitialVolumeRenderDimensionsIfWayTooBigToHandle() {
+    if (isOnMobile()) {
+        gVolRenderSliceWidth /= 2;
+        gVolRenderNumberOfSlices /= 2;
+        document.getElementById("numberOfSlicesLabel").textContent
+            = `Number of slices: ${gVolRenderNumberOfSlices}`;
+        document.getElementById("sliceSideWidthLabel").textContent
+            = `Slice size: ${gVolRenderSliceWidth}x${gVolRenderSliceWidth}`;
+    }
     try {
         get2DFrom3DDimensions(
             new IVec3(gVolRenderSliceWidth, gVolRenderSliceWidth,
