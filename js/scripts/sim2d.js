@@ -6,7 +6,8 @@ import { gl, gMainRenderWindow, TextureParams, RenderTarget,
          withConfig,
          sub,
          saveQuadAsBMPImage,
-         DEFAULT_MIN_FILTER, DEFAULT_MAG_FILTER} from "./gl-wrappers.js";
+         DEFAULT_MIN_FILTER, DEFAULT_MAG_FILTER,
+         isOnAndroid} from "./gl-wrappers.js";
 import splitStep, { 
     SimulationParameters 
 } from "./split-step.js";
@@ -90,8 +91,8 @@ const TEX_PARAMS_SQUARE_F32 = new TextureParams(
     DEFAULT_MIN_FILTER, DEFAULT_MAG_FILTER
 );
 
-const WIDTH = LENGTH;
-const HEIGHT = LENGTH;
+const WIDTH = (isOnAndroid())? 64: 256;
+const HEIGHT = (isOnAndroid())? 64: 256;
 const TEX_PARAMS_SIM = new TextureParams(
     (gl.version === 2)? gl.RG32F: gl.RGBA32F, 
     WIDTH, HEIGHT,
@@ -1131,6 +1132,39 @@ function refreshPotential() {
     }
 }
 
+let gHoveringMessageOpacity = 1.0;
+
+function decreaseOpacityOfHoveringMessage() {
+    if (gHoveringMessageOpacity > 0.0) {
+        let deltaT = 0.1;
+        if (gUserDeltaTs.length > 0)
+            deltaT = gUserDeltaTs[gUserDeltaTs.length - 1];
+        gHoveringMessageOpacity = Math.max(
+            0.0, 
+            gHoveringMessageOpacity - 0.2*deltaT
+        );
+        document.getElementById("hoveringMessageElements").style.opacity
+                = `${gHoveringMessageOpacity}`;
+    }
+}
+
+function showHoveringMessage(message) {
+    let hoveringMessageElement 
+        = document.getElementById("hoveringMessageElements");
+    gHoveringMessageOpacity = 1.0;
+    hoveringMessageElement.style = `opacity: ${gHoveringMessageOpacity}; `
+        + `position: absolute; `
+        + `top: ${parseInt(gCanvas.offsetTop + 0.01*gCanvas.height)}px; `
+        + `left: ${gCanvas.offsetLeft + 210}px`;
+    let hoveringMessage = document.getElementById("hoveringMessage");
+    hoveringMessage.textContent = message;
+}
+
+if (isOnAndroid())
+    showHoveringMessage(
+        `Android device detected; ` + `ultra low resolution enabled.`);
+
+
 function showPsiPWindow() {
     gFrames.render2.draw(GLSL_PROGRAMS.domainColoring,
         {tex: gFrames.psiP,
@@ -1353,6 +1387,7 @@ function animate() {
             [0, 0, gCanvas.width, gCanvas.height]
         );
     }
+    decreaseOpacityOfHoveringMessage();
     requestAnimationFrame(animate);
 }
 

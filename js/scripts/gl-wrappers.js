@@ -99,14 +99,26 @@ export class IScalar extends Scalar {}
 export class FScalar extends Scalar {}
 
 
-const IS_ON_MOBILE = (
-    (window.navigator.userAgent.includes('iPhone')
-        && window.navigator.userAgent.includes('Safari'))
-        || window.navigator.userAgent.includes('Android'));
+const IS_ON_ANDROID = window.navigator.userAgent.includes('Android');
+const IS_ON_IPHONE = window.navigator.userAgent.includes('iPhone');
+// const IS_ON_IPAD = window.navigator.userAgent.includes('iPad');
+const IS_ON_MOBILE = IS_ON_IPHONE || IS_ON_ANDROID
 
 export function isOnMobile() {
     return IS_ON_MOBILE;
 }
+
+export function isOnIPhone() {
+    return IS_ON_IPHONE;
+}
+
+export function isOnAndroid() {
+    return IS_ON_ANDROID;
+}
+
+// export function isOnIPad() {
+//     return IS_ON_IPAD;
+// }
 
 function getDefaultFiltering() {
     if (isOnMobile())

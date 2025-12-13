@@ -10,7 +10,7 @@ import {gl, gMainRenderWindow, TextureParams, Quad,
     saveQuadAsBMPImage,
     DEFAULT_MIN_FILTER,
     DEFAULT_MAG_FILTER,
-    isOnMobile} from "./gl-wrappers.js";
+    isOnMobile, isOnIPhone} from "./gl-wrappers.js";
 import { getShader } from "./shaders.js";
 import splitStep3D, {SimulationParameters} from "./split-step3d.js";
 import { VolumeRender } from "./volume-render.js";
@@ -341,6 +341,15 @@ let gVolRenderSliceWidth
         "sliceSideWidth"
     ).value);
 
+function disablePlanarSlicesIfOnIPhone() {
+    if (isOnIPhone()) {
+        let viewMode = document.getElementById("viewMode");
+        viewMode.innerHTML 
+            = `<option value=2 selected>Volume render</option>`;
+    }
+}
+
+disablePlanarSlicesIfOnIPhone();
 
 function adjustInitialVolumeRenderDimensionsIfWayTooBigToHandle() {
     if (isOnMobile()) {
@@ -1237,8 +1246,12 @@ let gHoveringMessageOpacity = 1.0;
 
 function decreaseOpacityOfHoveringMessage() {
     if (gHoveringMessageOpacity > 0.0) {
+        let deltaT = 0.1;
+        if (gUserDeltaTs.length > 0)
+            deltaT = gUserDeltaTs[gUserDeltaTs.length - 1];
         gHoveringMessageOpacity = Math.max(
-            0.0, gHoveringMessageOpacity - 0.02
+            0.0, 
+            gHoveringMessageOpacity - 0.2*deltaT
         );
         document.getElementById("hoveringMessageElements").style.opacity
                 = `${gHoveringMessageOpacity}`;

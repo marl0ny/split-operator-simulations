@@ -10,6 +10,18 @@
     </head>
 	<body style="background-color: rgb(255, 255, 255);">
 		</div>
+		    <div id="hoveringStatsElements" style="position: relative; z-index: 10;">
+				<div id="stats" style="position: absolute; top: 0px; right: 0px; width: 200px;">
+					<label id="hoveringStats" 
+						style="color: white;"></label>
+				</div>
+			</div>
+			<div id="hoveringMessageElements" style="position: relative; z-index: 10;">
+				<div id="message" style="position: absolute; top: 0px; right: 0px; width: 200px;">
+					<label id="hoveringMessage" 
+						style="color: white;"></label>
+				</div>
+			</div>
 			 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr;">
 				<div style="grid-column: 1; /*background-color: rgb(200, 200, 200);*/">
 					<label><a id="aLink" style="color: rgb(100, 100, 100); text-align: center; /*text-decoration-line: none;*/">Source</a></label><br>
@@ -179,7 +191,6 @@
 			</div>
 			<div> <img id="image" hidden="true"> </div>
 			<div> <canvas id="imageCanvas" hidden="true"> </div>
-		<script>const LENGTH=256;</script>
 		<script type="module" src="./scripts/sim2d.js"></script>
 	</body>
 </html>
