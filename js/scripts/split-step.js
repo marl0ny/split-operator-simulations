@@ -11,6 +11,10 @@ let gPrograms = {
     splitStepSpatial: 
         Quad.makeProgramFromSource(
             getShader('./shaders/split-step/spatial.frag')
+        ),
+    mul:
+        Quad.makeProgramFromSource(
+            getShader('./shaders/util/cmul.frag')
         )
 };
 
@@ -30,6 +34,72 @@ export function initializeDefaultKineticEnergy(
         }
     }
     dst.substituteArray(keArr);
+}
+
+export function 
+initializeDefaultKineticEnergyExponential(
+    dst, simulationWidth, simulationHeight, dt, m, hbar) {
+    let width = dst.width, height = dst.height;
+    let keArr = new Float32Array(2*width*height);
+    // console.log('dt, m, hbar', dt, m, hbar);
+    for (let i = 0; i < height; i++) {
+        for (let j = 0; j < width; j++) {
+            let iFreq = (i < height/2)? i: -height + i;
+            let jFreq = (j < width/2)? j: -width + j;
+            let px = 2.0*PI*jFreq/simulationWidth;
+            let py = 2.0*PI*iFreq/simulationHeight;
+            let ke = (px*px + py*py)/(2.0*m);
+            let reAngle = dt.imag*ke/hbar;
+            let imAngle = -dt.real*ke/hbar;
+            let reKe = Math.exp(reAngle)*Math.cos(imAngle);
+            let imKe = Math.exp(reAngle)*Math.sin(imAngle);
+            keArr[2*(i*width + j)] = reKe;
+            keArr[2*(i*width + j) + 1] = imKe;
+        }
+    }
+    dst.substituteArray(keArr);
+}
+
+export function 
+initializeKineticEnergyExponential(
+    dst, kineticEnergy, dt, hbar) {
+    let width = dst.width, height = dst.height;
+    let kineticEnergyArr = kineticEnergy.asFloat32Array();
+    for (let i = 0; i < height; i++) {
+        for (let j = 0; j < width; j++) {
+            let reKE = kineticEnergyArr[2*(i*width + j)];
+            let imKE = kineticEnergyArr[2*(i*width + j) + 1];
+            let reAngle = (dt.real*imKE + dt.imag*reKE)/hbar;
+            let imAngle = (-dt.real*reKE + dt.imag*imKE)/hbar;
+            let reKEExp = Math.exp(reAngle)*Math.cos(imAngle);
+            let imKEExp = Math.exp(reAngle)*Math.sin(imAngle);
+            kineticEnergyArr[2*(i*width + j)] = reKEExp;
+            kineticEnergyArr[2*(i*width + j) + 1] = imKEExp;
+        }
+    }
+    dst.substituteArray(keArr);
+}
+
+export function
+initializePotentialExponential(
+    dst, potential, dt, hbar
+) {
+    let width = dst.width, height = dst.height;
+    let potentialArr = potential.asFloat32Array();
+    for (let i = 0; i < height; i++) {
+        for (let j = 0; j < width; j++) {
+            let reV = potentialArr[2*(i*width + j)];
+            let imV = potentialArr[2*(i*width + j) + 1];
+            let reAngle = (dt.real*imV + dt.imag*reV)/hbar;
+            let imAngle = (-dt.real*reV + dt.imag*imV)/hbar;
+            let reVExp = Math.exp(reAngle)*Math.cos(imAngle);
+            let imVExp = Math.exp(reAngle)*Math.sin(imAngle);
+            potentialArr[2*(i*width + j)] = reVExp;
+            potentialArr[2*(i*width + j) + 1] = imVExp;
+        }
+    }
+    dst.substituteArray(potentialArr);
+
 }
 
 export class SimulationParameters {
@@ -97,4 +167,21 @@ export default function splitStep(psiF, psiI,
     splitStepMomentum(psiF, psiI, kineticEnergy, simParams);
     ifft2D(psiI, psiF);
     splitStepSpatial(psiF, psiI, potential, spatialSimParams);
+}
+
+export function splitStepWithExponentialStepOperatorsAsParameters(
+    psiF, psiI,
+    kineticExponential, potentialExponential
+) {
+    psiF.draw(
+        gPrograms.mul,
+        {tex1: psiI, tex2: potentialExponential});
+    fft2D(psiI, psiF);
+    psiF.draw(
+        gPrograms.mul,
+        {tex1: psiI, tex2: kineticExponential});
+    ifft2D(psiI, psiF);
+    psiF.draw(
+        gPrograms.mul,
+        {tex1: psiI, tex2: potentialExponential});
 }

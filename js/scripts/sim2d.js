@@ -9,7 +9,11 @@ import { gl, gMainRenderWindow, TextureParams, RenderTarget,
          DEFAULT_MIN_FILTER, DEFAULT_MAG_FILTER,
          isOnAndroid} from "./gl-wrappers.js";
 import splitStep, { 
-    SimulationParameters 
+    initializeDefaultKineticEnergyExponential,
+    initializeKineticEnergyExponential,
+    initializePotentialExponential,
+    SimulationParameters, 
+    splitStepWithExponentialStepOperatorsAsParameters
 } from "./split-step.js";
 import makeSurface, { makeSurfaceProgram } from "./surface.js";
 import { 
@@ -108,6 +112,11 @@ const TEX_PARAMS_SIM2 = new TextureParams(
 )
 // console.log('texture test', TEX_PARAMS_SIM.equals(TEX_PARAMS_SIM2));
 
+function usePreComputedExpStepOperators() {
+    // return true;
+    return isOnAndroid();
+}
+
 class Frames {
     constructor() {
         this.target = gMainRenderWindow;
@@ -149,6 +158,11 @@ class Frames {
             this.kineticEnergy.width, this.kineticEnergy.height,
             1.0
         );*/
+
+        if (usePreComputedExpStepOperators()) {
+            this.kineticExpStepOp = null;
+            this.potentialExpStepOp = null;
+        }
     }
 }
 
@@ -285,6 +299,15 @@ function timeStepRealCallback(value) {
     gSimParams.dt.real = reDt;
     document.getElementById("timeStepRealLabel").textContent
         = `Re(\u0394t) = ${reDt}`;
+    if (usePreComputedExpStepOperators() && 
+        gFrames.kineticExpStepOp !== null &&
+        gFrames.potentialExpStepOp !== null) {
+        initializePotentialExponential(
+            gFrames.potentialExpStepOp, gFrames.pot,
+            mul(new Complex(0.5, 0.0), gSimParams.dt),
+            gSimParams.hbar
+        );
+    }
 }
 timeStepRealCallback(document.getElementById("timeStepReal").value);
 document.getElementById("timeStepReal").addEventListener(
@@ -332,6 +355,15 @@ function timeStepImagCallback(value) {
     gSimParams.dt.imag = imDt;
     document.getElementById("timeStepImagLabel").textContent
         = `Im(\u0394t) = ${imDt}`;
+    if (usePreComputedExpStepOperators() && 
+        gFrames.kineticExpStepOp !== null &&
+        gFrames.potentialExpStepOp !== null) {
+        initializePotentialExponential(
+            gFrames.potentialExpStepOp, gFrames.pot,
+            mul(new Complex(0.5, 0.0), gSimParams.dt),
+            gSimParams.hbar
+        );
+    }
 }
 timeStepImagCallback(document.getElementById("timeStepImag").value);
 document.getElementById("timeStepImag").addEventListener(
@@ -872,6 +904,12 @@ function mouseSketchPotential(e, drawStrength) {
          amplitude: drawStrength}
     );
     gFrames.pot.draw(GLSL_PROGRAMS.copy, {tex: gFrames.pot2});
+    if (usePreComputedExpStepOperators()) {
+        initializePotentialExponential(
+            gFrames.potentialExpStepOp,
+            gFrames.pot, mul(new Complex(0.5, 0.0), 
+            gSimParams.dt), gSimParams.hbar);
+    }
     gMousePosition = xy;
 }
 
@@ -887,6 +925,12 @@ function touchSketchPotential(e, drawStrength) {
                 amplitude: drawStrength}
         );
         gFrames.pot.draw(GLSL_PROGRAMS.copy, {tex: gFrames.pot2});
+        if (usePreComputedExpStepOperators()) {
+            initializePotentialExponential(
+                gFrames.potentialExpStepOp,
+                gFrames.pot, mul(new Complex(0.5, 0.0), 
+                gSimParams.dt), gSimParams.hbar);
+        }
     }
 }
 
@@ -1076,6 +1120,12 @@ document.getElementById("uploadImage").addEventListener(
             gFrames.extra.substituteArray(imageData);
             gFrames.pot.draw(GLSL_PROGRAMS.copyFlip, 
                 {tex: gFrames.extra});
+            if (usePreComputedExpStepOperators()) {
+                initializePotentialExponential(
+                    gFrames.potentialExpStepOp,
+                    gFrames.pot, mul(new Complex(0.5, 0.0), 
+                    gSimParams.dt), gSimParams.hbar);
+            }
         }
         let promiseFunc = () => {
             if (im.width === 0 && im.height === 0) {
@@ -1119,6 +1169,13 @@ function refreshPotential() {
                 height: new Complex(gFrames.pot.height, 0.0),
                 applyClipping: gClipPotential}
         );
+        if (usePreComputedExpStepOperators() && 
+            gFrames.potentialExpStepOp !== null) {
+            initializePotentialExponential(
+                gFrames.potentialExpStepOp,
+                gFrames.pot, mul(new Complex(0.5, 0.0), 
+                gSimParams.dt), gSimParams.hbar);
+        }
     });
     if (gTextEditPotential.isTimeDependent) {
         gFrames.pot.draw(
@@ -1129,6 +1186,12 @@ function refreshPotential() {
                 applyClipping: gClipPotential
             }
         );
+        if (usePreComputedExpStepOperators()) {
+            initializePotentialExponential(
+                gFrames.potentialExpStepOp,
+                gFrames.pot, mul(new Complex(0.5, 0.0), 
+                gSimParams.dt), gSimParams.hbar);
+        }
     }
 }
 
@@ -1299,6 +1362,25 @@ function animate() {
     displayAverageFPS();
     refreshPotential();
     applyRotationAlongZAxisOfSurface(gAutoRotationVelocity);
+    if (usePreComputedExpStepOperators() && 
+        (gFrames.kineticExpStepOp === null || 
+         gFrames.potentialExpStepOp === null) 
+        ) {
+        gFrames.kineticExpStepOp = new Quad(TEX_PARAMS_SIM);
+        gFrames.potentialExpStepOp = new Quad(TEX_PARAMS_SIM);
+        initializeDefaultKineticEnergyExponential(
+            gFrames.kineticExpStepOp, 
+            gSimParams.dimensions.ind[0],
+            gSimParams.dimensions.ind[1],
+            gSimParams.dt, gSimParams.m, gSimParams.hbar
+        );
+        initializePotentialExponential(
+            gFrames.potentialExpStepOp,
+            gFrames.pot, 
+            mul(new Complex(0.5, 0.0), gSimParams.dt),
+            gSimParams.hbar
+        );
+    }
     gTextEditNonlinear.refresh(() => {
         gUseNonlinear = true;
     });
@@ -1321,6 +1403,12 @@ function animate() {
                     gSimParams.gridDimensions.ind[0],
                     gSimParams.gridDimensions.ind[1])}
         );
+        if (usePreComputedExpStepOperators()) {
+            initializeKineticEnergyExponential(
+                gFrames.kineticExpStepOp,
+                gFrames.kineticEnergy, dt, hbar
+            );
+        }
     });
     for (let i = 0; i < gStepsPerFrame; i++) {
         let kineticEnergy = gFrames.kineticEnergy;
@@ -1344,10 +1432,24 @@ function animate() {
                 }
             );
             potential = gFrames.pot2;
+            if (usePreComputedExpStepOperators() && 
+                gFrames.potentialExpStepOp !== null) {
+                initializePotentialExponential(
+                    gFrames.potentialExpStepOp, potential,
+                    mul(new Complex(0.5, 0.0), gSimParams.dt), 
+                    gSimParams.hbar
+                );
+            }
         }
-        splitStep(gFrames.psi2, gFrames.psi1,
-                  kineticEnergy, potential, gSimParams,
-                  (gShowPsiP)? gFrames.psiP: null);
+        if (usePreComputedExpStepOperators())
+            splitStepWithExponentialStepOperatorsAsParameters(
+                gFrames.psi2, gFrames.psi1,
+                gFrames.kineticExpStepOp, gFrames.potentialExpStepOp
+            );
+        else
+            splitStep(gFrames.psi2, gFrames.psi1,
+                      kineticEnergy, potential, gSimParams,
+                      (gShowPsiP)? gFrames.psiP: null);
         [gFrames.psi1, gFrames.psi2] 
             = [gFrames.psi2, gFrames.psi1];
         gSimParams.t = add(gSimParams.t, 
