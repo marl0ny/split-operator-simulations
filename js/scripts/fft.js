@@ -104,7 +104,8 @@ function doReverseBitSortOnCPU() {
 }
 
 function doFullCPUFallback() {
-    return false;
+    // return false;
+    return isOnAndroid();
 }
 
 function fftIterSquare(iterQuads, isInverse) {

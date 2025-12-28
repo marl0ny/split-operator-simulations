@@ -121,7 +121,8 @@ export function isOnAndroid() {
 // }
 
 function getDefaultFiltering() {
-    if (isOnMobile())
+    // if (isOnMobile())
+    if (isOnIPhone())
         return gl.NEAREST;
     // return gl.NEAREST;
     return gl.LINEAR;

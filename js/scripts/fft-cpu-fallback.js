@@ -81,37 +81,6 @@ export function radix2FFTSquareCPU(arr, size, isInverse) {
     squareComplexTransposeInPlace(arr, size);
 }
 
-
-class ComplexArray3D {
-    _data;
-    _nx;
-    _ny;
-    _nz;
-    _dimensions2D;
-    _dimensions3D;
-    constructor(data, nx, ny, nz) {
-        this._dimensions3D = new IVec3(nx, ny, nz);
-        this._dimensions2D = get2DFrom3DDimensions(new IVec3(nx, ny, nz));
-        this._nz = nz;
-        this._ny = ny;
-        this._nx = nx;
-        this._data = data;
-    }
-    at(i, j, k) {
-        return [
-            this._data[2*(i*this._ny*this._nx + j*this._nx + k)],
-            this._data[2*(i*this._ny*this._nx + j*this._nx + k) + 1],
-        ];
-    }
-    set(i, j, k, reVal, imVal) {
-        this._data[2*(i*this._ny*this._nx + j*this._nx + k)] = reVal;
-        this._data[2*(i*this._ny*this._nx + j*this._nx + k) + 1] = imVal;
-    }
-    getRawArray() {
-        return this._data;
-    }
-}
-
 function swapOutermostBlock(arr, i, j, texDimensions2D, texDimensions3D) {
     let uvwIndexI = new Vec3((i + 0.5)/nz, 0.0, 0.0);
     let uvIndexI = get2DFrom3DTextureCoordinates(uvwIndexI);
@@ -166,6 +135,10 @@ function reverseBitSortOutermostIndex3D(arr, texDimensions2D, texDimensions3D) {
         }
 
     }
+}
+
+function transposeXYInplaceCube(arr, size, indices) {
+    
 }
 
 function reverseBitSort3D(arr, nx, ny, nz) {
