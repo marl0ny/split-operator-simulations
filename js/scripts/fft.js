@@ -14,8 +14,10 @@ https://websites.pmc.ucsc.edu/~fnimmo/eart290c_17/NumericalRecipesinF77.pdf
 
 */
 import {gl, TextureParams, IScalar, Quad, 
-    DEFAULT_MIN_FILTER, DEFAULT_MAG_FILTER} from "./gl-wrappers.js";
+    DEFAULT_MIN_FILTER, DEFAULT_MAG_FILTER, isOnAndroid
+    } from "./gl-wrappers.js";
 import SHADERS, { getShader } from "./shaders.js";
+import { radix2FFTSquareCPU, reverseBitSortSquareCPU  } from "./fft-cpu-fallback.js";
 
 let gPrograms = {
     fftIter: Quad.makeProgramFromSource(
@@ -94,6 +96,15 @@ function refreshCosTable(n) {
         gCosTable.quad.substituteArray(gCosTable.ind);
         // console.log('Finished refreshing cos table.');
     }
+}
+
+function doReverseBitSortOnCPU() {
+    // return true;
+    return isOnAndroid();
+}
+
+function doFullCPUFallback() {
+    return false;
 }
 
 function fftIterSquare(iterQuads, isInverse) {
@@ -180,7 +191,27 @@ export function fft2D(dst, src) {
     // console.log('fft2D...');
     refreshIterQuads(src.format, src.width, src.height);
     let iterQuads1 = [gIterQuads[0], gIterQuads[1]];
-    revBitSort2(iterQuads1[0], src);
+    if (doFullCPUFallback()) {
+        let srcArr = src.asFloat32Array();
+        if (dst.width === dst.height) {
+            radix2FFTSquareCPU(srcArr, dst.width, false);
+            dst.substituteArray(srcArr);
+        } else {
+            // TODO!
+        }
+        return;
+    }
+    if (doReverseBitSortOnCPU()) {
+        let srcArr = src.asFloat32Array();
+        if (src.width === src.height) {
+            reverseBitSortSquareCPU(srcArr, src.width);
+        } else {
+            // TODO!
+        }
+        iterQuads1[0].substituteArray(srcArr);
+    } else {
+        revBitSort2(iterQuads1[0], src);
+    }
     if (src.width === src.height) {
         // console.log('Using square fft.');
         let iterQuads2 = fftIterSquare(iterQuads1, false);
@@ -194,9 +225,29 @@ export function fft2D(dst, src) {
 }
 
 export function ifft2D(dst, src) {
+    if (doFullCPUFallback()) {
+        let srcArr = src.asFloat32Array();
+        if (src.width === src.height) {
+            radix2FFTSquareCPU(srcArr, dst.width, true);
+            dst.substituteArray(srcArr);
+        } else {
+            // TODO!
+        }
+        return;
+    }
     refreshIterQuads(src.format, src.width, src.height);
     let iterQuads1 = [gIterQuads[0], gIterQuads[1]];
-    revBitSort2(iterQuads1[0], src);
+    if (doReverseBitSortOnCPU()) {
+        let srcArr = src.asFloat32Array();
+        if (src.width === src.height) {
+            reverseBitSortSquareCPU(srcArr, src.width);
+        } else {
+            // TODO!
+        }
+        iterQuads1[0].substituteArray(srcArr);
+    } else {
+        revBitSort2(iterQuads1[0], src);
+    }
     if (src.width === src.height) {
         let iterQuads2 = fftIterSquare(iterQuads1, true);
         dst.draw(gPrograms.copy, {tex: iterQuads2[0]});
