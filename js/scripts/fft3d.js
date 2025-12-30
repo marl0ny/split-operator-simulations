@@ -16,8 +16,9 @@ https://websites.pmc.ucsc.edu/~fnimmo/eart290c_17/NumericalRecipesinF77.pdf
 import {gl, TextureParams, 
         IScalar, MultidimensionalDataQuad, Quad,
         get2DFrom3DDimensions,
-        DEFAULT_MIN_FILTER, DEFAULT_MAG_FILTER
+        DEFAULT_MIN_FILTER, DEFAULT_MAG_FILTER, isOnAndroid
         } from "./gl-wrappers.js";
+import { radix2FFTCubeCPU } from "./fft-cpu-fallback.js"
 import SHADERS, { getShader } from "./shaders.js";
 
 let gPrograms = {
@@ -103,6 +104,11 @@ function refreshCosTable(n) {
         gCosTable.quad.substituteArray(gCosTable.ind);
         // console.log('Finished refreshing cos table.');
     }
+}
+
+function doFullCPUFallback() {
+    // return true;
+    return isOnAndroid();
 }
 
 function fftIterCube(iterQuads, isInverse) {
@@ -197,6 +203,17 @@ function refreshIterQuads(format, texDimensions3D) {
 }
 
 export function fft3D(dst, src) {
+    if (doFullCPUFallback()) {
+        let srcArr = src.asFloat32Array();
+        if (src.dimensions3D.ind[0] === src.dimensions3D.ind[1]
+            && src.dimensions3D.ind[1] === src.dimensions3D.ind[2]) {
+            radix2FFTCubeCPU(srcArr, src.dimensions3D.ind[0], false);
+        } else {
+            // TODO!
+        }
+        dst.substituteArray(srcArr);
+        return
+    }
     refreshIterQuads(src.format, src.dimensions3D);
     let iterQuads1 = [gIterQuads[0], gIterQuads[1]];
     revBitSort2(iterQuads1[0], src);
@@ -214,6 +231,17 @@ export function fft3D(dst, src) {
 }
 
 export function ifft3D(dst, src) {
+    if (doFullCPUFallback()) {
+        let srcArr = src.asFloat32Array();
+        if (src.dimensions3D.ind[0] === src.dimensions3D.ind[1]
+            && src.dimensions3D.ind[1] === src.dimensions3D.ind[2]) {
+            radix2FFTCubeCPU(srcArr, src.dimensions3D.ind[0], true);
+        } else {
+            // TODO!
+        }
+        dst.substituteArray(srcArr);
+        return
+    }
     refreshIterQuads(src.format, src.dimensions3D);
     let iterQuads1 = [gIterQuads[0], gIterQuads[1]];
     revBitSort2(iterQuads1[0], src);
