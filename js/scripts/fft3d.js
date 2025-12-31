@@ -18,7 +18,8 @@ import {gl, TextureParams,
         get2DFrom3DDimensions,
         DEFAULT_MIN_FILTER, DEFAULT_MAG_FILTER, isOnAndroid
         } from "./gl-wrappers.js";
-import { radix2FFTCubeCPU } from "./fft-cpu-fallback.js"
+import { radix2FFTCubeCPU, 
+        reverseBitSortCubeCPU } from "./fft-cpu-fallback.js"
 import SHADERS, { getShader } from "./shaders.js";
 
 let gPrograms = {
@@ -111,6 +112,14 @@ function doFullCPUFallback() {
     return isOnAndroid();
 }
 
+function doReverseBitSortOnCPU() {
+    return isOnAndroid();
+}
+
+function useCubeFFTForCubeDomain() {
+    return !isOnAndroid();
+}
+
 function fftIterCube(iterQuads, isInverse) {
     let texDimensions2D = iterQuads[1].textureDimensions;
     let texDimensions3D = iterQuads[1].dimensions3D;
@@ -125,7 +134,7 @@ function fftIterCube(iterQuads, isInverse) {
                 angleSign: (isInverse)? 1.0: -1.0,
                 scale: (isInverse && blockSize === size)? 1.0/size: 1.0,
                 size: size,
-                useCosTable: true,
+                useCosTable: false,
                 cosTableTex: gCosTable.quad,
                 texelDimensions2D: texDimensions2D,
                 texelDimensions3D: texDimensions3D
@@ -216,8 +225,21 @@ export function fft3D(dst, src) {
     }
     refreshIterQuads(src.format, src.dimensions3D);
     let iterQuads1 = [gIterQuads[0], gIterQuads[1]];
-    revBitSort2(iterQuads1[0], src);
-    if (src.dimensions3D.ind[0] === src.dimensions3D.ind[1]
+    if (doReverseBitSortOnCPU()) {
+        let srcArr = src.asFloat32Array();
+        if (src.dimensions3D.ind[0] === src.dimensions3D.ind[1]
+            && src.dimensions3D.ind[1] === src.dimensions3D.ind[2]) {
+            reverseBitSortCubeCPU(srcArr, src.dimensions3D.ind[0]);
+        } else {
+            // TODO
+        }
+        iterQuads1[0].substituteArray(srcArr);
+    } else {
+        revBitSort2(iterQuads1[0], src);
+    }
+    // revBitSort2(iterQuads1[0], src);
+    if (useCubeFFTForCubeDomain()
+        && src.dimensions3D.ind[0] === src.dimensions3D.ind[1]
         && src.dimensions3D.ind[1] === src.dimensions3D.ind[2]) {
         // console.log('Using fft cube.');
         let iterQuads2 = fftIterCube(iterQuads1, false);
@@ -244,8 +266,21 @@ export function ifft3D(dst, src) {
     }
     refreshIterQuads(src.format, src.dimensions3D);
     let iterQuads1 = [gIterQuads[0], gIterQuads[1]];
-    revBitSort2(iterQuads1[0], src);
-    if (src.dimensions3D.ind[0] === src.dimensions3D.ind[1]
+    if (doReverseBitSortOnCPU()) {
+        let srcArr = src.asFloat32Array();
+        if (src.dimensions3D.ind[0] === src.dimensions3D.ind[1]
+            && src.dimensions3D.ind[1] === src.dimensions3D.ind[2]) {
+            reverseBitSortCubeCPU(srcArr, src.dimensions3D.ind[0]);
+        } else {
+            // TODO
+        }
+        iterQuads1[0].substituteArray(srcArr);
+    } else {
+        revBitSort2(iterQuads1[0], src);
+    }
+    // revBitSort2(iterQuads1[0], src);
+    if (useCubeFFTForCubeDomain() 
+        && src.dimensions3D.ind[0] === src.dimensions3D.ind[1]
         && src.dimensions3D.ind[1] === src.dimensions3D.ind[2]) {
         let iterQuads2 = fftIterCube(iterQuads1, true);
         dst.draw(gPrograms.copy, {tex: iterQuads2[0]});

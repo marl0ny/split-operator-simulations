@@ -17,9 +17,9 @@ import {gl, TextureParams, IScalar, Quad,
     DEFAULT_MIN_FILTER, DEFAULT_MAG_FILTER, isOnAndroid
     } from "./gl-wrappers.js";
 import SHADERS, { getShader } from "./shaders.js";
-import { radix2FFTSquareCPU, radix2FFT2DDomainCPU, 
-    reverseBitSort2DDomainCPU, reverseBitSortSquareCPU,
-    } from "./fft-cpu-fallback.js";
+// import { radix2FFTSquareCPU, radix2FFT2DDomainCPU, 
+//     reverseBitSort2DDomainCPU, reverseBitSortSquareCPU,
+//     } from "./fft-cpu-fallback.js";
 
 let gPrograms = {
     fftIter: Quad.makeProgramFromSource(
@@ -100,12 +100,16 @@ function refreshCosTable(n) {
     }
 }
 
-function doReverseBitSortOnCPU() {
-    return isOnAndroid();
-}
+// function doReverseBitSortOnCPU() {
+//     return isOnAndroid();
+// }
 
-function doFullCPUFallback() {
-    return isOnAndroid();
+// function doFullCPUFallback() {
+//     return isOnAndroid();
+// }
+
+function useSquareFFTForSquareDomain() {
+    return !isOnAndroid();
 }
 
 function fftIterSquare(iterQuads, isInverse) {
@@ -120,7 +124,7 @@ function fftIterSquare(iterQuads, isInverse) {
                 angleSign: (isInverse)? 1.0: -1.0,
                 scale: (isInverse && blockSize === size)? 1.0/size: 1.0,
                 size: size,
-                useCosTable: true,
+                useCosTable: false,
                 cosTableTex: gCosTable.quad,
             }
         );
@@ -192,7 +196,7 @@ export function fft2D(dst, src) {
     // console.log('fft2D...');
     refreshIterQuads(src.format, src.width, src.height);
     let iterQuads1 = [gIterQuads[0], gIterQuads[1]];
-    if (doFullCPUFallback()) {
+    /* if (doFullCPUFallback()) {
         let srcArr = src.asFloat32Array();
         if (dst.width === dst.height)
             radix2FFTSquareCPU(srcArr, dst.width, false);
@@ -200,18 +204,18 @@ export function fft2D(dst, src) {
             radix2FFT2DDomainCPU(srcArr, dst.width, dst.height, false);
         dst.substituteArray(srcArr);
         return;
-    }
-    if (doReverseBitSortOnCPU()) {
+    } */
+    /* if (doReverseBitSortOnCPU()) {
         let srcArr = src.asFloat32Array();
         if (src.width === src.height)
             reverseBitSortSquareCPU(srcArr, src.width);
         else
             reverseBitSort2DDomainCPU(srcArr, src.width, src.height);
         iterQuads1[0].substituteArray(srcArr);
-    } else {
-        revBitSort2(iterQuads1[0], src);
-    }
-    if (src.width === src.height) {
+    } else { */
+    revBitSort2(iterQuads1[0], src);
+    // }
+    if (useSquareFFTForSquareDomain() && src.width === src.height) {
         // console.log('Using square fft.');
         let iterQuads2 = fftIterSquare(iterQuads1, false);
         dst.draw(gPrograms.copy, {tex: iterQuads2[0]});
@@ -224,7 +228,7 @@ export function fft2D(dst, src) {
 }
 
 export function ifft2D(dst, src) {
-    if (doFullCPUFallback()) {
+    /* if (doFullCPUFallback()) {
         let srcArr = src.asFloat32Array();
         if (src.width === src.height)
             radix2FFTSquareCPU(srcArr, dst.width, true);
@@ -232,20 +236,20 @@ export function ifft2D(dst, src) {
             radix2FFT2DDomainCPU(srcArr, dst.width, dst.height, true);
         dst.substituteArray(srcArr);
         return;
-    }
+    } */
     refreshIterQuads(src.format, src.width, src.height);
     let iterQuads1 = [gIterQuads[0], gIterQuads[1]];
-    if (doReverseBitSortOnCPU()) {
+    /* if (doReverseBitSortOnCPU()) {
         let srcArr = src.asFloat32Array();
         if (src.width === src.height)
             reverseBitSortSquareCPU(srcArr, src.width);
         else
             reverseBitSort2DDomainCPU(srcArr, src.width, src.height);
         iterQuads1[0].substituteArray(srcArr);
-    } else {
-        revBitSort2(iterQuads1[0], src);
-    }
-    if (src.width === src.height) {
+    } else { */
+    revBitSort2(iterQuads1[0], src);
+    // }
+    if (useSquareFFTForSquareDomain() && src.width === src.height) {
         let iterQuads2 = fftIterSquare(iterQuads1, true);
         dst.draw(gPrograms.copy, {tex: iterQuads2[0]});
         return;

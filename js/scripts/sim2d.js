@@ -7,13 +7,14 @@ import { gl, gMainRenderWindow, TextureParams, RenderTarget,
          sub,
          saveQuadAsBMPImage,
          DEFAULT_MIN_FILTER, DEFAULT_MAG_FILTER,
-         isOnAndroid} from "./gl-wrappers.js";
+         // isOnAndroid
+        } from "./gl-wrappers.js";
 import splitStep, { 
-    initializeDefaultKineticEnergyExponential,
-    initializeKineticEnergyExponential,
-    initializePotentialExponential,
+    // initializeDefaultKineticEnergyExponential,
+    // initializeKineticEnergyExponential,
+    // initializePotentialExponential,
     SimulationParameters, 
-    splitStepWithExponentialStepOperatorsAsParameters
+    // splitStepWithExponentialStepOperatorsAsParameters
 } from "./split-step.js";
 import makeSurface, { makeSurfaceProgram } from "./surface.js";
 import { 
@@ -98,8 +99,10 @@ const TEX_PARAMS_SQUARE_F32 = new TextureParams(
     DEFAULT_MIN_FILTER, DEFAULT_MAG_FILTER
 );
 
-const WIDTH = (isOnAndroid())? 128: 256;
-const HEIGHT = (isOnAndroid())? 128: 256;
+// const WIDTH = (isOnAndroid())? 128: 256;
+// const HEIGHT = (isOnAndroid())? 128: 256;
+const WIDTH = 256;
+const HEIGHT = 256;
 const TEX_PARAMS_SIM = new TextureParams(
     (gl.version === 2)? gl.RG32F: gl.RGBA32F, 
     WIDTH, HEIGHT,
@@ -286,10 +289,10 @@ let gTextEditKE
 
 let gStepsPerFrame = Number.parseInt(
     document.getElementById("stepsPerFrame").value);
-if (isOnAndroid()) {
-    gStepsPerFrame = Math.max(0, gStepsPerFrame - 1);
-    document.getElementById("stepsPerFrame").value = gStepsPerFrame;
-}
+// if (isOnAndroid()) {
+//     gStepsPerFrame = Math.max(0, gStepsPerFrame - 1);
+//     document.getElementById("stepsPerFrame").value = gStepsPerFrame;
+// }
 document.getElementById("stepsPerFrameLabel").textContent 
     = `Updates/frame: ${gStepsPerFrame}`;
 document.getElementById("stepsPerFrame").addEventListener(
@@ -1240,9 +1243,9 @@ function showHoveringMessage(message) {
     hoveringMessage.textContent = message;
 }
 
-if (isOnAndroid())
-    showHoveringMessage(
-        `Android device detected; ` + `low resolution mode enabled.`);
+// if (isOnAndroid())
+//     showHoveringMessage(
+//         `Android device detected; ` + `low resolution mode enabled.`);
 
 
 function showPsiPWindow() {
