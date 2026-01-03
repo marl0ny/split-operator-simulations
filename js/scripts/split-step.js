@@ -20,6 +20,73 @@ let gPrograms = {
 
 const PI = 3.141592653589793;
 
+export class SimulationParameters {
+    t;
+    dt;
+    m;
+    hbar;
+    dimensions; // simulation dimensions of the 2D rectangular domain
+    gridDimensions; // number of points used along each dimension
+    constructor(hbar, m, dt, dimensions, gridDimensions) {
+        this.t = new Complex(0.0, 0.0);
+        this.dt = dt;
+        this.m = m;
+        this.hbar = hbar;
+        this.dimensions = dimensions;
+        this.gridDimensions = gridDimensions;
+    }
+}
+
+function splitStepSpatial(psiF, psiI, potential, simParams) {
+    let params = simParams;
+    psiF.draw(
+        gPrograms.splitStepSpatial,
+        {dt: params.dt, m: params.m, hbar: params.hbar,
+         potentialTex: potential, psiTex: psiI
+        }
+    );
+}
+
+function splitStepMomentum(psiF, psiI, kineticEnergy, simParams) {
+    let params = simParams;
+    let uniforms = {
+        numberOfDimensions: new IScalar(2),
+        texelDimensions2D: params.gridDimensions,
+        dimensions2D: params.dimensions,
+        dt: params.dt,
+        m: params.m, hbar: params.hbar,
+        psiTex: psiI,
+        useCustomKETex: false,
+    };
+    if (kineticEnergy !== null) {
+        uniforms.useCustomKETex = true;
+        uniforms['customKETex'] = kineticEnergy;
+    }
+    psiF.draw(
+        gPrograms.splitStepMomentum,
+        uniforms
+    )
+}
+
+export default function splitStep(psiF, psiI,
+                                  kineticEnergy, potential,
+                                  simParams, 
+                                  momentumPsiOutput=null) {
+    let spatialSimParams = new SimulationParameters(
+        simParams.hbar, simParams.m, div(simParams.dt, 2.0),
+        simParams.dimensions, simParams.gridDimensions
+    );
+    splitStepSpatial(psiF, psiI, potential, spatialSimParams);
+    fft2D(psiI, psiF);
+    if (momentumPsiOutput !== null) {
+        console.log(momentumPsiOutput, psiI);
+        fftShift(momentumPsiOutput, psiI);
+    }
+    splitStepMomentum(psiF, psiI, kineticEnergy, simParams);
+    ifft2D(psiI, psiF);
+    splitStepSpatial(psiF, psiI, potential, spatialSimParams);
+}
+
 export function initializeDefaultKineticEnergy(
     dst, simulationWidth, simulationHeight, m) {
     let width = dst.width, height = dst.height;
@@ -100,73 +167,6 @@ initializePotentialExponential(
     }
     dst.substituteArray(potentialArr);
 
-}
-
-export class SimulationParameters {
-    t;
-    dt;
-    m;
-    hbar;
-    dimensions; // simulation dimensions of the 2D rectangular domain
-    gridDimensions; // number of points used along each dimension
-    constructor(hbar, m, dt, dimensions, gridDimensions) {
-        this.t = new Complex(0.0, 0.0);
-        this.dt = dt;
-        this.m = m;
-        this.hbar = hbar;
-        this.dimensions = dimensions;
-        this.gridDimensions = gridDimensions;
-    }
-}
-
-function splitStepSpatial(psiF, psiI, potential, simParams) {
-    let params = simParams;
-    psiF.draw(
-        gPrograms.splitStepSpatial,
-        {dt: params.dt, m: params.m, hbar: params.hbar,
-         potentialTex: potential, psiTex: psiI
-        }
-    );
-}
-
-function splitStepMomentum(psiF, psiI, kineticEnergy, simParams) {
-    let params = simParams;
-    let uniforms = {
-        numberOfDimensions: new IScalar(2),
-        texelDimensions2D: params.gridDimensions,
-        dimensions2D: params.dimensions,
-        dt: params.dt,
-        m: params.m, hbar: params.hbar,
-        psiTex: psiI,
-        useCustomKETex: false,
-    };
-    if (kineticEnergy !== null) {
-        uniforms.useCustomKETex = true;
-        uniforms['customKETex'] = kineticEnergy;
-    }
-    psiF.draw(
-        gPrograms.splitStepMomentum,
-        uniforms
-    )
-}
-
-export default function splitStep(psiF, psiI,
-                                  kineticEnergy, potential,
-                                  simParams, 
-                                  momentumPsiOutput=null) {
-    let spatialSimParams = new SimulationParameters(
-        simParams.hbar, simParams.m, div(simParams.dt, 2.0),
-        simParams.dimensions, simParams.gridDimensions
-    );
-    splitStepSpatial(psiF, psiI, potential, spatialSimParams);
-    fft2D(psiI, psiF);
-    if (momentumPsiOutput !== null) {
-        console.log(momentumPsiOutput, psiI);
-        fftShift(momentumPsiOutput, psiI);
-    }
-    splitStepMomentum(psiF, psiI, kineticEnergy, simParams);
-    ifft2D(psiI, psiF);
-    splitStepSpatial(psiF, psiI, potential, spatialSimParams);
 }
 
 export function splitStepWithExponentialStepOperatorsAsParameters(
