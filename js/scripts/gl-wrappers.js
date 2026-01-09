@@ -104,6 +104,9 @@ const IS_ON_IPHONE = window.navigator.userAgent.includes('iPhone');
 // const IS_ON_IPAD = window.navigator.userAgent.includes('iPad');
 const IS_ON_MOBILE = IS_ON_IPHONE || IS_ON_ANDROID
 
+const USE_LOW_RESOLUTION 
+    = document.querySelector("div#useLowResolution") !== null;
+
 export function isOnMobile() {
     return IS_ON_MOBILE;
 }
@@ -116,13 +119,17 @@ export function isOnAndroid() {
     return IS_ON_ANDROID;
 }
 
+export function useLowResolution() {
+    return USE_LOW_RESOLUTION;
+}
+
 // export function isOnIPad() {
 //     return IS_ON_IPAD;
 // }
 
 function getDefaultFiltering() {
     // if (isOnMobile())
-    if (isOnIPhone())
+    if (isOnIPhone() || useLowResolution())
         return gl.NEAREST;
     // return gl.NEAREST;
     return gl.LINEAR;

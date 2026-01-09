@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<html>
+	<head>
+        <!--
+			Originally, I had numerous issues trying to get consistent and proper scaling
+			on mobile devices. To fix this, it turns out that the viewport through the meta tag 
+			needs to be explicitly set to use the device's screen width,
+			as this is not done by default. 
+			As well as this, some browser specific adjustments need to be turned off.
+			I personally found this blog post by S. Sutoris helpful:
+			https://www.rismosch.com/article?id=css-on-mobile-and-the-most-important-header-tag
+			And of course I looked at the MDN documentation:
+			https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/meta/name/viewport
+		-->
+        <style>
+            body {
+                text-size-adjust: none; 
+                -moz-text-size-adjust: none;}
+            h2 {font-family:Arial, Helvetica, sans-serif; }
+            label {font-family:Arial, Helvetica, sans-serif; }
+			text {font-family:Arial, Helvetica, sans-serif; }
+            @media (orientation: landscape) {
+               .outer-div {display: grid; grid-template-columns: 1fr 1fr 1fr; }
+               .inner-div1 {grid-column: 1; }
+               .inner-div2 {grid-column: 2; }
+               .inner-div3 {grid-column: 3; resize: vertical; padding: 10px; }
+            }
+            @media (orientation: portrait) { 
+               .outer-div {display: grid; grid-template-rows: repeat(3, auto); }
+               .inner-div1 {grid-row: 2; }
+               .inner-div2 {grid-row: 1; } 
+               .inner-div3 {grid-row: 3; } 
+            } 
+        </style>
+        <title>Interactive Schrödinger Equation Solver Using the Split-Operator Method in 3D</title>
+    </head>
+	<body style="background-color: rgb(255, 255, 255);">
+        <!--
+			How to get floating divs to work:
+			https://stackoverflow.com/q/2006134 by eric-d-bari
+			https://stackoverflow.com/a/2006162 by marcgg
+		!-->
+        <div id="hoveringStatsElements" style="position: relative; z-index: 10;">
+            <div id="stats" style="position: absolute; top: 0px; right: 0px; width: 200px;">
+                <label id="hoveringStats" 
+                    style="color: white;"></label>
+            </div>
+        </div>
+        <div id="hoveringMessageElements" style="position: relative; z-index: 10;">
+            <div id="message" style="position: absolute; top: 0px; right: 0px; width: 200px;">
+                <label id="hoveringMessage" 
+                    style="color: white;"></label>
+            </div>
+        </div>
+        <div class="outer-div">
+            <div class="inner-div1">
+                <!--max-width:55%;!-->
+                <label><a id="aLink" style="color: rgb(100, 100, 100); text-decoration-line: none;">Source</a></label><br>
+                <label for="stepsPerFrame" id="stepsPerFrameLabel">Updates/frame</label>
+                <br>
+                <input type="range" id="stepsPerFrame" min="0" max="4.0" value="0.0"
+                    style="width: 95%;">
+                <br>
+                <label id="fps">fps: </label>
+                <hr style="width: 95%; justify-self: right;"/>
+                <button type="button"
+					aria-pressed="true" id="rotateViewButton">Rotate view</button>
+				<br>
+                <button type="button"
+					aria-pressed="true" id="newWaveFuncButton">New Ψ</button>
+				<br>
+                <button type="button"
+					aria-pressed="true" id="sketchVButton">Sketch V</button>
+                <button type="button"
+					aria-pressed="true" id="eraseVButton">Erase V</button>
+				<br>
+                <label for="sketchWidth" id="sketchWidthLabel">Sketch size</label>
+				<br>
+                <input type="range" id="sketchWidth" name="sketchWidth"
+                min="0" max="100" value="50"
+                style="width: 95%;"/>
+                <br>
+                <label for="sketchDepth" id="sketchDepthLabel">Sketch depth</label>
+				<br>
+                <input type="range" id="sketchDepth" name="sketchDepth"
+                min="-40" max="40" value="0"
+                style="width: 95%;"/>
+                <br>
+                <hr style="width: 95%; justify-self: left;"/>
+                <div id="brightnessControls" style="border: 10px; border-color: black;">
+                    <!--<label>Brightness:</label><br>!-->
+                    <input type="checkbox" id="showWavefunction" checked="true"></input>
+                    <label for="showWavefunction">Show Ψ(<b>r</b>)</label><br>
+                    <input type="checkbox" id="showWavefunctionPhase" checked="true"></input>
+                    <label for="showWavefunctionPhase">Colour phase</label><br>
+                    <label for="wavefunctionBrightness">Ψ opacity:</label><br>
+                    <input type="range" id="wavefunctionBrightness"
+                        min="5" max="100" value="10"
+                        style="width: 95%;"/>
+                    <label for="absPsiVisualization">Map opacity from: </label>
+                    <select id="absPsiVisualization">
+                        <option value=1>|Ψ(<b>r</b>)|</option>
+                        <option value=2>|Ψ(<b>r</b>)|²</option>
+                        <option value=-1>1 / |Ψ(<b>r</b>)|</option>
+                        <!--<option value=512>512x512x512</option>!-->
+                    </select><br>
+                    <input type="checkbox" id="showPotential" checked="false"></input>
+                    <label for="showPotential">Show V(<b>r</b>)</label><br>
+                    <label for="potentialBrightness">V(<b>r</b>)  opacity:</label>
+                    <br>
+                    <input type="range" id="potentialBrightness"
+                        min="0" max="100" value="10"
+                    style="width: 95%;"/>
+                    <br>
+                </div>
+                <hr style="width: 95%; justify-self: left;"/>
+                <label id="viewModeLabel" for="viewMode">View type: 
+                </label>
+                <!--default should be volume render-->
+                <select id="viewMode">
+                    <option value=1>Planar slices</option>
+                    <option value=2 selected>Volume render</option>
+                </select><br>
+                <div id="planarSlicesControls">
+                    <label for="zIndex" id="zIndexLabel">xy slice - z offset:</label>
+                    <br>
+                    <input type="range" id="zIndex"
+                        min="0" max="255" value="127"
+                    style="width: 95%;"/>
+                    <br>
+                    <label for="xIndex" id="xIndexLabel">yz slice - x offset:</label>
+                    <br>
+                    <input type="range" id="xIndex"
+                        min="0" max="255" value="127"
+                    style="width: 95%;"/>
+                    <br>
+                    <label for="yIndex" id="yIndexLabel">zx slice - y offset:</label>
+                    <br>
+                    <input type="range" id="yIndex"
+                        min="0" max="255" value="127"
+                    style="width: 95%;"/>
+                    <br>
+                </div>
+                <div id="volumeRenderControls" hidden>
+                    <label for="volumeRenderColorBrightness">Colour brightness</label>
+                    <input type="range" 
+                    id="volumeRenderColorBrightness" min="0" max="100" value="10" style="width: 95%;"/>
+                    <br>
+                    <label for="volumeRenderAlphaBrightness">Alpha brightness</label>
+                    <input type="range" id="volumeRenderAlphaBrightness" 
+                    min="0" max="100" value="20" style="width: 95%;"/><br>
+                    <label for="numberOfSlices" id="numberOfSlicesLabel">Number of slices</label>
+                    <input type="range" 
+                    id="numberOfSlices" min="64" max="2048" value="512" step="64" style="width: 95%;"/>
+                    <br>
+                    <label for="sliceSideWidth" id="sliceSideWidthLabel">Slice size</label>
+                    <input type="range" 
+                    id="sliceSideWidth" min="64" max="2048" value="256" step="64" style="width: 95%;"/>
+                    <br>
+                </div>
+            </div>
+            <div class="inner-div2">
+                <canvas style="touch-action: none; background-color: rgb(50.0, 50.0, 50.0);
+                               text-align: center;"
+                    id="sketchCanvas">
+                    <div style="color: white; position: absolute; z-index: 10">This is some text</div>
+                </canvas>
+            </div>
+            <div class="inner-div3">
+                <label id="changeGridLabel" for="changeGrid">Grid size
+                </label>
+                <select id="changeGrid">
+                    <option value=64>64x64x64</option>
+                    <option value=128>128x128x128</option>
+                    <option value=256>256x256x256</option>
+                    <!--<option value=512>512x512x512</option>!-->
+                </select><br>
+                <hr/>
+                <label for="presetPotential">Preset V(x, y, z, t)<br>
+                    <!-- Default should be Absorbing boundaries (A.B.)-->
+                    <select id="presetPotential">
+                        <option value=0>Free (periodic)</option>
+                        <option value=1>Harmonic</option>
+                        <option value=2>Double slit</option>
+                        <option value=3>Spherical well</option>
+                        <option value=4>Repulsive "spike"</option>
+                        <option value=5>Attractive "spike"</option>
+                        <option value=6>Absorbing boundaries (A.B.)</option>
+                        <option value=7 selected>Double slit (A.B.)</option>
+                        <option value=8>Repulsive "spike" (A.B.)</option>
+                        <option value=9>Attractive "spike" (A.B.)</option>
+                        <option value=10>Moving cylinder</option>
+                        <!--<option value=11>Moving att. spike (A.B.)</option>!-->
+                        <!--<option value=12>Upside down Gaussian</option>!-->
+                        <!--<option value=13>Rotating harmonic</option>!-->
+                    </select>
+                </label><br>
+                <label for="potentialEntry">Enter V(x, y, z, t)<br>
+                    <input type ="text" id="potentialEntry"
+                    value="a*((x/width)^2+(y/height)^2+(z/depth)^2)"
+                    name="potentialEntry" size="40"
+                    />
+                <br>
+                <label id="potentialClippedMessage">
+                    (To reduce numerical error, V will be clipped so that
+                    |V(x, y, t)| &lt; 2)
+                </label><br/>
+                <div id="potentialUserSliders"></div>
+                <hr/>
+                <label for="presetNonlinear">Preset nonlinear term<br>
+                    <select id="presetNonlinear" style="width: 48;">
+                        <option value=0 selected>None</option>
+                        <option value=1>1000*abs(a*psi)^2</option>
+                        <!-- 100.0*abs(a*psi)^2 - 0.016*a -->
+                        <option value=2>a*exp(-abs(psi)^2/0.01^2)</option>
+                        <option value=3>Combination of above two</option>
+                    </select>
+                </label>
+                <br>
+                <label for="nonlinearEntry">Enter nonlinearity f(Ψ)<br>
+                    <input type="text" id="nonlinearEntry"
+                        name="nonlinearEntry" size="40" value="">
+                </label>
+                <br>
+                <div id="nonlinearUserSliders"></div>
+                <hr/>
+                <label for="kineticEnergyEntry">Kinetic energy-momentum<br>relation: KE(px, py, pz)<br>
+                    <input type="text" id="kineticEnergyEntry"
+                        name="nonlinearEntry" size="40" value="(px^2+py^2+pz^2)/(2*m)">
+                </label>
+                <br>
+                <div id="kineticEnergyUserSliders"></div>
+                <hr/>
+                <label for="timeStepReal" id="timeStepRealLabel">Re(Δt)
+                </label>
+                <br>
+                <input type="range" id="timeStepReal"
+                        name="timeStepReal"
+                        min="-80.0" max="80.0" value="64.0"
+                        style="width: 95%;"/>
+                <!--default value should be 64.-->
+                <br>
+                <label for="timeStepImag" id="timeStepImagLabel">Im(Δt)
+                </label>
+                <br>
+                <input type="range" id="timeStepImag"
+                        name="timeStepImag"
+                        min="-200.0" max="0.0" value="0.0"
+                        style="width: 95%;"/>
+                <br>
+                <input type="checkbox" id="normalizePsi"/>
+                <label for="normalizePsi">Normalize Ψ after each frame</label><hr/>
+                <!-- Extra controls
+                    <input type="checkbox" id="screenshots"/>
+                    <label for="screenshots" id="screenshotsLabel">Capture frames</label><br/>
+                    <label for="angularVel" id="angularVelLabel">3D auto-rotate
+                    </label>
+                    <br>
+                    <input type="range" id="angularVel"
+                            name="angularVel"
+                            min="-100.0" max="100.0" value="0.0"
+                            style="width: 95%;"/>
+                    <br>
+                Extra controls !-->
+            </div>
+        </div>
+        <div id="useLowResolution" hidden="true"></div>
+        <script type="module" src="./scripts/sim3d.js"></script>
+    </body>
+</html>

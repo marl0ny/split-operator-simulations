@@ -10,7 +10,7 @@ import {gl, gMainRenderWindow, TextureParams, Quad,
     saveQuadAsBMPImage,
     DEFAULT_MIN_FILTER,
     DEFAULT_MAG_FILTER,
-    isOnMobile, isOnIPhone} from "./gl-wrappers.js";
+    isOnMobile, isOnIPhone, useLowResolution} from "./gl-wrappers.js";
 import { getShader } from "./shaders.js";
 import splitStep3D, {SimulationParameters} from "./split-step3d.js";
 import { VolumeRender } from "./volume-render.js";
@@ -147,8 +147,10 @@ let gSimParams = new SimulationParameters(
     // new IVec3(64, 64, 64),
     // new Vec3(128.0, 128.0, 128.0),
     // new IVec3(128, 128, 128),
-    (isOnMobile())? new Vec3(64.0, 64.0, 64.0): new Vec3(128.0, 128.0, 128.0),
-    (isOnMobile())? new IVec3(64, 64, 64): new IVec3(128, 128, 128),
+    (isOnMobile() || useLowResolution())? 
+        new Vec3(64.0, 64.0, 64.0): new Vec3(128.0, 128.0, 128.0),
+    (isOnMobile() || useLowResolution())?
+        new IVec3(64, 64, 64): new IVec3(128, 128, 128),
 );
 
 function timeStepRealCallback(value) {
@@ -352,7 +354,7 @@ function disablePlanarSlicesIfOnIPhone() {
 disablePlanarSlicesIfOnIPhone();
 
 function adjustInitialVolumeRenderDimensionsIfWayTooBigToHandle() {
-    if (isOnMobile()) {
+    if (isOnMobile() || useLowResolution()) {
         gVolRenderSliceWidth /= 2;
         gVolRenderNumberOfSlices /= 2;
         document.getElementById("numberOfSlicesLabel").textContent
