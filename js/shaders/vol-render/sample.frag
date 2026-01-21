@@ -31,6 +31,7 @@ out vec4 fragColor;
 
 uniform sampler2D tex;
 uniform float viewScale;
+uniform float zScale;
 uniform vec4 rotation;
 uniform ivec3 volumeTexelDimensions3D;
 uniform ivec2 volumeTexelDimensions2D;
@@ -143,6 +144,7 @@ vec4 sample2DTextureAs3D(sampler2D tex, vec3 position) {
 void main() {
     vec4 viewPosition 
         = vec4(to3DVolumeTextureCoordinates(UV) - vec3(0.5), 1.0);
+    viewPosition.z *= zScale;
     // float viewScaleAdj = max(viewScale, 2.0);
     float viewScaleAdj = viewScale;
     vec3 r = rotate(viewPosition, conj(rotation)).xyz/viewScaleAdj

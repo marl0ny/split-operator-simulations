@@ -571,6 +571,7 @@ let gRotation = mul(Quaternion.rotator(Math.PI/4.0, 0.0, 0.0, 1.0),
                     Quaternion.rotator(-Math.PI/4.0, 1.0, 0.0, 0.0));
 let gMouseIdlePosition = [];
 let gMouseInteractPosition = [];
+let gTouchStart = false;
 // let gTouchIdlePosition = [];
 // let gTouchInteractPosition = [];
 
@@ -579,6 +580,10 @@ function setRotation(x0, y0, x1, y1) {
     let d = new Vec3(x1 - x0, y1 - y0, 0.0);
     let axis = Vec3.crossProd(d, new Vec3(0.0, 0.0, -1.0));
     let angle = 10.0*Math.sqrt(d.x*d.x + d.y*d.y + d.z*d.z);
+    if (isOnMobile() && angle > 0.15)
+        angle = 0.15;
+    if (isOnMobile() && gTouchStart === true && angle > 0.01)
+        angle = 0.01;
     // console.log(angle, '\naxis: ', axis.x, axis.y, 
     //             '\nquaternion: ', gRotation);
     let rot = Quaternion.rotator(angle, axis.x, axis.y, axis.z);
@@ -609,10 +614,10 @@ function equalizeXYScaling(xy) {
 
 function scaleVolume(scaleVal) {
     gScale -= scaleVal;
-    if (gScale < 0.05)
-        gScale = 0.05;
-    if (gScale > 1.0)
-        gScale = 1.0;
+    // if (gScale < 0.05)
+    //     gScale = 0.05;
+    // if (gScale > 1.0)
+    //     gScale = 1.0;
 }
 
 gCanvas.addEventListener("wheel", e => {
@@ -815,6 +820,7 @@ gCanvas.addEventListener("mouseup", () => {
 });
 
 gCanvas.addEventListener("touchmove", e => {
+    gTouchStart = false;
     let touches = e.changedTouches;
     // When double touches has been activated,
     // just never respond to single touch movement.
@@ -834,6 +840,7 @@ gCanvas.addEventListener("touchmove", e => {
 });
 
 gCanvas.addEventListener("touchstart", e => {
+    gTouchStart = true;
     let touches = e.changedTouches;
     if (!gDoubleTouches.isActive && touches.length === 1) {
         // Don't respond to single touch movement here,
@@ -851,6 +858,7 @@ gCanvas.addEventListener("touchstart", e => {
 });
 
 gCanvas.addEventListener("touchend", e => {
+    gTouchStart = false;
     gMouseInteractPosition = [];
     let touches = e.changedTouches;
     if (touches.length === 1 && gDoubleTouches.isActive)

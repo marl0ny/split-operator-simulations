@@ -43,5 +43,6 @@ quaternion rotate(quaternion x, quaternion r) {
 void main() {
     vec3 r = rotate(quaternion(position, 1.0), 
                     rotation).xyz*viewScale;
+    r.z /= 2.0;
     gl_Position = vec4(r, 1.0);
 }

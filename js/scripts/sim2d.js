@@ -276,6 +276,7 @@ let gMousePosition = [];
 let gTouchesPosition = new Touches();
 let gRotation = mul(Quaternion.rotator(Math.PI/4.0, 0.0, 0.0, 1.0),
                     Quaternion.rotator(-Math.PI/4.0, 1.0, 0.0, 0.0));
+let gTouchStart = false;
 
 let gScale = 1.0;
 let gTextEditPotential 
@@ -697,8 +698,10 @@ function setRotation(x0, y0, x1, y1) {
     let d = new Vec3(x1 - x0, y1 - y0, 0.0);
     let axis = Vec3.crossProd(d, new Vec3(0.0, 0.0, -1.0));
     let angle = 10.0*Math.sqrt(d.x*d.x + d.y*d.y + d.z*d.z);
-    // console.log(angle, '\naxis: ', axis.x, axis.y, 
-    //             '\nquaternion: ', gRotation);
+    if (isOnMobile() && angle > 0.175)
+        angle = 0.175;
+    if (isOnMobile() && gTouchStart === true && angle > 0.01)
+        angle = 0.01;
     let rot = Quaternion.rotator(angle, axis.x, axis.y, axis.z);
     gRotation = mul(gRotation, rot);  
 }
@@ -945,11 +948,34 @@ function touchSketchPotential(e, drawStrength) {
 }
 
 gCanvas.addEventListener("touchend", e => {
+    gTouchStart = false;
     clearInitialMomentumDisplay();
     gTouchesPosition.reset();
 });
 
 gCanvas.addEventListener("touchmove", e => {
+    gTouchStart = false;
+    if (gShowSurface) {
+        respondToTouchInputByModifyingSurfaceView(e);
+    } else {
+        switch(gInputMode) {
+            case INPUT_MODES.NEW_WAVE_FUNC:
+                respondToTouchInputByModifyingWaveFunction(e);
+                break;
+            case INPUT_MODES.SKETCH_V:
+                touchSketchPotential(e, 0.3);
+                break;
+            case INPUT_MODES.ERASE_V:
+                touchSketchPotential(e, -0.3);
+                break;
+            default:
+                break;
+        }
+    }
+});
+
+gCanvas.addEventListener("touchstart", e => {
+    gTouchStart = true;
     if (gShowSurface) {
         respondToTouchInputByModifyingSurfaceView(e);
     } else {

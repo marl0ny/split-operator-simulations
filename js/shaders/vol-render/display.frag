@@ -300,6 +300,10 @@ void main() {
     vec2 uv2 = to2DTextureCoordinates(r);
     
     vec3 grad = texture2D(gradientTex, uv2).xyz;
+    // if (r.z < 1.0/float(fragmentTexelDimensions3D[2]) || 
+    //     r.z > 1.0 - 1.0/float(fragmentTexelDimensions3D[2]))
+    //     grad = vec3(0.0, 0.0, 1.0);
+    
     vec4 density = texture2D(densityTex, uv2);
     // density += 0.00001*laplacian(densityTex, density, r);
 
@@ -328,7 +332,7 @@ void main() {
     // fragColor = 4.0*pix;
     float a = dot(normal, normalize(grad));
     if (a <= 0.0) discard;
-    
+
     // fragColor = vec4(1.0*normalize(density.rgb), a*a);
     
     // float densityLength = length(density.rgb);

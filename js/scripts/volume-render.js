@@ -280,7 +280,7 @@ function gradient(dst, volumeData, boundaryMask,
 
 function sampleData(
     dst, srcData, sampleDataProgram,
-    viewScale,
+    viewScale, zScale,
     rotation,
     volumeTexelDimensions3D, volumeTexelDimensions2D,
     dataTexelDimensions3D, dataTexelDimensions2D
@@ -290,6 +290,7 @@ function sampleData(
         {
             tex: srcData,
             viewScale: viewScale,
+            zScale: zScale,
             rotation: rotation,
             volumeTexelDimensions3D: volumeTexelDimensions3D,
             volumeTexelDimensions2D: volumeTexelDimensions2D,
@@ -397,6 +398,7 @@ export class VolumeRender {
                             + 'must be a MultidimensionalDataQuad.');
             return;
         }
+        let minZ = 0.0;
         let maxX = 0.0, maxY = 0.0, maxZ = 0.0;
         for (let i = 0; i < this.cubeOutlineVertices.length; i++) {
             let v
@@ -405,7 +407,9 @@ export class VolumeRender {
             maxX = (x > maxX)? x: maxX;
             maxY = (y > maxY)? y: maxY;
             maxZ = (z > maxZ)? z: maxZ;
+            minZ = (z < minZ)? z: minZ;
         }
+        console.log('scale and z range: ', scale, (maxZ - minZ)*scale, maxZ, minZ);
         let rotScale = (scale > 1.0)? scale: 1.0/Math.max(maxX, maxY, maxZ);
         // let rotScale = 1.0;
         let dataTexelDimensions2D = new IVec2(srcData.width, srcData.height);
@@ -420,7 +424,7 @@ export class VolumeRender {
             });
         /* this._frames.dataHalfPrecision.draw(
             this.programs.copy, {tex: srcData}
-        );*/
+        ); */
         /* gradient(this._frames.gradientDataHalfPrecision,
                  this._frames.data, 0,
                  this.programs.gradient, 2, 
@@ -433,18 +437,22 @@ export class VolumeRender {
                 BOUNDARY_TYPE.USE_TEXTURE_WRAPPING,
                 0, 3,
                 dataTexelDimensions3D, dataTexelDimensions2D);
-                this._frames.volume.clear();
-                this._frames.volumeGrad.clear();
+        this._frames.volume.clear();
+        this._frames.volumeGrad.clear();
+        let zRange = (maxZ - minZ)*scale;
+        let zScale = 1.0;
+        if (scale > 1.0)
+            zScale *= zRange/2.0;
         sampleData(
             this._frames.volume, this._frames.dataHalfPrecision,
             this.programs.sampleData,
-            rotScale, rotation,
+            rotScale, zScale, rotation,
             this.volumeTexelDimensions3D, this.volumeTexelDimensions2D,
             dataTexelDimensions3D, dataTexelDimensions2D);
         sampleData(
             this._frames.volumeGrad, this._frames.gradientData,
             this.programs.sampleData,
-            rotScale, rotation,
+            rotScale, zScale, rotation,
             this.volumeTexelDimensions3D, this.volumeTexelDimensions2D,
             dataTexelDimensions3D, dataTexelDimensions2D);
 
