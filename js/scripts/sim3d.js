@@ -580,14 +580,38 @@ function setRotation(x0, y0, x1, y1) {
     let d = new Vec3(x1 - x0, y1 - y0, 0.0);
     let axis = Vec3.crossProd(d, new Vec3(0.0, 0.0, -1.0));
     let angle = 10.0*Math.sqrt(d.x*d.x + d.y*d.y + d.z*d.z);
-    if (isOnMobile() && angle > 0.15)
-        angle = 0.15;
-    if (isOnMobile() && gTouchStart === true && angle > 0.01)
-        angle = 0.01;
+    if (isOnMobile() && angle > 0.05)
+        angle = 0.05;
+    if (isOnMobile() && gTouchStart === true && angle > 0.0)
+        angle = 0.0;
     // console.log(angle, '\naxis: ', axis.x, axis.y, 
     //             '\nquaternion: ', gRotation);
     let rot = Quaternion.rotator(angle, axis.x, axis.y, axis.z);
     gRotation = mul(gRotation, rot);  
+}
+
+function crossProd2D(a,  b) {
+    return a[0]*b[1] - a[1]*b[0];
+}
+
+function
+setRotationDoubleTouch(f0, f1, g0, g1) {
+    let c = [(g0[0] + f0[0])/2.0,  (g0[1]+f0[1])/2.0]
+    let d = Math.sqrt(
+        (g0[0] - f0[0])*(g0[0] - f0[0])
+         +(g0[1] - f0[1])*(g0[1] - f0[1]));
+    let cToF0 = [f0[0] - c[0], f0[1] - c[1]];
+    let cToG0 = [g0[0] - c[0], g0[1] - c[1]];
+    let deltaF = [f1[0] - f0[0], f1[1] - f0[1]];
+    let deltaG = [g1[0] - g0[0], g1[1] - g0[1]];
+    let rotF = crossProd2D(
+        cToF0, deltaF)/(d*d);
+    let rotG = crossProd2D(
+        cToG0, deltaG)/(d*d);
+    let rot = Quaternion.rotator(
+        2.0*(rotF + rotG), 0.0, 0.0, 1.0);
+    gRotation = mul(gRotation, rot);
+    
 }
 
 function getMouseXY(e) {
@@ -614,10 +638,10 @@ function equalizeXYScaling(xy) {
 
 function scaleVolume(scaleVal) {
     gScale -= scaleVal;
-    // if (gScale < 0.05)
-    //     gScale = 0.05;
-    // if (gScale > 1.0)
-    //     gScale = 1.0;
+    if (gScale < 0.05)
+        gScale = 0.05;
+    if (gScale > 2.0)
+        gScale = 2.0;
 }
 
 gCanvas.addEventListener("wheel", e => {
@@ -798,8 +822,21 @@ function continueTouchZoomRotate(e) {
         (t2X - t1X)*(t2X - t1X) + (t2Y - t1Y)*(t2Y - t1Y)); 
     gDoubleTouches.finger1.push([t1X, t1Y]);
     gDoubleTouches.finger2.push([t2X, t2Y]);
-    if (gDoubleTouches.fingerDistances.length > 1)
+    let len1 = gDoubleTouches.finger1.length;
+    let len2 = gDoubleTouches.finger2.length;
+    setRotationDoubleTouch(
+        gDoubleTouches.finger1[len1 - 2],
+        gDoubleTouches.finger1[len1 - 1],
+        gDoubleTouches.finger2[len2 - 2],
+        gDoubleTouches.finger2[len2 - 1]
+    );
+    if (gDoubleTouches.fingerDistances.length > 1) {
         gScale *= fingerDistance/gDoubleTouches.fingerDistances.pop();
+        if (gScale > 3.0)
+            gScale = 3.0;
+        if (gScale < 0.05)
+            gScale = 0.05
+    }
     gDoubleTouches.fingerDistances.push(fingerDistance);
 }
 
@@ -1292,7 +1329,9 @@ function setPresetPotential(value) {
         DOUBLE_SLIT_AB: 7,
         REPULSIVE_COULOMB_AB: 8,
         ATTRACTIVE_COULOMB_AB: 9,
-        MOVING_BUMP: 10, 
+        MOVING_BUMP: 10,
+        RING: 11,
+        SQUARE: 12
         // MOVING_ATTRACTIVE_SPIKE_AB: 11,
         // ATTRACTIVE_MOVING_BUMP_AB: 12,
         // ROTATING_HARMONIC: 13
@@ -1300,6 +1339,7 @@ function setPresetPotential(value) {
     let u = `(x/width + 0.5)`;
     let v = `(y/height + 0.5)`;
     let w = `(z/depth + 0.5)`;
+    let rC = `sqrt((x/width)^2 + (z/depth)^2)`;
     let absorbingBoundary = 
         `-i*(exp(-${u}^2/0.001) + exp(-(${u}-1.0)^2/0.001)`
         + `+ exp(-${v}^2/0.001) + exp(-(${v}-1.0)^2/0.001)`
@@ -1362,6 +1402,28 @@ function setPresetPotential(value) {
             gTextEditPotential.newText(
                 `2*exp(-0.5*((x - 0.3*width*cos(t/100))^2 + `
                 + `(y - 0.3*height*sin(t/100))^2)/(width*5/256)^2)`
+            );
+            break;
+        case PRESETS.RING:
+            gTextEditPotential.newText(
+                absorbingBoundary
+                 + ` + 2.0*step(-abs(${v}-0.5) + 0.02)*step(${rC}-0.15)`
+                 + ` + 2.0*step(-abs(${v}-0.5) + 0.02)*step(-${rC}+0.1)`
+            );
+            break;
+        case PRESETS.SQUARE:
+            gTextEditPotential.newText(
+                absorbingBoundary
+                 + `+ 2.0*step(-abs(${v}-0.5) + 0.03)*step(${w}-0.6)`
+                 + `+ 2.0*step(-abs(${v}-0.5) + 0.03)*step(-${w}+0.4)`
+                 + `+ 2.0*step(-abs(${v}-0.5) + 0.03)*step(${u}-0.6)`
+                 + `*step(-${w}+0.6)*step(${w}-0.4)`
+                 + `+ 2.0*step(-abs(${v}-0.5) + 0.03)*step(-${u}+0.4)`
+                 + `*step(-${w}+0.6)*step(${w}-0.4)`
+                 + `+ 2.0*step(-abs(${v}-0.5) + 0.03)`
+                 + `*step(-abs(${u}-0.5)+0.07)`
+                 + `*step(-abs(${w}-0.5)+0.07)`
+                 
             );
             break;
         /* case PRESETS.MOVING_ATTRACTIVE_SPIKE_AB:

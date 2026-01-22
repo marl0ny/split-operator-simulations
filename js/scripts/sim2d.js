@@ -7,6 +7,7 @@ import { gl, gMainRenderWindow, TextureParams, RenderTarget,
          sub,
          saveQuadAsBMPImage,
          DEFAULT_MIN_FILTER, DEFAULT_MAG_FILTER,
+         isOnMobile
          // isOnAndroid
         } from "./gl-wrappers.js";
 import splitStep, { 

@@ -280,7 +280,7 @@ function gradient(dst, volumeData, boundaryMask,
 
 function sampleData(
     dst, srcData, sampleDataProgram,
-    viewScale, zScale,
+    sampleScale, viewScale,
     rotation,
     volumeTexelDimensions3D, volumeTexelDimensions2D,
     dataTexelDimensions3D, dataTexelDimensions2D
@@ -289,8 +289,8 @@ function sampleData(
         sampleDataProgram,
         {
             tex: srcData,
+            sampleScale: sampleScale,
             viewScale: viewScale,
-            zScale: zScale,
             rotation: rotation,
             volumeTexelDimensions3D: volumeTexelDimensions3D,
             volumeTexelDimensions2D: volumeTexelDimensions2D,
@@ -409,9 +409,12 @@ export class VolumeRender {
             maxZ = (z > maxZ)? z: maxZ;
             minZ = (z < minZ)? z: minZ;
         }
-        console.log('scale and z range: ', scale, (maxZ - minZ)*scale, maxZ, minZ);
-        let rotScale = (scale > 1.0)? scale: 1.0/Math.max(maxX, maxY, maxZ);
-        // let rotScale = 1.0;
+       // console.log('scale and z range: ', scale, (maxZ - minZ)*scale, maxZ, minZ);
+      // let rotScale =(scale > 1.0)? scale: 1.0/Math.max(maxX, maxY, maxZ);
+        let viewScale = new Vec3(scale, scale, scale);
+        let rotScale=scale;
+       // if (scale*maxX <1.0) viewScale.x = 1.0/maxX;
+       // if (scale*maxY < 1.0) viewScale.y = 1.0/maxY;
         let dataTexelDimensions2D = new IVec2(srcData.width, srcData.height);
         let dataTexelDimensions3D = new IVec3(
             ...srcData.dataDimensions);
@@ -440,19 +443,22 @@ export class VolumeRender {
         this._frames.volume.clear();
         this._frames.volumeGrad.clear();
         let zRange = (maxZ - minZ)*scale;
-        let zScale = 1.0;
-        if (scale > 1.0)
-            zScale *= zRange/2.0;
+        let xScale = 1.0, yScale = 1.0, zScale = 1.0;
+       // if (scale > 1.0)
+            zScale *= scale*maxZ;
+      // let xScale = scale*maxX;
+     // let yScale = scale*maxY;
+      let sampleScale = new Vec3(xScale, yScale, zScale);  
         sampleData(
             this._frames.volume, this._frames.dataHalfPrecision,
             this.programs.sampleData,
-            rotScale, zScale, rotation,
+            sampleScale, viewScale, rotation,
             this.volumeTexelDimensions3D, this.volumeTexelDimensions2D,
             dataTexelDimensions3D, dataTexelDimensions2D);
         sampleData(
             this._frames.volumeGrad, this._frames.gradientData,
             this.programs.sampleData,
-            rotScale, zScale, rotation,
+            sampleScale, viewScale, rotation,
             this.volumeTexelDimensions3D, this.volumeTexelDimensions2D,
             dataTexelDimensions3D, dataTexelDimensions2D);
 
