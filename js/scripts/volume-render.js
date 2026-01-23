@@ -409,56 +409,44 @@ export class VolumeRender {
             maxZ = (z > maxZ)? z: maxZ;
             minZ = (z < minZ)? z: minZ;
         }
-       // console.log('scale and z range: ', scale, (maxZ - minZ)*scale, maxZ, minZ);
-      // let rotScale =(scale > 1.0)? scale: 1.0/Math.max(maxX, maxY, maxZ);
-        let viewScale = new Vec3(scale, scale, scale);
-        let rotScale=scale;
-       // if (scale*maxX <1.0) viewScale.x = 1.0/maxX;
-       // if (scale*maxY < 1.0) viewScale.y = 1.0/maxY;
         let dataTexelDimensions2D = new IVec2(srcData.width, srcData.height);
         let dataTexelDimensions3D = new IVec3(
             ...srcData.dataDimensions);
         this._frames.createDataFrames(dataTexelDimensions2D);
         this._frames.dataHalfPrecision.draw(
-            this.programs.zeroBoundaries, 
+            this.programs.zeroBoundaries,
             {tex: srcData,
              texelDimensions2D: dataTexelDimensions2D,
              texelDimensions3D: dataTexelDimensions3D,
             });
-        /* this._frames.dataHalfPrecision.draw(
-            this.programs.copy, {tex: srcData}
-        ); */
-        /* gradient(this._frames.gradientDataHalfPrecision,
-                 this._frames.data, 0,
-                 this.programs.gradient, 2, 
-                 BOUNDARY_TYPE.USE_TEXTURE_WRAPPING,
-                 0, 3,
-                 dataTexelDimensions3D, dataTexelDimensions2D);*/
         gradient(this._frames.gradientData,
                 this._frames.dataHalfPrecision, 0,
-                this.programs.gradient, 2, 
+                this.programs.gradient, 2,
                 BOUNDARY_TYPE.USE_TEXTURE_WRAPPING,
                 0, 3,
                 dataTexelDimensions3D, dataTexelDimensions2D);
         this._frames.volume.clear();
         this._frames.volumeGrad.clear();
-        let zRange = (maxZ - minZ)*scale;
-        let xScale = 1.0, yScale = 1.0, zScale = 1.0;
-       // if (scale > 1.0)
-            zScale *= scale*maxZ;
-      // let xScale = scale*maxX;
-     // let yScale = scale*maxY;
-      let sampleScale = new Vec3(xScale, yScale, zScale);  
+        let sampleScalePreRotation = new Vec3(1.0, 1.0, scale*maxZ);
+        let sampleScalePostRotation = new Vec3(scale, scale, scale);
+        let displayScale = new Vec3(1.0, 1.0, 1.0);
+        if (scale*maxX < 1.0 && scale*maxY < 1.0) {
+            sampleScalePreRotation.x = scale*maxX;
+            sampleScalePreRotation.y = scale*maxY;
+            displayScale = new Vec3(scale*maxX, scale*maxY, 1.0);
+        }
         sampleData(
             this._frames.volume, this._frames.dataHalfPrecision,
             this.programs.sampleData,
-            sampleScale, viewScale, rotation,
+            sampleScalePreRotation, sampleScalePostRotation,
+            rotation,
             this.volumeTexelDimensions3D, this.volumeTexelDimensions2D,
             dataTexelDimensions3D, dataTexelDimensions2D);
         sampleData(
             this._frames.volumeGrad, this._frames.gradientData,
             this.programs.sampleData,
-            sampleScale, viewScale, rotation,
+            sampleScalePreRotation, sampleScalePostRotation,
+            rotation,
             this.volumeTexelDimensions3D, this.volumeTexelDimensions2D,
             dataTexelDimensions3D, dataTexelDimensions2D);
 
@@ -467,7 +455,7 @@ export class VolumeRender {
         withConfig({
             enable: gl.DEPTH_TEST, depthFunc: gl.LESS,
             width: this._frames.view.textureDimensions.ind[0],
-            height: this._frames.view.textureDimensions.ind[1]}, 
+            height: this._frames.view.textureDimensions.ind[1]},
         () => {
             gl.enable(gl.BLEND);
             gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
@@ -481,7 +469,8 @@ export class VolumeRender {
             );
         });
         let viewUniforms = (additionalUniforms === null)?
-            {colorBrightness: 1.0, alphaBrightness: 1.0}: additionalUniforms
+            {colorBrightness: 1.0, alphaBrightness: 1.0}:
+            additionalUniforms;
         displayVolume(this._frames.view,
             this.programs.showVolume, {
                 ...viewUniforms,
@@ -494,7 +483,7 @@ export class VolumeRender {
                 texelDimensions3D: this.volumeTexelDimensions3D,
                 debugRotation: this.debugRotation,
                 debugShow2DTexture: false,
-                scale: scale/rotScale,
+                scale: displayScale,
             },
             this._triangles
         );

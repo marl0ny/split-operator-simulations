@@ -26,7 +26,7 @@ out vec2 UV;
 
 uniform vec4 debugRotation;
 uniform bool debugShow2DTexture;
-uniform float scale;
+uniform vec3 scale;
 
 uniform ivec3 texelDimensions3D;
 uniform ivec2 texelDimensions2D;
@@ -86,5 +86,9 @@ void main() {
     UV = uvIndex.xy;
     vec4 viewPos = vec4(to3DTextureCoordinates(UV), 1.0)
                    - vec4(0.5, 0.5, 0.5, 0.0);
-    gl_Position = project(2.0*scale*rotate(viewPos, debugRotation));
+    vec4 res = rotate(viewPos, debugRotation);
+    res.x *= 2.0*scale.x;
+    res.y *= 2.0*scale.y;
+    res.z *= 2.0*scale.z;
+    gl_Position = project(res);
 }
