@@ -30,9 +30,10 @@ out vec4 fragColor;
 #define quaternion vec4
 
 uniform sampler2D tex;
-uniform vec3 sampleScale;
-uniform vec3 viewScale;
+uniform vec3 preRotationScale;
 uniform vec4 rotation;
+uniform float postRotationScale;
+uniform float scalePostRotation;
 uniform ivec3 volumeTexelDimensions3D;
 uniform ivec2 volumeTexelDimensions2D;
 uniform ivec3 dataTexelDimensions3D;
@@ -145,11 +146,9 @@ void main() {
     vec4 viewPosition 
         = vec4(to3DVolumeTextureCoordinates(UV) - vec3(0.5), 1.0);
     for (int i = 0; i < 3; i += 1)
-        viewPosition[i] *= sampleScale[i];
-    // float viewScaleAdj = max(viewScale, 2.0);
-    // float viewScaleAdj = viewScale;
-    vec3 r = rotate(viewPosition, conj(rotation)).xyz/viewScale
-         + vec3(0.5);
+        viewPosition[i] *= preRotationScale[i];
+    vec3 r = rotate(viewPosition, conj(rotation)).xyz/postRotationScale
+        + vec3(0.5);
     // This check needs to be done to avoid a repeating effect
     // caused by sampling beyond the initial boundary.
     if (r.x < 0.0 || r.x >= 1.0 ||

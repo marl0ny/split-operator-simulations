@@ -596,7 +596,7 @@ function crossProd2D(a,  b) {
 
 function
 setRotationDoubleTouch(f0, f1, g0, g1) {
-    let c = [(g0[0] + f0[0])/2.0,  (g0[1]+f0[1])/2.0]
+    let c = [(g0[0] + f0[0])/2.0,  (g0[1]+f0[1])/2.0];
     let d = Math.sqrt(
         (g0[0] - f0[0])*(g0[0] - f0[0])
          +(g0[1] - f0[1])*(g0[1] - f0[1]));
@@ -608,10 +608,11 @@ setRotationDoubleTouch(f0, f1, g0, g1) {
         cToF0, deltaF)/(d*d);
     let rotG = crossProd2D(
         cToG0, deltaG)/(d*d);
+    if (2.0*(rotG + rotF) > Math.PI)
+        return;
     let rot = Quaternion.rotator(
         2.0*(rotF + rotG), 0.0, 0.0, 1.0);
     gRotation = mul(gRotation, rot);
-    
 }
 
 function getMouseXY(e) {
@@ -819,7 +820,7 @@ function continueTouchZoomRotate(e) {
     let delta2X = t2X - gDoubleTouches.finger2[0];
     let delta2Y = t2Y - gDoubleTouches.finger2[1];*/
     let fingerDistance = Math.sqrt(
-        (t2X - t1X)*(t2X - t1X) + (t2Y - t1Y)*(t2Y - t1Y)); 
+        (t2X - t1X)*(t2X - t1X) + (t2Y - t1Y)*(t2Y - t1Y));
     gDoubleTouches.finger1.push([t1X, t1Y]);
     gDoubleTouches.finger2.push([t2X, t2Y]);
     let len1 = gDoubleTouches.finger1.length;
@@ -831,11 +832,15 @@ function continueTouchZoomRotate(e) {
         gDoubleTouches.finger2[len2 - 1]
     );
     if (gDoubleTouches.fingerDistances.length > 1) {
-        gScale *= fingerDistance/gDoubleTouches.fingerDistances.pop();
-        if (gScale > 3.0)
-            gScale = 3.0;
-        if (gScale < 0.05)
-            gScale = 0.05
+        let scaleFactor
+            = fingerDistance/gDoubleTouches.fingerDistances.pop();
+        if (scaleFactor > 0.5 && scaleFactor < 1.5) {
+            gScale *= scaleFactor;
+            if (gScale > 3.0)
+                gScale = 3.0;
+            if (gScale < 0.05)
+                gScale = 0.05;
+        }
     }
     gDoubleTouches.fingerDistances.push(fingerDistance);
 }

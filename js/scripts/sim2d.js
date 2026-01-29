@@ -349,7 +349,7 @@ function autoRotationVelocityCallback(value) {
 document.getElementById("potentialClippedMessage").innerHTML
     = "To reduce numerical error,<br\> "
     + " V will be clipped so that<br\> "
-    + " |V(x, y, t)| \u2264 2"
+    + " |V(x, y, t)| \u2264 2";
 
 let gNormalize = document.getElementById("normalizePsi").checked;
 
@@ -392,7 +392,7 @@ let gTakeScreenshots = (() => {
     if (screenshotsElement !== null)
         return document.getElementById("screenshots").checked;
     return false;
-})()
+})();
 
 {
     let screenshotsElement = document.getElementById("screenshots");
@@ -560,15 +560,15 @@ function setPresetPotential(value) {
         ROTATING_HARMONIC: 13
     };
     let u = `(x/width + 0.5)`, v = `(y/height + 0.5)`;
-    let absorbingBoundary = 
+    let absorbingBoundary =
         `-i*(exp(-${u}^2/0.001) + exp(-(${u}-1.0)^2/0.001)`
         + `+ exp(-${v}^2/0.001) + exp(-(${v}-1.0)^2/0.001))`;
-    let doubleSlit = `step(-abs(${v}-0.5) + 0.02) ` 
+    let doubleSlit = `step(-abs(${v}-0.5) + 0.02) `
                         + `- step(-abs(${v}-0.5) + 0.02)*(`
                             + `step(-abs(${u}-0.45) + 0.02)`
                             + `+ step(-abs(${u}-0.55) + 0.02))`;
     let circular
-        = `0.5*(tanh(75.0*(((x/width)^2 + (y/height)^2)^0.5 - 0.45))` 
+        = `0.5*(tanh(75.0*(((x/width)^2 + (y/height)^2)^0.5 - 0.45))`
             + ` + 1.0)`;
     let coulomb = `0.01/((${u}-0.5)^2 + (${v}-0.5)^2)^0.5`;
     gClipPotential = false;

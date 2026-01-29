@@ -280,8 +280,7 @@ function gradient(dst, volumeData, boundaryMask,
 
 function sampleData(
     dst, srcData, sampleDataProgram,
-    sampleScale, viewScale,
-    rotation,
+    preRotationScale, postRotationScale, rotation,
     volumeTexelDimensions3D, volumeTexelDimensions2D,
     dataTexelDimensions3D, dataTexelDimensions2D
 ) {
@@ -289,9 +288,9 @@ function sampleData(
         sampleDataProgram,
         {
             tex: srcData,
-            sampleScale: sampleScale,
-            viewScale: viewScale,
+            preRotationScale: preRotationScale,
             rotation: rotation,
+            postRotationScale: postRotationScale,
             volumeTexelDimensions3D: volumeTexelDimensions3D,
             volumeTexelDimensions2D: volumeTexelDimensions2D,
             dataTexelDimensions3D: dataTexelDimensions3D,
@@ -427,26 +426,23 @@ export class VolumeRender {
                 dataTexelDimensions3D, dataTexelDimensions2D);
         this._frames.volume.clear();
         this._frames.volumeGrad.clear();
-        let sampleScalePreRotation = new Vec3(1.0, 1.0, scale*maxZ);
-        let sampleScalePostRotation = new Vec3(scale, scale, scale);
+        let sampleScale = new Vec3(1.0, 1.0, scale*maxZ);
         let displayScale = new Vec3(1.0, 1.0, 1.0);
         if (scale*maxX < 1.0 && scale*maxY < 1.0) {
-            sampleScalePreRotation.x = scale*maxX;
-            sampleScalePreRotation.y = scale*maxY;
+            sampleScale.x = scale*maxX;
+            sampleScale.y = scale*maxY;
             displayScale = new Vec3(scale*maxX, scale*maxY, 1.0);
         }
         sampleData(
             this._frames.volume, this._frames.dataHalfPrecision,
             this.programs.sampleData,
-            sampleScalePreRotation, sampleScalePostRotation,
-            rotation,
+            sampleScale, scale, rotation,
             this.volumeTexelDimensions3D, this.volumeTexelDimensions2D,
             dataTexelDimensions3D, dataTexelDimensions2D);
         sampleData(
             this._frames.volumeGrad, this._frames.gradientData,
             this.programs.sampleData,
-            sampleScalePreRotation, sampleScalePostRotation,
-            rotation,
+            sampleScale, scale, rotation,
             this.volumeTexelDimensions3D, this.volumeTexelDimensions2D,
             dataTexelDimensions3D, dataTexelDimensions2D);
 
