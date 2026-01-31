@@ -25,7 +25,8 @@
                .outer-div {display: grid; grid-template-columns: 1fr 1fr 1fr; }
                .inner-div1 {grid-column: 1;}
                .inner-div2 {grid-column: 2;}
-               .inner-div3 {grid-column: 3; resize: vertical; padding: 10px;} 
+               .inner-div3 {grid-column: 3; resize: vertical; padding: 10px;}
+			   #hoveringColorMap { bottom: 0px }
             }
             @media (orientation: portrait) { 
                .outer-div {display: grid; grid-template-rows: repeat(3, auto); } 
@@ -122,6 +123,20 @@
 					<!--<label style="text-align: center;"> at each frame</label><br>!-->
 				</div>
 				<div class="inner-div2">
+					<div id="hoveringColorMap"
+						style="position: absolute; z-index: 10;
+						width: max(20%, 200px); height: max(10%, 100px);
+						border-style: solid; border-color: transparent; border-width: 2px;
+						padding-top: 1em; padding-left: 1em;">
+						<label style="color: white; justify-content: center;">arg(Ψ)</label>
+						<canvas id="colorMapCanvas" style="width: 100%; height: 20%;
+						padding: 0px ; border-width: 0px;"></canvas>
+						<label style="color: white;">-π</label>
+						<label style="position: absolute; left: 25%; color: white;">-π/2</label>
+						<label style="position: absolute; left: 50%; color: white;">0</label>
+						<label style="position: absolute; right: 25%; color: white;">π/2</label>
+						<label style="position: absolute; right: 0px; color: white;">π</label>
+					</div>
 					<canvas style="
 									touch-action: none; background-color: rgb(50, 50, 50);
 								   text-align: center;"
@@ -228,6 +243,63 @@
 			</div>
 			<div> <img id="image" hidden="true"> </div>
 			<div> <canvas id="imageCanvas" hidden="true"> </div>
+		<script>
+			{
+				let colorMapCanvas = document.getElementById('colorMapCanvas');
+				let ctx = colorMapCanvas.getContext('2d');
+				let width = colorMapCanvas.width;
+				let height = colorMapCanvas.height;
+
+				function argumentToColor(argVal) {
+					let maxCol = 1.0;
+					let minCol = 50.0/255.0;
+					let colRange = maxCol - minCol;
+					if (argVal <= Math.PI/3.0 && argVal >= 0.0) {
+						return [maxCol,
+								minCol + colRange*argVal/(Math.PI/3.0),
+								minCol];
+					} else if (argVal > Math.PI/3.0 
+							   && argVal <= 2.0*Math.PI/3.0) {
+						return [
+							maxCol - colRange*(argVal - Math.PI/3.0) / 
+							(Math.PI/3.0),
+							maxCol, minCol];
+					} else if (argVal > 2.0*Math.PI/3.0
+							   && argVal <= Math.PI){
+						return [minCol, maxCol,
+								minCol + colRange*(argVal - 2.0*Math.PI/3.0) /
+								(Math.PI/3.0)];
+					} else if (argVal < 0.0 && argVal > -Math.PI/3.0){
+						return [maxCol, minCol,
+								minCol - colRange*argVal/(Math.PI/3.0)];
+					} else if (argVal <= -Math.PI/3.0 
+							   && argVal > -2.0*Math.PI/3.0){
+						return [maxCol + (colRange*(argVal + Math.PI/3.0) / 
+							    (Math.PI/3.0)),
+								minCol, maxCol];
+					} else if (argVal <= -2.0*Math.PI/3.0 
+							   && argVal >= -Math.PI){
+						return [minCol,
+								minCol - (colRange*(argVal + 2.0*Math.PI/3.0) /
+								(Math.PI/3.0)), 
+								maxCol];
+					}
+					else {
+						return [minCol, maxCol, maxCol];
+					}
+				}
+
+				for (let i = 0; i < width; i++) {
+					let [rF, gF, bF] = argumentToColor(
+						2.0*Math.PI*(i - width/2.0)/width);
+					let r = Number.parseInt(255*rF);
+					let g = Number.parseInt(255*gF);
+					let b = Number.parseInt(255*bF);
+					ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+					ctx.fillRect(i, 0, 1, height);
+				}
+			}
+		</script>
 		<script type="module" src="./scripts/sim2d.js"></script>
 	</body>
 </html>

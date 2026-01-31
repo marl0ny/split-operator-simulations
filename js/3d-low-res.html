@@ -23,7 +23,7 @@
 			text {font-family:Arial, Helvetica, sans-serif; }
             @media (orientation: landscape) {
                .outer-div {display: grid; grid-template-columns: 1fr 1fr 1fr; }
-               .inner-div1 {grid-column: 1; overflow: scroll; height: 99vh; }
+               .inner-div1 {grid-column: 1;  overflow: scroll; height: 95vh; }
                .inner-div2 {grid-column: 2; }
                .inner-div3 {grid-column: 3; resize: vertical; padding: 10px; }
             }
@@ -31,7 +31,7 @@
                .outer-div {display: grid; grid-template-rows: repeat(3, auto); }
                .inner-div1 {grid-row: 2; }
                .inner-div2 {grid-row: 1; } 
-               .inner-div3 {grid-row: 3; } 
+               .inner-div3 {grid-row: 3; }
             } 
         </style>
         <title>Interactive Schrödinger Equation Solver Using the Split-Operator Method in 3D</title>
@@ -162,6 +162,20 @@
                 </div>
             </div>
             <div class="inner-div2">
+                <div id="hoveringColorMap"
+                    style="position: absolute; z-index: 10;
+                    width: max(20%, 200px); height: max(10%, 100px);
+                    border-style: solid; border-color: transparent; border-width: 2px;
+                    padding-top: 1em; padding-left: 1em;">
+                    <label style="color: white; justify-content: center;">arg(Ψ)</label>
+                    <canvas id="colorMapCanvas" style="width: 100%; height: 20%;
+                    padding: 0px ; border-width: 0px;"></canvas>
+                    <label style="color: white;">-π</label>
+                    <label style="position: absolute; left: 25%; color: white;">-π/2</label>
+                    <label style="position: absolute; left: 50%; color: white;">0</label>
+                    <label style="position: absolute; right: 25%; color: white;">π/2</label>
+                    <label style="position: absolute; right: 0px; color: white;">π</label>
+				</div>
                 <canvas style="touch-action: none; background-color: rgb(50.0, 50.0, 50.0);
                                text-align: center;"
                     id="sketchCanvas">
@@ -192,8 +206,8 @@
                         <option value=8>Repulsive "spike" (A.B.)</option>
                         <option value=9>Attractive "spike" (A.B.)</option>
                         <option value=10>Moving cylinder</option>
-                        <option value=11>Ring</option>
-                        <option value=12>Square</option>
+                        <option value=11>"Circular" ring (A.B.)</option>
+                        <option value=12>Square ring (A.B.)</option>
                         <!--<option value=11>Moving att. spike (A.B.)</option>!-->
                         <!--<option value=12>Upside down Gaussian</option>!-->
                         <!--<option value=13>Rotating harmonic</option>!-->
@@ -269,6 +283,63 @@
             </div>
         </div>
         <div id="useLowResolution" hidden="true"></div>
+        <script>
+			{
+				let colorMapCanvas = document.getElementById('colorMapCanvas');
+				let ctx = colorMapCanvas.getContext('2d');
+				let width = colorMapCanvas.width;
+				let height = colorMapCanvas.height;
+
+				function argumentToColor(argVal) {
+					let maxCol = 1.0;
+					let minCol = 50.0/255.0;
+					let colRange = maxCol - minCol;
+					if (argVal <= Math.PI/3.0 && argVal >= 0.0) {
+						return [maxCol,
+								minCol + colRange*argVal/(Math.PI/3.0),
+								minCol];
+					} else if (argVal > Math.PI/3.0 
+							   && argVal <= 2.0*Math.PI/3.0) {
+						return [
+							maxCol - colRange*(argVal - Math.PI/3.0) / 
+							(Math.PI/3.0),
+							maxCol, minCol];
+					} else if (argVal > 2.0*Math.PI/3.0
+							   && argVal <= Math.PI){
+						return [minCol, maxCol,
+								minCol + colRange*(argVal - 2.0*Math.PI/3.0) /
+								(Math.PI/3.0)];
+					} else if (argVal < 0.0 && argVal > -Math.PI/3.0){
+						return [maxCol, minCol,
+								minCol - colRange*argVal/(Math.PI/3.0)];
+					} else if (argVal <= -Math.PI/3.0 
+							   && argVal > -2.0*Math.PI/3.0){
+						return [maxCol + (colRange*(argVal + Math.PI/3.0) / 
+							    (Math.PI/3.0)),
+								minCol, maxCol];
+					} else if (argVal <= -2.0*Math.PI/3.0 
+							   && argVal >= -Math.PI){
+						return [minCol,
+								minCol - (colRange*(argVal + 2.0*Math.PI/3.0) /
+								(Math.PI/3.0)), 
+								maxCol];
+					}
+					else {
+						return [minCol, maxCol, maxCol];
+					}
+				}
+
+				for (let i = 0; i < width; i++) {
+					let [rF, gF, bF] = argumentToColor(
+						2.0*Math.PI*(i - width/2.0)/width);
+					let r = Number.parseInt(255*rF);
+					let g = Number.parseInt(255*gF);
+					let b = Number.parseInt(255*bF);
+					ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+					ctx.fillRect(i, 0, 1, height);
+				}
+			}
+		</script>
         <script type="module" src="./scripts/sim3d.js"></script>
     </body>
 </html>
