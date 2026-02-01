@@ -95,6 +95,8 @@
                     <label for="showWavefunction">Show Ψ(<b>r</b>)</label><br>
                     <input type="checkbox" id="showWavefunctionPhase" checked="true"></input>
                     <label for="showWavefunctionPhase">Colour phase</label><br>
+                    <input type="checkbox" id="showWavefunctionColorMap"></input>
+                    <label for="showWavefunctionColorMap">Show colour bar</label><br>
                     <label for="wavefunctionBrightness">Ψ opacity:</label><br>
                     <input type="range" id="wavefunctionBrightness"
                         min="5" max="100" value="10"
@@ -163,6 +165,7 @@
             </div>
             <div class="inner-div2">
                 <div id="hoveringColorMap"
+                    hidden="true"
                     style="position: absolute; z-index: 10;
                     width: max(20%, 200px); height: max(10%, 100px);
                     border-style: solid; border-color: transparent; border-width: 2px;
@@ -336,6 +339,11 @@
 					ctx.fillRect(i, 0, 1, height);
 				}
 			}
+            document.getElementById("showWavefunctionColorMap").checked = false;
+            document.getElementById("showWavefunctionColorMap").addEventListener(
+                "input",
+                e => document.getElementById("hoveringColorMap").hidden 
+                     = !e.target.checked);
 		</script>
         <script type="module" src="./scripts/sim3d.js"></script>
     </body>
