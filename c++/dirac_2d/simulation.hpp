@@ -20,7 +20,9 @@ struct Frames {
     WireFrame arrows3d;
     WireFrame surface;
     Frames(
-        const SimParams &sim_params, int view_width, int view_height);
+        const SimParams &sim_params, 
+        int view_width, int view_height,
+        unsigned int min_filter, unsigned int mag_filter);
     void change_simulation_dimensions(IVec2 d_2d);
 };
 
@@ -64,7 +66,7 @@ class Simulation {
         const Vec2 &tex_pos, const Vec2 &wave_num);
     public:
     Simulation(
-        const SimParams &sim_params, int view_width, int view_height);
+        const SimParams &sim_params, TextureParams default_tex_params);
     void time_steps(const SimParams &sim_params);
     const RenderTarget &render_view(
         SimParams sim_params, Vec2 cursor_pos,

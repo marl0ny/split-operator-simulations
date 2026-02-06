@@ -5,7 +5,7 @@ the structure and layout of simulation code that call upon GLSL shaders
 for numerical computations and visualization.
 
 A useful resource for writing this source file is Learn OpenGL
-(https://learnopengl.com); it is especially helpful as a first-time
+(https://learnopengl.com) - it is especially helpful as a first-time
 introduction to OpenGL without any prior graphics knowledge.
 */
 #include <cstdint>
@@ -20,6 +20,7 @@ introduction to OpenGL without any prior graphics knowledge.
 #include <GLES3/gl32.h>
 #include <iostream>
 #include <fstream>
+#include <cmath>
 
 size_t s_frames_count = 0;
 
@@ -90,6 +91,26 @@ static GLuint to_base(int sized) {
     case GL_R32F: case GL_R32I: case GL_R32UI: case GL_R16F:
     case GL_R16I: case GL_R16UI: case GL_R8: case GL_R8UI:
         return GL_RED;
+    }
+    return -1;
+}
+
+static int number_of_channels(int sized) {
+    switch(sized) {
+        case GL_RGBA32F: case GL_RGBA32I: case GL_RGBA32UI: case GL_RGBA16F:
+        case GL_RGBA16I: case GL_RGBA16UI:
+        case GL_RGBA8I: case GL_RGBA8UI: case GL_RGBA8:
+            return 4;
+        case GL_RGB32F: case GL_RGB32I: case GL_RGB32UI: case GL_RGB16F:
+        case GL_RGB16I: case GL_RGB16UI: case GL_RGB8I: case GL_RGB8UI:
+        case GL_RGB8:
+            return 3;
+        case GL_RG32F: case GL_RG32I: case GL_RG32UI: case GL_RG16F:
+        case GL_RG16I: case GL_RG16UI: case GL_RG8I: case GL_RG8UI:
+            return 2;
+        case GL_R32F: case GL_R32I: case GL_R32UI: case GL_R16F:
+        case GL_R16I: case GL_R16UI: case GL_R8: case GL_R8UI:
+            return 1;
     }
     return -1;
 }
@@ -249,7 +270,7 @@ float Vec2::length() const {
 
 Vec2 Vec2::normalized() const {
     return (this->length_squared() != 0.0)? 
-        *this/this->length_squared(): Vec2{.x=0.0, .y=0.0};
+        *this/this->length(): Vec2{.x=0.0, .y=0.0};
 }
 
 Vec2 operator+(float r, const Vec2 &v) {
@@ -353,7 +374,7 @@ float Vec3::length() const {
 
 Vec3 Vec3::normalized() const {
     return (this->length_squared() != 0.0)? 
-        *this/this->length_squared(): Vec3{.x=0.0, .y=0.0, .z=0.0};
+        *this/this->length(): Vec3{.x=0.0, .y=0.0, .z=0.0};
 }
 
 Vec3 operator+(float r, const Vec3 &v) {
@@ -475,7 +496,7 @@ float Vec4::length() const {
 
 Vec4 Vec4::normalized() const {
     return (this->length_squared() != 0.0)? 
-        *this/this->length_squared(): Vec4{.x=0.0, .y=0.0, .z=0.0, .w=0.0};
+        *this/this->length(): Vec4{.x=0.0, .y=0.0, .z=0.0, .w=0.0};
 }
 
 Vec4 operator+(float r, const Vec4 &v) {
@@ -785,6 +806,281 @@ IVec4 operator/(int r, const IVec4 &v) {
     return res;
 }
 
+unsigned char &U8Vec2::operator[](size_t index) {
+    return this->ind[index];
+}
+
+unsigned char U8Vec2::operator[](size_t index) const {
+    return this->ind[index];
+}
+
+U8Vec2 U8Vec2::operator+(const U8Vec2 &other) const {
+    U8Vec2 res;
+    for (size_t i = 0; i < 2; i++)
+        res[i] = this->ind[i] + other[i];
+    return res;
+}
+
+U8Vec2 U8Vec2::operator*(const U8Vec2 &other) const {
+    U8Vec2 res;
+    for (size_t i = 0; i < 2; i++)
+        res[i] = this->ind[i] * other[i];
+    return res;
+}
+
+U8Vec2 U8Vec2::operator-(const U8Vec2 &other) const {
+    U8Vec2 res;
+    for (size_t i = 0; i < 2; i++)
+        res[i] = this->ind[i] - other[i];
+    return res;
+}
+
+U8Vec2 U8Vec2::operator/(const U8Vec2 &other) const {
+    U8Vec2 res;
+    for (size_t i = 0; i < 2; i++)
+        res[i] = this->ind[i] / other[i];
+    return res;
+}
+
+U8Vec2 U8Vec2::operator+(unsigned char other) const {
+    U8Vec2 res;
+    for (size_t i = 0; i < 2; i++)
+        res[i] = this->ind[i] + other;
+    return res;
+}
+
+U8Vec2 U8Vec2::operator*(unsigned char other) const {
+    U8Vec2 res;
+    for (size_t i = 0; i < 2; i++)
+        res[i] = this->ind[i] * other;
+    return res;
+}
+
+U8Vec2 U8Vec2::operator-(unsigned char other) const {
+    U8Vec2 res;
+    for (size_t i = 0; i < 2; i++)
+        res[i] = this->ind[i] - other;
+    return res;
+}
+
+U8Vec2 U8Vec2::operator/(unsigned char other) const {
+    U8Vec2 res;
+    for (size_t i = 0; i < 2; i++)
+        res[i] = this->ind[i] / other;
+    return res;
+}
+
+U8Vec2 operator+(unsigned char a, const U8Vec2 &b) {
+    U8Vec2 res;
+    for (size_t i = 0; i < 2; i++)
+        res[i] = a + b[i];
+    return res;
+}
+
+U8Vec2 operator*(unsigned char a, const U8Vec2 &b) {
+    U8Vec2 res;
+    for (size_t i = 0; i < 2; i++)
+        res[i] = a * b[i];
+    return res;
+}
+
+U8Vec2 operator-(unsigned char a, const U8Vec2 &b) {
+    U8Vec2 res;
+    for (size_t i = 0; i < 2; i++)
+        res[i] = a - b[i];
+    return res;
+}
+
+U8Vec2 operator/(unsigned char a, const U8Vec2 &b) {
+    U8Vec2 res;
+    for (size_t i = 0; i < 2; i++)
+        res[i] = a / b[i];
+    return res;
+}
+
+unsigned char &U8Vec3::operator[](size_t index) {
+    return this->ind[index];
+}
+
+unsigned char U8Vec3::operator[](size_t index) const {
+    return this->ind[index];
+}
+
+U8Vec3 U8Vec3::operator+(const U8Vec3 &other) const {
+    U8Vec3 res;
+    for (size_t i = 0; i < 3; i++)
+        res[i] = this->ind[i] + other[i];
+    return res;
+}
+
+U8Vec3 U8Vec3::operator*(const U8Vec3 &other) const {
+    U8Vec3 res;
+    for (size_t i = 0; i < 3; i++)
+        res[i] = this->ind[i] * other[i];
+    return res;
+}
+
+U8Vec3 U8Vec3::operator-(const U8Vec3 &other) const {
+    U8Vec3 res;
+    for (size_t i = 0; i < 3; i++)
+        res[i] = this->ind[i] - other[i];
+    return res;
+}
+
+U8Vec3 U8Vec3::operator/(const U8Vec3 &other) const {
+    U8Vec3 res;
+    for (size_t i = 0; i < 3; i++)
+        res[i] = this->ind[i] / other[i];
+    return res;
+}
+
+U8Vec3 U8Vec3::operator+(unsigned char other) const {
+    U8Vec3 res;
+    for (size_t i = 0; i < 3; i++)
+        res[i] = this->ind[i] + other;
+    return res;
+}
+
+U8Vec3 U8Vec3::operator*(unsigned char other) const {
+    U8Vec3 res;
+    for (size_t i = 0; i < 3; i++)
+        res[i] = this->ind[i] * other;
+    return res;
+}
+
+U8Vec3 U8Vec3::operator-(unsigned char other) const {
+    U8Vec3 res;
+    for (size_t i = 0; i < 3; i++)
+        res[i] = this->ind[i] - other;
+    return res;
+}
+
+U8Vec3 U8Vec3::operator/(unsigned char other) const {
+    U8Vec3 res;
+    for (size_t i = 0; i < 3; i++)
+        res[i] = this->ind[i] / other;
+    return res;
+}
+
+U8Vec3 operator+(unsigned char a, const U8Vec3 &b) {
+    U8Vec3 res;
+    for (size_t i = 0; i < 3; i++)
+        res[i] = a + b[i];
+    return res;
+}
+
+U8Vec3 operator*(unsigned char a, const U8Vec3 &b) {
+    U8Vec3 res;
+    for (size_t i = 0; i < 3; i++)
+        res[i] = a * b[i];
+    return res;
+}
+
+U8Vec3 operator-(unsigned char a, const U8Vec3 &b) {
+    U8Vec3 res;
+    for (size_t i = 0; i < 3; i++)
+        res[i] = a - b[i];
+    return res;
+}
+
+U8Vec3 operator/(unsigned char a, const U8Vec3 &b) {
+    U8Vec3 res;
+    for (size_t i = 0; i < 3; i++)
+        res[i] = a / b[i];
+    return res;
+}
+
+unsigned char &U8Vec4::operator[](size_t index) {
+    return this->ind[index];
+}
+
+unsigned char U8Vec4::operator[](size_t index) const {
+    return this->ind[index];
+}
+
+U8Vec4 U8Vec4::operator+(const U8Vec4 &other) const {
+    U8Vec4 res;
+    for (size_t i = 0; i < 4; i++)
+        res[i] = this->ind[i] + other[i];
+    return res;
+}
+
+U8Vec4 U8Vec4::operator*(const U8Vec4 &other) const {
+    U8Vec4 res;
+    for (size_t i = 0; i < 4; i++)
+        res[i] = this->ind[i] * other[i];
+    return res;
+}
+
+U8Vec4 U8Vec4::operator-(const U8Vec4 &other) const {
+    U8Vec4 res;
+    for (size_t i = 0; i < 4; i++)
+        res[i] = this->ind[i] - other[i];
+    return res;
+}
+
+U8Vec4 U8Vec4::operator/(const U8Vec4 &other) const {
+    U8Vec4 res;
+    for (size_t i = 0; i < 4; i++)
+        res[i] = this->ind[i] / other[i];
+    return res;
+}
+
+U8Vec4 U8Vec4::operator+(unsigned char other) const {
+    U8Vec4 res;
+    for (size_t i = 0; i < 4; i++)
+        res[i] = this->ind[i] + other;
+    return res;
+}
+
+U8Vec4 U8Vec4::operator*(unsigned char other) const {
+    U8Vec4 res;
+    for (size_t i = 0; i < 4; i++)
+        res[i] = this->ind[i] * other;
+    return res;
+}
+
+U8Vec4 U8Vec4::operator-(unsigned char other) const {
+    U8Vec4 res;
+    for (size_t i = 0; i < 4; i++)
+        res[i] = this->ind[i] - other;
+    return res;
+}
+
+U8Vec4 U8Vec4::operator/(unsigned char other) const {
+    U8Vec4 res;
+    for (size_t i = 0; i < 4; i++)
+        res[i] = this->ind[i] / other;
+    return res;
+}
+
+U8Vec4 operator+(unsigned char a, const U8Vec4 &b) {
+    U8Vec4 res;
+    for (size_t i = 0; i < 4; i++)
+        res[i] = a + b[i];
+    return res;
+}
+
+U8Vec4 operator*(unsigned char a, const U8Vec4 &b) {
+    U8Vec4 res;
+    for (size_t i = 0; i < 4; i++)
+        res[i] = a * b[i];
+    return res;
+}
+
+U8Vec4 operator-(unsigned char a, const U8Vec4 &b) {
+    U8Vec4 res;
+    for (size_t i = 0; i < 4; i++)
+        res[i] = a - b[i];
+    return res;
+}
+
+U8Vec4 operator/(unsigned char a, const U8Vec4 &b) {
+    U8Vec4 res;
+    for (size_t i = 0; i < 4; i++)
+        res[i] = a / b[i];
+    return res;
+}
 uint32_t shader_from_source(std::string shader_source, uint32_t shader_type) {
     GLuint shader_ref = glCreateShader(shader_type);
     // int minor_version, major_version;
@@ -960,7 +1256,7 @@ void WireFrame::draw(uint32_t program) {
         std::string name = name_attribute.first;
         Attribute attribute = name_attribute.second;
         GLint id = glGetAttribLocation(program, name.c_str());
-        glEnableVertexAttribArray(id);
+        glEnableVertexAttribArray(id); 
         /* std::cout << "size: " << attribute.size << std::endl;
         std::cout << "type: " << attribute.type << std::endl;
         std::cout << "normalized: " << (GLboolean)attribute.normalized << std::endl;
@@ -988,6 +1284,14 @@ void WireFrame::draw(uint32_t program) {
         } else {
             glDrawElements(
                 GL_LINES, this->elements.size(), GL_UNSIGNED_INT, NULL);
+        }
+        break;
+        case WireFrame::POINTS:
+        if (this->elements.size() == 0) {
+            glDrawArrays(GL_POINTS, 0, this->vertices.size());
+        } else {
+            glDrawElements(
+                GL_POINTS, this->elements.size(), GL_UNSIGNED_INT, NULL);
         }
         break;
         case WireFrame::TRIANGLES:
@@ -1130,6 +1434,7 @@ void RenderTarget::clear() {
         return;
     glBindFramebuffer(GL_FRAMEBUFFER, this->fbo);
     glBindRenderbuffer(GL_RENDERBUFFER, this->rbo);
+    // glClearColor(0.0, 0.0, 0.0, 0.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glBindFramebuffer(GL_FRAMEBUFFER, (GLint)NULL);
     glBindRenderbuffer(GL_RENDERBUFFER, (GLint)NULL);
@@ -1199,12 +1504,59 @@ void RenderTarget::draw(
             break;
             case Uniform::MULTIDIMENSIONAL_DATA_QUAD:
             glUniform1i(location, value.multidimensional_data_quad->get_id());
+            break;
+            case Uniform::QUAD_CONTAINER:
+            printf("Quad value: %d\n", value.quad_ref_container.ref.get_id());
+            glUniform1i(location, value.quad_ref_container.ref.get_id());
+            break;
+            case Uniform::RENDER_TARGET_CONTAINER:
+            printf("Render target value: %d\n",
+                value.render_target_ref_container.ref.get_id());
+            glUniform1i(
+                location,
+                value.render_target_ref_container.ref.get_id());
+            break;
         }
     }
     wire_frame.draw(program);
     glViewport(original_viewport[0], original_viewport[1],
                original_viewport[2], original_viewport[3]);
     unbind();
+}
+
+void RenderTarget::fill_array_with_contents(float *arr) const {
+    int width = this->params.width;
+    int height = this->params.height;
+    unsigned int format = this->params.format;
+    IVec4 viewport = 
+        {.ind{0, 0, (int)width, (int)height}};
+    if (this->id != 0)
+        glBindFramebuffer(GL_FRAMEBUFFER, this->fbo);
+    glReadPixels(viewport[0], viewport[1], viewport[2], viewport[3],
+        to_base(format), GL_FLOAT, (void *)arr);
+    unbind();
+}
+
+void RenderTarget::fill_array_with_contents(unsigned char *arr) const {
+    int width = this->params.width;
+    int height = this->params.height;
+    unsigned int format = this->params.format;
+    IVec4 viewport = 
+        {.ind{0, 0, (int)width, (int)height}};
+    if (this->id != 0)
+        glBindFramebuffer(GL_FRAMEBUFFER, this->fbo);
+    glReadPixels(viewport[0], viewport[1], viewport[2], viewport[3],
+        to_base(format), GL_UNSIGNED_BYTE, (void *)arr);
+    unbind();
+}
+
+RenderTarget::~RenderTarget() {
+    if (this->id == 0)
+        return;
+    glDeleteTextures(1, &this->texture);
+    glDeleteBuffers(1, &this->fbo);
+    glDeleteBuffers(1, &this->rbo);
+    s_removed_frames.push_back(this->get_id());
 }
 
 struct {
@@ -1389,7 +1741,10 @@ uint32_t Quad::make_program_from_source(std::string fragment_source) {
         fragment_source, GL_FRAGMENT_SHADER);
     uint32_t program = glCreateProgram();
     if (program == 0) {
+        glDeleteShader(vs_ref);
+        glDeleteShader(fs_ref);
         fprintf(stderr, "Unable to create program.\n");
+        return program;
     }
     glAttachShader(program, vs_ref);
     glAttachShader(program, fs_ref);
@@ -1399,7 +1754,11 @@ uint32_t Quad::make_program_from_source(std::string fragment_source) {
     glGetProgramiv(program, GL_LINK_STATUS, &status);
     glGetProgramInfoLog(program, 1023, NULL, buf);
     if (status != GL_TRUE) {
+        glDeleteProgram(program);
+        glDeleteShader(vs_ref);
+        glDeleteShader(fs_ref);
         fprintf(stderr, "%s\n%s\n", "Failed to link program:", buf);
+        return 0;
     }
     glUseProgram(program);
     return program;
@@ -1444,6 +1803,98 @@ void Quad::clear() {
     }
 }
 
+void Quad::substitute_array(void *array, IVec4 viewport) {
+    int old_viewport[4] = {0,};
+    glGetIntegerv(GL_VIEWPORT, old_viewport);
+    glViewport(0, 0, this->width(), this->height());
+    if (this->id != 0)
+        glBindFramebuffer(GL_FRAMEBUFFER, this->fbo);
+    glActiveTexture(GL_TEXTURE0 + this->id);
+    glTexSubImage2D(
+        GL_TEXTURE_2D, 0,
+        viewport[0], viewport[1], viewport[2], viewport[3],
+        to_base(this->format()), to_type(this->format()), array);
+    glViewport(old_viewport[0], old_viewport[1],
+        old_viewport[2], old_viewport[3]);
+    unbind();
+}
+
+void Quad::set_pixels(std::vector<float> vec) {
+    this->substitute_array(
+        (void *)&vec[0], 
+        {.ind{0, 0, (int)this->width(), (int)this->height()}}
+    );
+}
+
+void Quad::set_pixels(const std::vector<float> &vec, IVec4 viewport) {
+    this->substitute_array((void *)&vec[0], viewport);
+}
+
+void Quad::set_pixels(float *vec) {
+    this->substitute_array(
+        (void *)&vec[0], 
+        {.ind{0, 0, (int)this->width(), (int)this->height()}}
+    );
+}
+
+std::vector<float> Quad::get_float_pixels(IVec4 viewport) {
+    if (this->id != 0)
+        glBindFramebuffer(GL_FRAMEBUFFER, this->fbo);
+    int size = this->width()*this->height()
+        *number_of_channels(this->format());
+    std::vector<float> vec(size);
+    glReadPixels(viewport[0], viewport[1], viewport[2], viewport[3],
+        to_base(this->format()), GL_FLOAT, (void *)&vec[0]);
+    unbind();
+    return vec;
+}
+
+std::vector<float> Quad::get_float_pixels() {
+    return this->get_float_pixels(
+        {.ind{0, 0, (int)this->width(), (int)this->height()}});
+}
+
+void Quad::fill_array_with_contents(float *arr) const {
+    IVec4 viewport = 
+        {.ind{0, 0, (int)this->width(), (int)this->height()}};
+    if (this->id != 0)
+        glBindFramebuffer(GL_FRAMEBUFFER, this->fbo);
+    // int size = this->width()*this->height()
+    //     *number_of_channels(this->format());
+    glReadPixels(viewport[0], viewport[1], viewport[2], viewport[3],
+        to_base(this->format()), GL_FLOAT, (void *)arr);
+    unbind();
+}
+
+void Quad::fill_array_with_contents(unsigned char *arr) const {
+    IVec4 viewport = 
+        {.ind{0, 0, (int)this->width(), (int)this->height()}};
+    if (this->id != 0)
+        glBindFramebuffer(GL_FRAMEBUFFER, this->fbo);
+    // int size = this->width()*this->height()
+    //     *number_of_channels(this->format());
+    glReadPixels(viewport[0], viewport[1], viewport[2], viewport[3],
+        to_base(this->format()), GL_UNSIGNED_BYTE, (void *)arr);
+    unbind();
+}
+ 
+std::vector<uint8_t> Quad::get_byte_pixels(IVec4 viewport) {
+    if (this->id != 0)
+        glBindFramebuffer(GL_FRAMEBUFFER, this->fbo);
+    size_t size = this->width()*this->height()
+        *number_of_channels(this->format());
+    std::vector<uint8_t> vec(size);
+    glReadPixels(viewport[0], viewport[1], viewport[2], viewport[3],
+        to_base(this->format()), GL_UNSIGNED_BYTE, (void *)&vec[0]);
+    unbind();
+    return vec;
+}
+
+std::vector<uint8_t> Quad::get_byte_pixels() {
+    return this->get_byte_pixels(
+        {.ind{0, 0, (int)this->width(), (int)this->height()}});
+}
+
 void Quad::reset(const TextureParams &new_tex_params) {
     if (this->id != 0) {
         this->params = new_tex_params;
@@ -1470,15 +1921,15 @@ void Quad::reset(const TextureParams &new_tex_params) {
     }
 }
 
-uint32_t Quad::width() {
+uint32_t Quad::width() const {
     return this->params.width;
 }
 
-uint32_t Quad::height() {
+uint32_t Quad::height() const {
     return this->params.height;
 }
 
-uint32_t Quad::format() {
+uint32_t Quad::format() const {
     return this->params.format;
 }
 
@@ -1638,7 +2089,7 @@ MainQuad::MainQuad(int width, int height) {
     this->quad.id = 0;
     this->quad.params = {
         .width=(uint32_t)width, .height =(uint32_t)height};
-    s_frames_count++;
+    // s_frames_count++;
 }
 
 void MainQuad::draw(const Quad &q) {

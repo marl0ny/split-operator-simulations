@@ -1,44 +1,72 @@
 <!DOCTYPE html>
-<meta charset="utf-8"/>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
 <html>
     <head>
+        <!--
+			Originally, I had numerous issues trying to get consistent and proper scaling
+			on mobile devices. To fix this, it turns out that the viewport throught the meta tag 
+			needs to be explicitly set to use the device's screen width,
+			as this is not done by defualt. 
+			As well as this, some browser specific adjustments need to be turned off.
+			I personally found this blog post by S. Sutoris helpful:
+			https://www.rismosch.com/article?id=css-on-mobile-and-the-most-important-header-tag
+			And of course I looked at the MDN documentation:
+			https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/meta/name/viewport
+		-->
         <style>
+            .body-style {
+                font-family: Arial;
+                background-color: rgb(0, 0, 0);
+                -moz-text-size-adjust: none; 
+                text-size-adjust: none;
+            }
             h3 {font-family:Arial, Helvetica, sans-serif; }
             label {font-family:Arial, Helvetica, sans-serif; color: white; }
 			text {font-family:Arial, Helvetica, sans-serif; }
+            @media (orientation: landscape) {
+                .outer-div {
+                    display: grid; grid-template-columns: 1fr 1fr;
+                }
+                .inner-div1 {
+                    grid-column: 1;
+                }
+                .inner-div2 {
+                    grid-column: 2;
+                }
+                .controls-div {
+                    overflow-y: scroll; height: 95vh; max-height: 95vh;
+                }
+            }
+            @media (orientation: portrait) {
+                .outer-div {
+                    display: grid; grid-template-rows: repeat(2, auto); gap: 20px;
+                }
+                .inner-div1 {
+                    grid-row: 2; overflow-y: scroll; height: calc(100vh - 95vw);
+                }
+                .inner-div2 {
+                    grid-row: 1; overflow-y: scroll;
+                }
+                .controls-div {
+                    overflow-y: scroll; overflow-x: hidden; width: 84vw;
+                    max-width: 84vw; margin-left: 8vw; margin-right: 8vw;
+                }
+            }
         </style>
     </head>
-    <body style="font-family: Arial; background-color: rgb(0, 0, 0);">
+    <body class="body-style">
         <!--<h3 style="color:white; text-align: center;">Box of springs</h3>!-->
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr;">
-            <div style="grid-column: 1;">
-                <!--<p style="color:white; font-size:14px; text-align: center;">
-                &nabla; &times; &delta; &#x2202; &#x1D404; &bull;
-                </p>!-->
-                <div style="overflow-y: scroll; max-height: 700px;" id="controls"></div>
+        <div class="outer-div">
+            <div class="inner-div1" id="inner-div1">
+                <div class="controls-div" id="controls"></div>
             </div>
-            <div style="grid-column: 2;">
+            <div class="inner-div2">
                 <canvas id="canvas" oncontextmenu="event.preventDefault()"
                     style="touch-action: none; 
                         border: solid white 1px; top: 0px; bottom: 0px;
                         text-align: center;">
                 </canvas>
-                <p style="color:white; font-size:14px; text-align: center;">
-                </p>
-                <!--<p style="color:white; font-size:14px; text-align: center;">
-                Use the mouse to grab and move the box of springs around.
-                </br>To reset the simulation, press the space bar.
-                </p>!-->
-            </div>
-            <div style="grid-column: 3; padding: 10px;">
-                <!--
-                <label for="setMouseInput">Mouse input<br>
-                <select id="setMouseInput">
-                    <option value=0>New wave function</option>
-                    <option value=1>Scalar potential sketch</option>
-                    <option value=2>Vector potential sketch</option>
-                </select><br>
-                -->
             </div>
         </div>
     </body>
@@ -48,9 +76,49 @@
          cd /Applications/XCode.app/Contents/Developer/Applications; open ./Simulator.app
     !-->
     <script type='text/javascript'>
+
+        /* Sliders become invisible when setting the body colour to black
+        when using Safari on Desktop Mac OS. This workaround just sets the 
+        background colour to grayish on this particular configuration. */
+        if (window.navigator.userAgent.includes('Safari') 
+            && window.navigator.userAgent.includes('Mac OS')
+            && !window.navigator.userAgent.includes('iPhone')
+            && !window.navigator.userAgent.includes('Chrome')) {
+            let elements = document.getElementsByClassName('body-style');
+            for (let e of elements)
+                e.style['background-color'] = `rgba(75, 75, 75)`;
+        }
+
+        let gOnMobile = 
+            (window.navigator.userAgent.includes('iPhone') ||
+             window.navigator.userAgent.includes('Android') ||
+             window.navigator.userAgent.includes('Mobile')
+            );
+
+        function isOnMobile() {
+            return gOnMobile;
+        }
+
+        /* Adjust the controls div height to be 95 % the height
+        of the client if the client width is greater than the client
+        height (landscape mode). This takes as parameters the client width
+        and height. Else make its width 84 % of the client's screen. */
+        function adjustControlsDimensions(width, height) {
+            if (width >= height)
+                document.getElementById("controls").style.maxHeight 
+                    = `${Number.parseInt(0.95*height)}px`;
+            if (height > width) {
+                document.getElementById("inner-div1").style.maxHeight
+                    = `${Number.parseInt(height - 0.95*width)}px`
+                document.getElementById("controls").style.maxWidth
+                        = `${Number.parseInt(0.84*width)}px`;
+            }
+        }
+
         var canvas = document.getElementById('canvas');
         let clientW = document.documentElement.clientWidth;
         let clientH = document.documentElement.clientHeight;
+        // adjustControlsDimensions(clientW, clientH);
         let sideLength = Number.parseInt(
             0.94*((clientW < clientH)? clientW: clientH));
         let arguments = [`${sideLength}`, `${sideLength}`];
@@ -63,13 +131,17 @@
           canvas: canvas,
           arguments: arguments
         };
+        // canvas.style["max-height"] = "10%";
         let sNumberOfTouches = 0;
 
         function getNormalizedCanvasCoordinates(e) {
-            // TODO: account for scroll location on the page as well!
-            let x = (e.clientX - canvas.offsetLeft)/canvas.offsetWidth;
-            let y = ((canvas.offsetTop + canvas.offsetHeight) 
-                        - e.clientY)/canvas.offsetHeight;
+            let x = (
+                e.clientX + window.scrollX - canvas.offsetLeft
+            )/canvas.offsetWidth;
+            let y = (
+                (canvas.offsetTop + canvas.offsetHeight - window.scrollY) 
+                - e.clientY
+            )/canvas.offsetHeight;
             return [x, y];
         }
 

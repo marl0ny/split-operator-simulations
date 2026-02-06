@@ -141,11 +141,11 @@ static double get_scaled_scroll() {
 }
 
 void dirac_2d(MainGLFWQuad main_render,
-             int window_width, int window_height,
+             TextureParams default_tex_params,
              sim_2d::SimParams &params,
              Interactor interactor) {
     
-    sim_2d::Simulation sim(params, window_width, window_height);
+    sim_2d::Simulation sim(params, default_tex_params);
     UserProgramsManager programs_manager {};
 
     {
@@ -419,6 +419,22 @@ int main(int argc, char *argv[]) {
         window_width = std::atoi(argv[1]);
         window_height = std::atoi(argv[2]);
     }
+    int filter_type = GL_LINEAR;
+    if (argc >= 4) {
+        std::string s(argv[3]);
+        if (s == "nearest")
+            filter_type = GL_NEAREST;
+    }
+    TextureParams default_tex_params = {
+        .format=GL_RGBA32F,
+        .width=(unsigned int)window_width,
+        .height=(unsigned int)window_height,
+        .generate_mipmap=!(filter_type == GL_NEAREST),
+        .wrap_s=GL_CLAMP_TO_EDGE,
+        .wrap_t=GL_CLAMP_TO_EDGE,
+        .mag_filter=(unsigned int)filter_type,
+        .min_filter=(unsigned int)filter_type
+    };
     auto main_quad = MainGLFWQuad(window_width, window_height);
 
     // Initialize Interactor instance
@@ -426,7 +442,7 @@ int main(int argc, char *argv[]) {
     sim_2d::SimParams sim_params;
 
     dirac_2d(
-        main_quad, window_width, window_height, 
+        main_quad, default_tex_params, 
         sim_params, interactor);
     return 1;
 }

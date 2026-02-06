@@ -44,7 +44,8 @@ static int convert_side_length_selector_value(int val) {
 }
 
 Frames::Frames(
-    const SimParams &sim_params, int view_width, int view_height):
+    const SimParams &sim_params, int view_width, int view_height, 
+    unsigned int min_filter, unsigned int mag_filter):
     view_tex_params(
         {
             .format=GL_RGBA16F,
@@ -52,8 +53,8 @@ Frames::Frames(
             .height=(uint32_t)view_height,
             .wrap_s=GL_CLAMP_TO_EDGE,
             .wrap_t=GL_CLAMP_TO_EDGE,
-            .min_filter=GL_LINEAR,
-            .mag_filter=GL_LINEAR,
+            .min_filter=min_filter,
+            .mag_filter=mag_filter,
         }
     ),
     sim_tex_params(
@@ -65,8 +66,8 @@ Frames::Frames(
                 sim_params.texelSideLengthSelector.selected),
             .wrap_s=GL_REPEAT,
             .wrap_t=GL_REPEAT,
-            .min_filter=GL_LINEAR,
-            .mag_filter=GL_LINEAR,
+            .min_filter=min_filter,
+            .mag_filter=mag_filter,
         }
     ),
     visual_intermediate(Quad(sim_tex_params)),
@@ -92,14 +93,16 @@ Frames::Frames(
 }
 
 void Frames::change_simulation_dimensions(IVec2 d_2d) {
+    unsigned int min_filter = this->sim_tex_params.min_filter;
+    unsigned int mag_filter = this->sim_tex_params.mag_filter;
     this->sim_tex_params = {
         .format=GL_RGBA32F,
         .width=(uint32_t)d_2d[0],
         .height=(uint32_t)d_2d[1],
         .wrap_s=GL_REPEAT,
         .wrap_t=GL_REPEAT,
-        .min_filter=GL_LINEAR,
-        .mag_filter=GL_LINEAR};
+        .min_filter=min_filter,
+        .mag_filter=mag_filter};
     this->visual_intermediate.reset(this->sim_tex_params);
     this->psi.upper.reset(this->sim_tex_params);
     this->psi.lower.reset(this->sim_tex_params);
@@ -218,9 +221,13 @@ GLSLPrograms::GLSLPrograms() {
 }
 
 Simulation::Simulation(
-    const SimParams &sim_params, int view_width, int view_height):
+    const SimParams &sim_params, TextureParams default_tex_params):
     m_programs(),
-    m_frames(sim_params, view_width, view_height)
+    m_frames(sim_params,
+        (int)default_tex_params.width,
+        (int)default_tex_params.height,
+        default_tex_params.min_filter,
+        default_tex_params.mag_filter)
     {
 
 }
