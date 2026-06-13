@@ -82,7 +82,7 @@ complex complexExp(complex z) {
 
 /* 
 Compute the eigenvectors for a Pauli matrix oriented in an
-arbitrary dimension. Although easily accomplishable by pencil and paper,
+arbitrary dimension. Although easily double by pencil and paper,
 this was instead done using 
 Python with [Sympy](https://www.sympy.org/en/index.html).
 The representation used for the Pauli matrices are found here:
@@ -140,8 +140,10 @@ void main() {
     vec4 potential = texture2D(potentialTex, UV);
 
     // 3-vector potential
-    vec3 vecPot = potential.xyz;
+    vec3 vecPot = vec3(potential[1], potential[2], potential[3]);
     float vx = vecPot.x, vy = vecPot.y, vz = vecPot.z;
+
+    float scalarPotential = potential[0];
 
     // Compute length of 3-vector potential
     float v = length(vecPot);
@@ -187,7 +189,7 @@ void main() {
     }
 
     // Step the wave function using the scalar potential
-    float arg = -c*potential.w*dt/hbar;
+    float arg = -c*scalarPotential*dt/hbar;
     complex expV = complex(cos(arg), sin(arg));
 
     fragColor = (spinorIndex == TOP)? c1C2(expV, s01): c1C2(expV, s23);

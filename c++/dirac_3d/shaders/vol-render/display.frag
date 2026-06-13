@@ -42,6 +42,8 @@ uniform ivec2 fragmentTexelDimensions2D;
 uniform float alphaBrightness;
 uniform float colorBrightness;
 
+// uniform bool usePerspectiveProjection;
+
 quaternion mul(quaternion q1, quaternion q2) {
     quaternion q3;
     q3.w = q1.w*q2.w - q1.x*q2.x - q1.y*q2.y - q1.z*q2.z;
@@ -295,11 +297,29 @@ vec4 laplacian(sampler2D tex, vec4 vc, vec3 r) {
             + (vxF + vxB - 2.0*vc)/(dz[2]*dz[2]);
 }
 
+vec4 perspectiveProject(vec4 x) {
+    return vec4(
+        x.x*(x.z + 4.0)/4.0,
+        x.y*(x.z + 4.0)/4.0,
+        x.z,
+        x.w
+    );
+}
+
 void main() {
     vec3 r = to3DTextureCoordinates(UV);
+    // if (usePerspectiveProjection) {
+    //     r = (r - vec3(0.5));
+    //     r = perspectiveProject(vec4(r, 1.0)).xyz;
+    //     r = r + vec3(0.5);
+    // }
     vec2 uv2 = to2DTextureCoordinates(r);
     
     vec3 grad = texture2D(gradientTex, uv2).xyz;
+    // if (r.z < 1.0/float(fragmentTexelDimensions3D[2]) || 
+    //     r.z > 1.0 - 1.0/float(fragmentTexelDimensions3D[2]))
+    //     grad = vec3(0.0, 0.0, 1.0);
+    
     vec4 density = texture2D(densityTex, uv2);
     // density += 0.00001*laplacian(densityTex, density, r);
 
@@ -328,7 +348,7 @@ void main() {
     // fragColor = 4.0*pix;
     float a = dot(normal, normalize(grad));
     if (a <= 0.0) discard;
-    
+
     // fragColor = vec4(1.0*normalize(density.rgb), a*a);
     
     // float densityLength = length(density.rgb);

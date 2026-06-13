@@ -1,21 +1,24 @@
-
+#include "gl_wrappers.hpp"
 #include "glfw_window.hpp"
+#include "parameters.hpp"
 #include "interactor.hpp"
-#include "simulation.hpp"
-#include "spinors.hpp"
-#include "matrix.hpp"
 #include "parse.hpp"
 #include "user_edit_glsl.hpp"
-#include <iostream>
+#include "simulation.hpp"
 
+#include <GLFW/glfw3.h>
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #include <emscripten/bind.h>
-
-using namespace emscripten;
+#include "ui_wrappers/wasm.hpp"
+#else
+#include "ui_wrappers/imgui.hpp"
 #endif
+
 #include <functional>
+#include <utility>
+
 
 static std::function <void()> s_loop;
 #ifdef __EMSCRIPTEN__
@@ -24,111 +27,328 @@ static void s_main_loop() {
 }
 #endif
 
-static std::function <void(int, Uniform)> s_sim_params_set;
-static std::function <void(int, int, std::string)> s_sim_params_set_string;
-static std::function <Uniform(int)> s_sim_params_get;
-static std::function<void(int, std::string, float)> s_user_edit_set_value;
-static std::function<float(int, std::string)> s_user_edit_get_value;
-static std::function<std::string(int)>
-    s_user_edit_get_comma_separated_variables;
+using namespace sim_3d;
 
+void simulation_ui_interface_handler(
+    MainGLFWQuad main_render,
+    TextureParams default_tex_params,  // Default texture parameters
+    SimParams &params  // Parameters of the simulations
+) {
+    Interactor interactor(main_render.get_window());
+    Simulation sim(default_tex_params, params);
+    SimParams modified_params {};
+    UserProgramsManager potential_text_edit {};
 
-enum {
-    NEW_INITIAL_CONDITIONS=0, MOUSE_ROTATE,
-};
-static int s_input_type = MOUSE_ROTATE;
-
-void dirac_3d(MainGLFWQuad main_render,
-             int window_width, int window_height,
-             Interactor interactor,
-             sim_3d::SimParams &sim_params,
-             UserEditGLSLProgram &potential_edit
-             ) {
-    auto simulation = sim_3d::Simulation(
-        sim_params, window_width, window_height);
-    Quaternion rotation = Quaternion{.real=1.0, .i=0.0, .j=0.0, .k=0.0}; 
-    float scale = 1.0;
+    // For handling mouse or touch interation.
+    std::optional<Vec2> hover_position;
+    std::optional<Vec2> start_position;
     std::vector<Vec2> cursor_positions {};
-    // Matrix::test_solve();
-    s_loop = [&] {
-        int steps_frame = sim_params.stepsPerFrame;
-        for (int i = 0; i < steps_frame; i++)
-            simulation.time_step(sim_params);
-        scale = (1.0/25.0)*Interactor::get_scroll();
-        Vec2 mouse_pos = interactor.get_mouse_position();
-        main_render.draw(simulation.render_view(
-            sim_params, rotation, scale, mouse_pos));
-        auto poll_events = [&] {
-            glfwPollEvents();
-            interactor.click_update(main_render.get_window());
-            Vec2 pos = interactor.get_mouse_position();
-            if (potential_edit.refresh()) {
-                simulation.set_potential_from_program(
-                    potential_edit.get_program(),
-                    potential_edit.get_active_uniforms(),
-                    sim_params);
-                #ifdef __EMSCRIPTEN__
-                std::string s 
-                    = std::string("userSliders(")
-                    + std::to_string(sim_params.FOUR_VECTOR_POTENTIAL) 
-                    +  ")";
-                emscripten_run_script(s.c_str());
-                #endif
+    std::optional<std::pair<Vec2, Vec2>> start_double_touches;
+    std::vector<std::pair<Vec2, Vec2>> double_touches_positions {};
+    Quaternion rotation // = Quaternion::rotator(0.25*PI, Vec3{.x=0.0, 1.0, 0.0});
+        = Quaternion::rotator(-1.0, Vec3{.x=1.0, 1.0, 0.0});
+
+    {
+        /* Set those parameters of the Parameters struct that are treated
+        as uniforms by GLSL shaders.*/
+        s_sim_params_set = [&params, &sim, &potential_text_edit]
+            (int c, Uniform u) {
+            /* if (c == params.DATA_TEXEL_DIMENSIONS3_D) {
+                sim.reset_data_dimensions(u.ivec3);
+                IVec2 d = get_2d_from_3d_dimensions(u.ivec3);
+                printf("Dimensions (%d, %d)\n",
+                       d[0], d[1]);
+                potential_text_edit.queue_current();
+            }*/
+            if (c == params.VOLUME_TEXEL_DIMENSIONS3_D) {
+                sim.reset_volume_dimensions(u.ivec3);
+                IVec2 d = get_2d_from_3d_dimensions(u.ivec3);
+                printf("Dimensions (%d, %d)\n",
+                       d[0], d[1]);
+                potential_text_edit.queue_current();
             }
-            if (pos.x > 0.0 && pos.x < 1.0 && 
-                pos.y > 0.0 && pos.y < 1.0 && interactor.left_pressed()) {
+            if (c == params.SIMULATION_DIMENSIONS3_D)
+                potential_text_edit.queue_current();
+            if (c == params.USE_LINEAR) {
+                if (u.b32)
+                    sim.reset_volume_filtering(GL_LINEAR);
+                else
+                    sim.reset_volume_filtering(GL_NEAREST);
+            }
+            params.set(c, u);
+            if (c == params.CDTDX) {
+                params.dt = params.cdtdx
+                * ((params.sideLength/float(params.texelSideLength))/params.c);
+                std::string string_val = std::to_string(params.dt);
+                std::string text_content
+                    = "Time step Δt (a.u.) = ";
+                text_content += string_val;
+                edit_label_display(params.DT_LABEL, text_content);
+            }
+            if (c == params.POS_E) {
+                float positive_coeff = u.f32;
+                float negative_content = std::sqrt(1.0F 
+                    - positive_coeff*positive_coeff);
+                std::string string_val = std::to_string(negative_content);
+                std::string text_content
+                    = "Negative energy (-E) content = " + string_val;
+                edit_label_display(params.NEG_E, text_content);
+            }
+        };
+        /* Get those parameters of the Parameters struct that can be
+        inputed as uniforms to GLSL shaders.*/
+        s_sim_params_get = [&params]
+            (int c) -> Uniform {
+            return params.get(c);
+        };
+        /* String parametres can't be configured as uniforms, so
+        are set using a different function.*/
+        s_sim_params_set_string = [&params, &potential_text_edit]
+            (int c, int index, std::string val) {
+            params.set(c, index, val);
+            if (c == params.FOUR_VECTOR_POTENTIAL) {
+                int program;
+                std::vector<std::string> latex_out {"", "", "", ""};
+                // printf("input: %s\n", &params.userTextEntry[0][0]);
+                std::set<std::string> variables_set = 
+                    initialize_glsl_program_from_strings(
+                        program, latex_out, params.fourVectorPotential);
+                potential_text_edit.add_new_program(program, variables_set);
+                display_parameters_as_sliders(c, variables_set,  {"t"});
+                edit_katex_label_display(params.LATEX_LABEL1, 
+                    (latex_out[0].size() == 0)? 
+                    "": ("V(x, y, z, t) = " + latex_out[0]));
+                edit_katex_label_display(params.LATEX_LABEL2, 
+                    (latex_out[1].size() == 0)? 
+                    "": ("A_x(x, y, z, t) = " + latex_out[1]));
+                edit_katex_label_display(params.LATEX_LABEL3, 
+                    (latex_out[2].size() == 0)? 
+                    "": ("A_y(x, y, z, t) = " + latex_out[2]));
+                edit_katex_label_display(params.LATEX_LABEL4, 
+                    (latex_out[3].size() == 0)? 
+                    "": ("A_z(x, y, z, t) = " + latex_out[3]));
+            }
+        };
+        /* Perform an action upon the press of a button. */
+        s_button_pressed = [&params, &sim]
+            (int param_code) {
+            if (param_code == params.INITIALIZE_NEW_WAVE_FUNCTION_BUTTON) {
+                sim.init(
+                    params, params.position,
+                    params.wavenumber, params.sigma);
+            }
+        };
+        /* Floating-point value parameters and their associated sliders
+        can be created by the user. This notifies and keeps track of any
+        newly created user-defined parameter. The user defined paramters are
+        not part of the Parameters struct, so are stored separately.*/
+        s_sim_params_set_user_float_param = [&potential_text_edit]
+            (int c, std::string var_name, float value) {
+            potential_text_edit.add_seen_variable(var_name, value);
+            potential_text_edit.queue_current();
+        };
+        /* Upon a change of a dropdown or selection menu, change its
+        corresponding selection parameter in the Parameters struct so that
+        it matches the dropdown.*/
+        s_selection_set = [&params, &potential_text_edit, &sim]
+            (int c, int val) {
+            /* if (c == params.PRESET_FUNCTIONS_DROPDOWN) {
+                params.presetFunctionsDropdown.selected = val;
+                int program;
+                std::vector<std::string> latex_out = std::vector<std::string> {""};
+                std::set<std::string> variables_set = 
+                    initialize_glsl_program_from_strings(
+                        program, latex_out,
+                        {params.presetFunctionsDropdown.options[val]});
+                potential_text_edit.add_new_program(program, variables_set);
+                display_parameters_as_sliders(
+                    params.USER_TEXT_ENTRY, variables_set, {"t"});
+                edit_katex_label_display(params.LATEX_LABEL, 
+                    (latex_out[0].size() == 0)? 
+                    "": ("f(x, y, z) = " + latex_out[0]));
+            }*/
+            if (c == params.VISUALIZATION_SELECT) {
+                params.visualizationSelect.selected = val;
+            }
+            if (c == params.TEXEL_SIDE_LENGTH_SELECTOR) {
+                params.texelSideLengthSelector.selected = val;
+                int texel_side_length = 64;
+                if (val == 1)
+                    texel_side_length = 128;
+                else if (val == 2)
+                    texel_side_length = 256;
+                params.texelSideLength = texel_side_length;
+                sim.reset_simulation_dimensions(IVec3{.ind{
+                    texel_side_length, texel_side_length, texel_side_length
+                }});
+                sim.reset_data_reduce_dimensions(IVec3{.ind{
+                    texel_side_length, texel_side_length, texel_side_length
+                }});
+                params.dt = params.cdtdx
+                * ((params.sideLength/float(params.texelSideLength))/params.c);
+                std::string string_val = std::to_string(params.dt);
+                std::string text_content
+                    = "Time step Δt (a.u.) = ";
+                text_content += string_val;
+                edit_label_display(params.DT_LABEL, text_content);
+            }
+        };
+        // /* Upon change of a user-defined parameter, change its value. */
+        // s_user_edit_set_value = [&potential_text_edit]
+        //     (int c, std::string var_name, float value) {
+        // };
+        // /* Upon change of a user-defined parameter, get its value. */
+        // s_user_edit_get_value = [&potential_text_edit]
+        //     (int c, std::string var_name) -> float {
+        // };
+        /* Retrieve the new image that was set by the user. */
+        // s_image_set = [&params]
+        //     (int c, const std::string &image_data, int w, int h) {
+        // };
+        s_configure_bmp_recording = [&params](int c, bool is_recording) {
+            if (c == params.TAKE_SCREENSHOTS) {
+                params.takeScreenshots.is_recording = is_recording;
+            }
+        };
+        s_bmp_image = [&sim] () {
+            std::vector<unsigned char> &image_data = sim.get_image_data();
+            return (unsigned char *)&image_data[0];
+        };
+        s_bmp_image_size = [&sim]() {
+            std::vector<unsigned char> &image_data = sim.get_image_data();
+            return image_data.size();
+        };
+    }
+
+    { // Initial configuration from the default preset option
+        int program;
+        /* int index = params.presetFunctionsDropdown.selected;
+        std::set<std::string> variables_set 
+            = initialize_glsl_program_from_strings(
+                program,
+                {params.presetFunctionsDropdown.options[index]});
+        potential_text_edit.add_new_program(program, variables_set);*/
+        edit_bool_display(params.USE_LINEAR, 
+            default_tex_params.min_filter == GL_LINEAR);
+        sim.init(params,
+                Vec3{.x=0.5, 0.5, 0.5},
+                IVec3{.x=5, 0, 0}, 0.05);
+    }
+
+    start_gui(main_render.get_window());
+    s_loop = [&] {
+
+        if (start_position.has_value()) {
+            if (cursor_positions.size() > 1) {
                 Vec2 delta_2d = interactor.get_mouse_delta();
                 Vec3 delta {.ind={delta_2d[0], delta_2d[1], 0.0}};
+                if (s_is_on_touch_screen() && delta.length() > 0.01)
+                    delta = 0.01*delta/delta.length();
                 Vec3 view_vec {.ind={0.0, 0.0, -1.0}};
                 Vec3 axis = cross_product(delta, view_vec);
-                if (s_input_type == MOUSE_ROTATE) {
-                    Quaternion rot = Quaternion::rotator(
-                        3.0*axis.length(), axis);
-                        rotation = rotation*rot;
-                } else if (s_input_type == NEW_INITIAL_CONDITIONS) {
-                    if (cursor_positions.empty()) {
-                        cursor_positions.push_back(pos);
-                        simulation.init_from_cursor_position(
-                            sim_params, rotation, scale,
-                            sim_params.texelSideLength/2,
-                            sim_params.texelSideLength/2,
-                            sim_params.texelSideLength/2,
-                            pos, 
-                            IVec3 {.ind={0, 0, 0}}, 
-                            0.05
-                        );
-                    } else {
-                        #ifdef __EMSCRIPTEN__
-                        printf("Cursor position 1: %g, %g\n", cursor_positions[0].x, cursor_positions[0].y);
-                        printf("Cursor position 2: %g, %g\n", pos.x, pos.y);
-                        #endif
-                        simulation.init_from_cursor_positions(
-                            sim_params, rotation, scale,
-                            sim_params.texelSideLength/2,
-                            sim_params.texelSideLength/2,
-                            sim_params.texelSideLength/2,
-                            cursor_positions[0], pos, 
-                            0.05
-                        );
-                    }
+                Quaternion rot = Quaternion::rotator(
+                    3.0*axis.length(), axis);
+                rotation = rotation*rot;                
+            }
+        } else {
+        }
+        if (!potential_text_edit.program_queued() && potential_text_edit.is_time_dependent()) {
+            potential_text_edit.queue_current();
+        }
+        if (potential_text_edit.program_queued()) {
+            UserDefinedProgram user_defined = potential_text_edit.expend_program();
+            sim.add_user_defined(
+                params, user_defined.program, user_defined.uniforms);
+
+        }
+        for (int i = 0; i < params.stepsPerFrame; i++) {
+            sim.time_step(params);
+            params.t += params.dt;
+        }
+        main_render.draw(
+            sim.view(params, hover_position, 
+                rotation, 0.01*Interactor::get_scroll()));
+
+        if (hover_position.has_value()) {
+            Vec3 loc = sim.get_cursor_location();
+            Vec3 scaled_loc = sim.get_scaled_cursor_location(params);
+            if (loc.x >= -1.0 && loc.x < 1.0 && loc.y >= -1.0 && loc.y < 1.0
+                && loc.z >= -1.0 && loc.z < 1.0) {
+                #ifdef __EMSCRIPTEN__
+                edit_hovering_canvas_label_display(
+                    SimParams::CANVAS_HOVER_DISPLAY,
+                    "x: " + std::to_string(scaled_loc.x) + ", "
+                    + "y: " + std::to_string(scaled_loc.y) + ", "
+                    + "z: " + std::to_string(scaled_loc.z)
+                );
+                #endif
+                /* edit_hovering_canvas_visibility_top_left_offset(
+                    SimParams::CANVAS_HOVER_DISPLAY, true, 50, 50
+                );*/
+            }
+        }
+
+        if (params.takeScreenshots.is_recording)
+            download_bmp_image("render-in-3d");
+
+        auto poll_events = [&] {
+            // Tell GLFW to poll events
+            glfwPollEvents();
+
+            // Get user interaction events
+            interactor.click_update(main_render.get_window());
+
+            // Handle mouse or single touch events
+            Vec2 pos = interactor.get_mouse_position();
+            if (outside_gui() && pos.x > 0.0 && pos.x < 1.0 && 
+                pos.y > 0.0 && pos.y < 1.0) { 
+                if (interactor.left_pressed()) {
+                    if (!start_position.has_value())
+                        start_position = pos;
+                    cursor_positions.push_back(pos);
                 }
+                hover_position = pos;
+            } else {
+                hover_position.reset();
             }
             if (interactor.left_released()) {
-                if (!cursor_positions.empty())
-                    cursor_positions.pop_back();
+                if (start_position.has_value()) {
+                    start_position.reset();
+                    cursor_positions.clear();
+                }
             }
+
+            // Handle double touch events
+            Vec2 double_touches[2];
+            double_touches[0] = interactor.get_double_touch_position(0);
+            double_touches[1] = interactor.get_double_touch_position(1);
+            if (interactor.double_touch_active()
+                && double_touches[0].x > 0.0 && double_touches[0].x < 1.0
+                && double_touches[0].y > 0.0 && double_touches[0].y < 1.0
+                && double_touches[1].x > 0.0 && double_touches[1].x < 1.0
+                && double_touches[1].y > 0.0 && double_touches[1].y < 1.0) {
+                if (!start_double_touches.has_value())
+                    start_double_touches = 
+                        {double_touches[0], double_touches[1]};
+                double_touches_positions.push_back(
+                        {double_touches[0], double_touches[1]});
+            }
+            if (interactor.double_touch_released()) {
+                if (start_double_touches.has_value()) {
+                    start_double_touches.reset();
+                    double_touches_positions.clear();
+                }
+            }
+
             #ifndef __EMSCRIPTEN__
-            if (glfwGetKey(main_render.get_window(), 
-                GLFW_KEY_A) == GLFW_PRESS)
-                s_input_type = NEW_INITIAL_CONDITIONS;
-            if (glfwGetKey(main_render.get_window(), 
-                GLFW_KEY_S) == GLFW_PRESS)
-                s_input_type = MOUSE_ROTATE;
             #endif
         };
+        display_gui(&params);
         poll_events();
+
         glfwSwapBuffers(main_render.get_window());
     };
+
     #ifdef __EMSCRIPTEN__
     emscripten_set_main_loop(s_main_loop, 0, true);
     #else
@@ -137,174 +357,45 @@ void dirac_3d(MainGLFWQuad main_render,
     #endif
 }
 
-/*
- Can pass command line arguments to main. This is primarily
- introduced so that the dimensions of the window can be
- chosen before launch, which is particularly useful for 
- the WASM build where the html file page can vary in size.
 
-*/
 int main(int argc, char *argv[]) {
-    int window_width = 1500, window_height = 1500;
+    int window_width = 1440, window_height = 1440;
     if (argc >= 3) {
         window_width = std::atoi(argv[1]);
         window_height = std::atoi(argv[2]);
     }
-    // int window_width = 1920, window_height = 1080;
-    // int which = 0;
-    // auto main_quad = MainGLFWQuad(window_width, window_height);
-    // Interactor interactor(main_quad.get_window());
-    SimParams sim_params {};
-    // auto p = Vec3{.ind={0.0F, 0.0F, 0.0F}};
-    // auto s = spinors::get_spinor_plane_wave(
-    //     sim_params, p, {0.0, 0.0, 1.0, 0.0}, 0);
-    // std:: cout << s[0][0] << std::endl;
-    // std:: cout << s[0][1] << std::endl;
-    // std:: cout << s[1][0] << std::endl;
-    // std:: cout << s[1][1] << std::endl;
-    // Matrix::test_det();
-    // Matrix::test_solve();
-    // Matrix::test_inverse();
-    // test_get_expression_stack();
-    test_shunting_yard();
-    auto main_quad = MainGLFWQuad(window_width, window_height);
-    Interactor interactor(main_quad.get_window());
-    s_sim_params_set = [&sim_params](int c, Uniform u) {
-        sim_params.set(c, u);
-    };
-    UserEditGLSLProgram glsl_potential_edit {};
-    s_sim_params_set_string = [&sim_params, &glsl_potential_edit](
-        int c, int index, std::string val) {
-        sim_params.set(c, index, val);
-        glsl_potential_edit.new_texts({
-            sim_params.fourVectorPotential[0],
-            sim_params.fourVectorPotential[1],
-            sim_params.fourVectorPotential[2],
-            sim_params.fourVectorPotential[3]});
-    };
-    s_user_edit_set_value
-        = [&glsl_potential_edit](int c, std::string s, float value) {
-        glsl_potential_edit.set_value(s, value);      
-    };
-    s_user_edit_get_value
-        = [&glsl_potential_edit](int c, std::string s) -> float {
-        auto uniforms = glsl_potential_edit.get_active_uniforms();
-        return uniforms.operator[](s).vec2[0];
-    };
-    s_user_edit_get_comma_separated_variables 
-        = [&glsl_potential_edit](int c) -> std::string {
-         std::string r = "";
-        int count = 0;
-        auto uniforms = glsl_potential_edit.get_active_uniforms();
-        int size = uniforms.size();
-        for (auto &e: uniforms) {
-            count++;
-            r += e.first + ((count == size)? "": ",");
-        }
-        return r;
-    };
-    s_sim_params_get = [&sim_params](int c) -> Uniform {
-        return sim_params.get(c);
-    };
-    // {
-    //     auto e = UserEditGLSLProgram();
-    //     e.new_texts({"a*x^2 + y", "k*(x^2 + z^2)", "z^2 + y", "d"});
-    //     e.refresh();
-        
-    // }
-    dirac_3d(
-        main_quad, window_width, window_height, 
-        interactor, sim_params, 
-        glsl_potential_edit);
-    return 1;
-}
-
-/* Setters for the simulation parameters struct, where they act
-as the exposed entry point for JavaScript code in the WASM build.
-There are multiple functions, one for each type. They all take as the first
-argument a param_code representing each field of the parameter struct,
-where these codes must be written and enumerated separately in JavaScript.
-For the function setters of scalar quantities, the next and final argument is
-just the quantity itself. For those that set a vector quantity,
-these next arguments in order must be passed into the function: 
-the number of elements the vector contains, the index of the vector to change
-the value, and lastly the value itself. The actual vector structs
-themselves are not passed as argument: this is to avoid the complexity of 
-getting non-primitive objects to be passed between JS/C++.
-*/
-
-void set_int_param(int param_code, int i) {
-    s_sim_params_set(param_code, Uniform((int)i));
-}
-
-void set_float_param(int param_code, float f) {
-    s_sim_params_set(param_code, Uniform((float)f));
-}
-
-void set_bool_param(int param_code, bool b) {
-    s_sim_params_set(param_code, Uniform((bool)b));
-}
-
-void set_string_param(int param_code, int index, std::string s) {
-    s_sim_params_set_string(param_code, index, s);
-}
-
-// std::string send_json_string() {
-//     return {"This", "is", "some", "text\n";
-// }
-
-float user_edit_get_value(int div_code, std::string variable_name) {
-    return s_user_edit_get_value(div_code, variable_name);
-}
-
-void user_edit_set_value(int div_code, std::string variable_name, float value) {
-    s_user_edit_set_value(div_code, variable_name, value);
-}
-
-std::string user_edit_get_comma_separated_variables(int div_code) {
-    return s_user_edit_get_comma_separated_variables(div_code);
-}
-
-void set_vec_param(int param_code, int elem_count, int index, float val) {
-    auto u = s_sim_params_get(param_code);
-    if (elem_count == 2) {
-        u.vec2[index] = val;
-    } else if (elem_count == 3) {
-        u.vec3[index] = val;
-    } else {
-        u.vec4[index] = val;
+    int filter_type = GL_LINEAR;
+    if (argc >= 4) {
+        std::string s(argv[3]);
+        if (s == "nearest")
+            filter_type = GL_NEAREST;
     }
-    s_sim_params_set(param_code, u);
-}
-
-void set_ivec_param(int param_code, int elem_count, int index, float val) {
-    auto u = s_sim_params_get(param_code);
-    if (elem_count == 2) {
-        u.ivec2[index] = val;
-    } else if (elem_count == 3) {
-        u.ivec3[index] = val;
+    if (argc >= 5) {
+        std::string s(argv[4]);
+        s_is_on_touch_screen = []() {
+            return true;
+        };
     } else {
-        u.ivec4[index] = val;
+        std::string s(argv[4]);
+        s_is_on_touch_screen = []() {
+            return false;
+        };
     }
-    s_sim_params_set(param_code, u);
+    SimParams params {};
+    TextureParams default_tex_params = {
+        .format=GL_RGBA16F,
+        .width=(unsigned int)window_width,
+        .height=(unsigned int)window_height,
+        .generate_mipmap=false,
+        // .generate_mipmap=!(filter_type == GL_NEAREST),
+        .wrap_s=GL_CLAMP_TO_EDGE,
+        .wrap_t=GL_CLAMP_TO_EDGE,
+        .mag_filter=(unsigned int)filter_type,
+        .min_filter=(unsigned int)filter_type
+    };
+    MainGLFWQuad 
+    main_render (default_tex_params.width, default_tex_params.height);
+    simulation_ui_interface_handler(
+        main_render, default_tex_params, params);
+    return 0;
 }
-
-void set_mouse_mode(int type) {
-    s_input_type = type;
-}
-
-#ifdef __EMSCRIPTEN__
-EMSCRIPTEN_BINDINGS(my_module) {
-    function("set_float_param", set_float_param);
-    function("set_int_param", set_int_param);
-    function("set_bool_param", set_bool_param);
-    function("set_vec_param", set_vec_param);
-    function("set_ivec_param", set_ivec_param);
-    function("set_mouse_mode", set_mouse_mode);
-    function("set_string_param", set_string_param);
-    function("user_edit_get_value", user_edit_get_value);
-    function("user_edit_set_value", user_edit_set_value);
-    function("user_edit_get_comma_separated_variables",
-             user_edit_get_comma_separated_variables);
-}
-#endif

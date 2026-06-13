@@ -1,4 +1,5 @@
-/* Scale a texture by a single scalar value. */
+/* Scale the contents of one texture by a uniform float
+value, and place this in another texture.*/
 #if (__VERSION__ >= 330) || (defined(GL_ES) && __VERSION__ >= 300)
 #define texture2D texture
 #else
@@ -8,7 +9,7 @@
 #if (__VERSION__ > 120) || defined(GL_ES)
 precision highp float;
 #endif
-
+    
 #if __VERSION__ <= 120
 varying vec2 UV;
 #define fragColor gl_FragColor
@@ -17,8 +18,8 @@ in vec2 UV;
 out vec4 fragColor;
 #endif
 
-uniform float scale;
 uniform sampler2D tex;
+uniform float scale;
 
 void main() {
     fragColor = scale*texture2D(tex, UV);

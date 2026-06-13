@@ -1,4 +1,4 @@
-/* Copy the contents of a texture to the output texture */
+/*Copy the contents of one texture to another.*/
 #if (__VERSION__ >= 330) || (defined(GL_ES) && __VERSION__ >= 300)
 #define texture2D texture
 #else

@@ -18,7 +18,7 @@ https://en.wikipedia.org/wiki/Volume_ray_casting
 #if (__VERSION__ > 120) || defined(GL_ES)
 precision highp float;
 #endif
- 
+
 #if __VERSION__ <= 120
 varying vec2 UV;
 #define fragColor gl_FragColor
@@ -30,12 +30,16 @@ out vec4 fragColor;
 #define quaternion vec4
 
 uniform sampler2D tex;
-uniform float viewScale;
+uniform vec3 preRotationScale;
 uniform vec4 rotation;
+uniform float postRotationScale;
+uniform float scalePostRotation;
 uniform ivec3 volumeTexelDimensions3D;
 uniform ivec2 volumeTexelDimensions2D;
 uniform ivec3 dataTexelDimensions3D;
 uniform ivec2 dataTexelDimensions2D;
+uniform ivec2 screenDimensions;
+uniform bool usePerspectiveProjection;
 
 quaternion mul(quaternion q1, quaternion q2) {
     quaternion q3;
@@ -140,13 +144,24 @@ vec4 sample2DTextureAs3D(sampler2D tex, vec3 position) {
     return mix(f0, f1, (dz == 0.0)? 0.0: (r.z - z0)/dz);
 }
 
+vec4 perspectiveProject(vec4 x) {
+    return vec4(
+        x.x*(x.z + 4.0)/4.0,
+        x.y*(x.z + 4.0)/4.0,
+        x.z,
+        x.w
+    );
+}
+
 void main() {
     vec4 viewPosition 
         = vec4(to3DVolumeTextureCoordinates(UV) - vec3(0.5), 1.0);
-    // float viewScaleAdj = max(viewScale, 2.0);
-    float viewScaleAdj = viewScale;
-    vec3 r = rotate(viewPosition, conj(rotation)).xyz/viewScaleAdj
-         + vec3(0.5);
+    viewPosition.y *= float(screenDimensions[1])/float(screenDimensions[0]);
+    // if (usePerspectiveProjection) viewPosition = perspectiveProject(viewPosition);
+    for (int i = 0; i < 3; i += 1)
+        viewPosition[i] *= preRotationScale[i];
+    vec3 r = rotate(viewPosition, conj(rotation)).xyz/postRotationScale
+        + vec3(0.5);
     // This check needs to be done to avoid a repeating effect
     // caused by sampling beyond the initial boundary.
     if (r.x < 0.0 || r.x >= 1.0 ||

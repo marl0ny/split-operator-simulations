@@ -1,11 +1,144 @@
 {
-    "stepsPerFrame": {"name": "Steps/Frame", "type": "int", "value": 1, "min": 0, "max": 5},
-    "c": {"name": "c (a.u.)", "type": "float", "value": 137.06},
-    "hbar": {"name": "hbar (a.u.)", "type": "float", "value": 1.0},
-    "m": {"name": "mass (a.u.)", "type": "float", "value": 1.0, "min": 0.0, "max": 10.0, "step": 0.1},
-    "dt": {"name": "Time Step (a.u.)", "type": "float", "value": 0.000028, "min": 0.0, "max": 0.00003, "step": 0.000001, "comment":0.000028},
-    "t": {"name": "Time elapsed (a.u.)", "type": "float", "value": 0.0},
-    "texelSideLength": {"name": "Grid Side Length (Cubic)", "type": "int", "value": 64, "min": 64, "max": 128, "step": 64},
-    "sideLength": {"name": "Simulation Side Length", "type": "float", "value": 2.0},
-    "fourVectorPotential": {"name": "4-Vector Potential", "type": "std::vector<std::string>", "value": "{\"0\", \"0\", \"0\", \"0\"}"}
+
+    "link": {
+        "name": "Source", "type": "LinkedLabel", 
+        "value": "https://github.com/marl0ny/split-operator-simulations"},
+    "stepsPerFrame": {
+        "name": "Steps/frame", "type": "int", "value": 1, "min": 0, "max": 5},
+    "mouseSelector": {
+        "name": "Mouse usage", "type": "SelectionList", "value": "{0, {\"Rotate only\", \"New wave function\", \"Sketch modify scalar potential\", \"Erase modify scalar potential\", \"Sketch modify vector potential\", \"Erase modify vector potential\"}}"},
+    "texelSideLengthSelector": {
+        "name": "Grid discretization size", "type": "SelectionList", "value": "{0, {\"64x64x64\", \"128x128x128\", \"256x256x256\"}}"},
+    "dtLabel": {
+        "name": "Time step Δt (a.u.) = 0.000028", "type": "Label", "value": "{}", "comment": "print((0.99*2.0/512)/137.036)", "style": "font-weight: normal;"},
+    "cdtdx": {
+        "name": "c|Δt|/Δx", "type": "float", "value": 0.99, "min": 0.0, "max": 1.0, "step": 0.01},
+    "c": {
+        "name": "c (a.u.)", "type": "float", "value": 137.06},
+    "hbar": {
+        "name": "hbar (a.u.)", "type": "float", "value": 1.0},
+    "m": {
+        "name": "mass (a.u.)", "type": "float", "value": 1.0, "min": 0.0, "max": 10.0, "step": 0.1},
+    "dt": {
+        "name": "Time Step (a.u.)", "type": "float", "value": 0.000028},
+    "t": {
+        "name": "Time elapsed (a.u.)", "type": "float", "value": 0.0},
+    "texelSideLength": {
+        "name": "Grid Side Length (Cubic)", "type": "int", "value": 64},
+    "sideLength": {
+        "name": "Simulation Side Length", "type": "float", "value": 2.0},
+    "simulationDimensions3D": {
+        "name": "Discretization dimensions", "type": "IVec3", "value": [64, 64, 64]},
+    "dataTexelDimensions3D": {
+            "name": "Volume dimensions", "type": "IVec3", "value": [64, 64, 64]},
+
+
+    "initializeWaveFunctionStart": {"name": "Initialize New Wave Function Controls", "type": "SubSectionStart", "value": {}},
+        "sigma": {
+            "name": "Size", "type": "float", "value": 0.1, "min": 0.03, "max": 0.3, "step": 0.001},
+        "posE": {
+            "name": "Positive energy (+E) content", "type":  "float", "value": 1.0, "min": 0.0, "max": 1.0, "step": 0.01},
+        "negE": {
+            "name": "Negative energy (-E) content = 0", "type": "Label", "value": "{}", "style": "font-weight: normal;"}, 
+        "posSpinDir": {
+            "name": "Spin up orientation for +E solutions (sx, sy, sz)", "type":  "Vec3", "value": [0.0, 0.0, 1.0], "min": [-1.0, -1.0, -1.0], "max": [1.0, 1.0, 1.0], "step": [0.01, 0.01, 0.01]},
+        "orientationsMSGLabel": {
+            "name": "(Orientations get normalized. (0, 0, 0) changed to (0, 0, 1).)", "type": "Label", "value": "{}", "style": "font-weight: normal;"},
+        "negSpinDir": {
+            "name": "Spin up orientation for -E solutions", "type":  "Vec3", "value": [0.0, 0.0, 1.0], "min": [-1.0, -1.0, -1.0], "max": [1.0, 1.0, 1.0], "step": [0.01, 0.01, 0.01]},
+        "momentumSpaceInit": {
+            "name": "Apply spinor and +E/-E configuration to each momentum plane wave individually. Plane waves then summed up to form wave packet.", "type": "bool", "value": false},
+        "wavenumber": {
+            "name": "Wave number, w.r.t. simulation domain", "type": "IVec3", "value": [0, 0, 0], "min": [-16, -16, -16], "max": [16, 16, 16], "step": [1, 1, 1]},
+        "position": {
+            "name": "Position (norm. coord.)", "type": "Vec3", "value": [0.5, 0.5, 0.5], "min": [0.0, 0.0, 0.0], "max": [1.0, 1.0, 1.0], "step": [0.01, 0.01, 0.01]
+        },
+        "initializeNewWaveFunctionButton": {
+            "name": "Initialize new wave function", "type": "Button", "value": {}
+        },
+    "initializeWaveFunctionEnd": {"name": "Initialize New Wave Function Controls", "type": "SubSectionEnd", "value": {}},
+
+    "initializePotentialStart": {"name": "Initialize Potential Controls", "type": "SubSectionStart", "value": {}},
+        "fourVectorPotential": {
+            "name": "4-Vector Potential", "type": "EntryBoxes", "value": "{\"0\", \"0\", \"0\", \"0\"}", "subLabels": ["V(x, y, z, t)", "Ax(x, y, z, t)", "Ay(x, y, z, t)", "Az(x, y, z, t)"]},
+        "latexLabel1": {
+            "name": "KaTeX Label", "type": "KaTeXLabel", "value": {}},
+        "latexLabel2": {
+            "name": "KaTeX Label", "type": "KaTeXLabel", "value": {}},
+        "latexLabel3": {
+            "name": "KaTeX Label", "type": "KaTeXLabel", "value": {}},
+        "latexLabel4": {
+            "name": "KaTeX Label", "type": "KaTeXLabel", "value": {}},
+    "initializePotentialEnd": {"name": "Initialize Potential Controls", "type": "SubSectionEnd", "value": {}},
+
+    "visualizationControlsStart": {"name": "Visualization Controls", "type": "SubSectionStart", "value": {}},
+
+        "visualizationSelect": {
+            "name": "Visualization select", "type": "SelectionList", "value": "{0, {\"Volume render\", \"Three orthogonal planar slices\", \"Vector field\", \"Three orthogonal planar slices, vector field\", \"Volume render, vector field\"}}"},
+        "usePerspectiveProjection": {
+            "name": "Use perspective projection", "type": "bool", "value": true},
+        "brightness": {
+            "name": "Overall scaling", "type": "float", "value": 0.5, "min": 0.0, "max": 20.0, "step": 0.01},
+        
+        "waveFuncVisStart": {"name": "Wave Function Visualization Options", "type": "SubSectionStart", "value": "{}"},
+            "adjNoteLabel": {
+                "name": "(Please note: bar(𝜓) = 𝜓†γ⁰)", "type": "Label", "value": "{}", "style": "font-weight: normal;"},
+            "showCurrent0": {
+                "name": "Current 0th component (𝜓(r)†𝜓(r))", "type": "bool", "value": false, "xorListName": "scalarVis"},
+            "showPsuedocurrent0": {
+                "name": "Pseudocurrent 0th component (𝜓(r)†γ⁵𝜓(r))", "type": "bool", "value": false, "xorListName": "scalarVis"},
+            "showScalar": {
+                "name": "Scalar (bar(𝜓(r))𝜓(r))", "type": "bool", "value": false, "xorListName": "scalarVis"},
+            "showPseudoscalar": {
+                "name": "Pseudoscalar (bar(𝜓(r))γ⁵𝜓(r))", "type": "bool", "value": false, "xorListName": "scalarVis"},
+            "showPsi0WPhase": {
+                "name": "|𝜓₁(r)|² component with phase", "type": "bool", "value": true, "xorListName": "scalarVis"},
+            "showPsi1WPhase": {
+                "name": "|𝜓₂(r)|² component with phase", "type": "bool", "value": false, "xorListName": "scalarVis"},
+            "showPsi2WPhase": {
+                "name": "|𝜓₃(r)|² component with phase", "type": "bool", "value": false, "xorListName": "scalarVis"},
+            "showPsi3WPhase": {
+                "name": "|𝜓₄(r)|² component with phase", "type": "bool", "value": false, "xorListName": "scalarVis"},
+            "showSpatialCurrent": {
+                "name": "Spatial current (bar(𝜓(r))γⁱ𝜓(r), i=1,2,3)", "type": "bool", "value": false},
+            "showPseudospatialCurrent": {
+                "name": "Spatial pseudocurrent (bar(𝜓(r))γⁱγ⁵𝜓(r))", "type": "bool", "value": false},
+        "waveFuncVisEnd": {"name": "Wave Function Visualization Options", "type": "SubSectionEnd", "value": "{}"},
+
+        "volumeRenderSectionStart": {"name": "Volume Render Controls", "type": "SubSectionStart", "value": {}},
+            "useLinear": {
+                "name": "Linear interpolation", "type": "bool", "value": false},
+            "alphaBrightness": {
+                "name": "Alpha brightness", "type": "float", "value": 2.0, "min": 0.0, "max": 10.0, "step": 0.01},
+            "colorBrightness": {
+                "name": "Color brightness", "type": "float", "value": 1.0, "min": 0.0, "max": 10.0, "step": 0.01},
+            "volumeTexelDimensions3D": {
+                "name": "Volume dimensions", "type": "IVec3", "value": [128, 128, 192], "min": [16, 16, 16], "max": [512, 512, 512], "step": [2, 2, 4]},
+            "__noiseScale": {
+                "name": "Noise sampling strength", "type": "float", "value": 0.25, "min": 0.0, "max": 1.5, "step": 0.01},
+            "applyBlur": {
+                "name": "Enable bloom", "type": "bool", "value": true},
+            "blurSize": {
+                "name": "Bloominess", "type": "int", "value": 5, "min": 0, "max": 10},
+        "volumeRenderSectionEnd": {"name": "Volume Render Controls", "type": "SubSectionEnd", "value": {}},
+
+        "planarSlicesSectionStart": {"name": "Three Orthogonal Planar Slices Controls", "type": "SubSectionStart", "value": {}},
+            "planarNormCoordOffsets": {
+                "name": "Planar slices offsets (in normalized coordinates) for xy, yz, xz", "type": "Vec3", "value": [0.5, 0.5, 0.5], "min": [0.0, 0.0, 0.0], "max": [1.0, 1.0, 1.0], "step": [0.001, 0.001, 0.001]},
+        "planarSlicesSectionEnd": {"name": "Three Orthogonal Planar Slices Controls", "type": "SubSectionEnd", "value": {}},
+
+        "arrows3DLineSectionStart": {"name": "Arrows Plot", "type": "SubSectionStart", "value": {}},
+            "arrowDimensions": {
+                "name": "Arrows dimensions", "type": "IVec3", "value": [8, 8, 8], "min": [8, 8, 8], "max": [128, 128, 128]},
+            "useCones": {
+                "name": "Use conical arrows", "type": "bool", "value": false},
+        "arrows3DLineSectionEnd": {"name": "Arrows Plot", "type": "SubSectionEnd", "value": {}},
+
+    "visualizationControlsEnd": {"name": "Visualization Controls", "type": "SubSectionEnd", "value": {}},
+
+    "takeScreenshots": {"name": "Take screenshots at every frame (uncompressed bitmap)", "type": "BMPRecord", "value": "{false, 1440, 1440}"},
+
+    "canvasHoverDisplay": {"name": "", "type": "HoveringCanvasLabel", "value": {}},
+
+    "dummyValue": {"name": "dummyValue", "type": "int", "value": 0}
 }
