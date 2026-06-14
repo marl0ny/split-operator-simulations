@@ -7,13 +7,13 @@
 namespace dirac_split_step2d {
 
     struct BiSpinorQuad {
-        BiSpinorQuad(TextureParams t): u(t), v(t) {}
+        BiSpinorQuad(TextureParams t): upper(t), lower(t) {}
         union {
             struct {
                 Quad ind[2];
             };
             struct {
-                Quad u, v;
+                Quad upper, lower;
             };
         };
         Quad &operator[](int i) {
@@ -25,8 +25,8 @@ namespace dirac_split_step2d {
         BiSpinorQuad &operator=(BiSpinorQuad &) = delete;
         BiSpinorQuad &operator=(BiSpinorQuad &&) = delete;
         ~BiSpinorQuad() {
-            this->u.~Quad();
-            this->v.~Quad();
+            this->upper.~Quad();
+            this->lower.~Quad();
         }
     };
 
@@ -40,12 +40,13 @@ namespace dirac_split_step2d {
     struct Programs {
         uint32_t momentum_step;
         uint32_t spatial_step;
+        uint32_t add;
         fft2d::Programs fft;
     };
 
     struct QuadTemps {
         BiSpinorQuad psi_p[2];
-        BiSpinorQuad psi_x[2];
+        BiSpinorQuad psi_x[4];
         fft2d::QuadTemps fft;
     };
 
@@ -55,6 +56,15 @@ namespace dirac_split_step2d {
         QuadTemps &intermediate_quantities,
         Programs glsl_programs,
         SplitStepParameters split_step_params
+    );
+
+    void split_step_momentum_alt(
+        BiSpinorQuad &psi_final,
+        const BiSpinorQuad &psi_init,
+        QuadTemps &intermediate_quantities,
+        Programs glsl_programs,
+        SplitStepParameters split_step_params,
+        int propagation_dir
     );
 
     void split_step_spatial(

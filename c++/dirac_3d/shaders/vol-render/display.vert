@@ -26,10 +26,12 @@ out vec2 UV;
 
 uniform vec4 debugRotation;
 uniform bool debugShow2DTexture;
-uniform float scale;
+uniform vec4 scale;
 
 uniform ivec3 texelDimensions3D;
 uniform ivec2 texelDimensions2D;
+
+uniform bool usePerspectiveProjection;
 
 
 quaternion mul(quaternion q1, quaternion q2) {
@@ -54,13 +56,14 @@ quaternion rotate(quaternion x, quaternion r) {
 }
 
 vec4 project(vec4 x) {
-    return vec4(x.x, x.y, 0.0, 1.0);
-    /* vec4 y;
-    y[0] = x[0]*5.0/(x[2] + 5.0);
-    y[1] = x[1]*5.0/(x[2] + 5.0);
-    y[2] = x[2];
+    if (!usePerspectiveProjection)
+        return vec4(x.x, x.y, 0.0, 1.0);
+    vec4 y;
+    y[0] = (x[0])*4.0/(x[2] + 4.0);
+    y[1] = (x[1])*4.0/(x[2] + 4.0);
+    y[2] = 0.0;
     y[3] = 1.0;
-    return y;*/
+    return y;
 }
 
 vec3 to3DTextureCoordinates(vec2 uv) {
@@ -86,5 +89,9 @@ void main() {
     UV = uvIndex.xy;
     vec4 viewPos = vec4(to3DTextureCoordinates(UV), 1.0)
                    - vec4(0.5, 0.5, 0.5, 0.0);
-    gl_Position = project(2.0*scale*rotate(viewPos, debugRotation));
+    vec4 res = rotate(viewPos, debugRotation);
+    res.x *= 2.0*scale.x;
+    res.y *= 2.0*scale.y;
+    res.z *= 2.0*scale.z;
+    gl_Position = project(res);
 }

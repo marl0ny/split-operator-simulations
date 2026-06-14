@@ -33,6 +33,7 @@ uniform vec2 sigmaTexCoord;
 uniform complex2 spinor;
 
 uniform bool useEnergyStatesCombinations;
+uniform bool invertNegativeEnergyMomentum;
 uniform vec2 dimensions2D;
 uniform ivec2 texelDimensions2D;
 uniform int spinorIndex;
@@ -76,7 +77,7 @@ complex frac(complex z1, complex z2) {
     return mul(z1, invZ2);
 }
 
-complex wavepacket(vec2 r) {
+complex wavepacket(vec2 r, vec2 wn) {
     float sx = sigmaTexCoord.x;
     float sy = sigmaTexCoord.y;
     float width = dimensions2D[0];
@@ -84,11 +85,23 @@ complex wavepacket(vec2 r) {
     float gx = exp(-0.25*pow(r.x/sx, 2.0))/sqrt(sx*sqrt(2.0*PI));
     float gy = exp(-0.25*pow(r.y/sy, 2.0))/sqrt(sy*sqrt(2.0*PI));
     float g = gx*gy/(width*height);
-    float nx = waveNumber.x;
-    float ny = waveNumber.y;
+    float nx = wn.x;
+    float ny = wn.y;
     complex phase = complex(cos(2.0*PI*(nx*r.x + ny*r.y)),
                             sin(2.0*PI*(nx*r.x + ny*r.y)));
     return amplitude*g*phase;
+}
+
+complex wavepacketPeriodic(vec2 r, vec2 wn) {
+    return wavepacket(r, wn)
+        + wavepacket(vec2(r.x + 1.0, r.y), wn) 
+        + wavepacket(vec2(r.x - 1.0, r.y), wn) 
+        + wavepacket(vec2(r.x, r.y + 1.0), wn)
+        + wavepacket(vec2(r.x, r.y - 1.0), wn)
+        + wavepacket(vec2(r.x - 1.0, r.y - 1.0), wn)
+        + wavepacket(vec2(r.x + 1.0, r.y + 1.0), wn)
+        + wavepacket(vec2(r.x + 1.0, r.y - 1.0), wn)
+        + wavepacket(vec2(r.x - 1.0, r.y + 1.0), wn);
 }
 
 
@@ -258,7 +271,7 @@ vec2 eigenvectorRealSymmetric2x2(int i, float d0, float d1, float nd) {
 complex2 eigenvectorDiracRep(
     int spinorIndex, bool isPositiveE, bool isSpinUp, vec3 p) {
     bool isNegativeE = !isPositiveE, isSpinDown = !isSpinUp;
-    float E = sqrt(m*m*c*c*c*c + c*c*dot(p, p));
+    float scaledE = sqrt(m*m + dot(p/c, p/c));  // Energy divided by c^2
     float absP = length(p);
     complex2 spin = (isSpinUp)? 
         getSpinUpState(p, absP): getSpinDownState(p, absP);
@@ -270,18 +283,18 @@ complex2 eigenvectorDiracRep(
     } else {
         if (isSpinUp && isPositiveE) {
             c0 = 1.0;
-            c1 = c*absP/(m*c*c + E);
+            c1 = (absP/c)/(m + scaledE);
         } else if (isSpinDown && isPositiveE) {
             c0 = 1.0;
-            c1 = -c*absP/(m*c*c + E);
+            c1 = -(absP/c)/(m + scaledE);
         } else if (isSpinUp && isNegativeE) {
-            c0 = -c*absP/(m*c*c + E);
+            c0 = -(absP/c)/(m + scaledE);
             c1 = 1.0;
         } else if (isSpinDown && isNegativeE) {
-            c0 = c*absP/(m*c*c + E);
+            c0 = (absP/c)/(m + scaledE);
             c1 = 1.0;
         }
-        return sqrt((m*c*c + E)/(2.0*E))
+        return sqrt((m + scaledE)/(2.0*scaledE))
             *((spinorIndex == 0)? c0*spin: c1*spin);
     }
 }
@@ -369,15 +382,7 @@ void main() {
     float x0 = offsetTexCoord.x;
     float y0 = offsetTexCoord.y;
     vec2 r = vec2(x - x0, y - y0);
-    complex w = wavepacket(r)
-        + wavepacket(vec2(r.x + 1.0, r.y)) 
-        + wavepacket(vec2(r.x - 1.0, r.y)) 
-        + wavepacket(vec2(r.x, r.y + 1.0))
-        + wavepacket(vec2(r.x, r.y - 1.0))
-        + wavepacket(vec2(r.x - 1.0, r.y - 1.0))
-        + wavepacket(vec2(r.x + 1.0, r.y + 1.0))
-        + wavepacket(vec2(r.x + 1.0, r.y - 1.0))
-        + wavepacket(vec2(r.x - 1.0, r.y + 1.0));
+    complex w = wavepacketPeriodic(r, waveNumber);
     if (!useEnergyStatesCombinations) {
         fragColor = c1C2(w, spinor);
     } else {
@@ -387,6 +392,19 @@ void main() {
         float pSquared = dot(pVector, pVector);
         complex2 spinor2 = getEnergyStatesCombinations(
             pVector, pSquared, c0, c1, c2, c3);
-        fragColor = c1C2(w, spinor2);
+        complex2 spinorPos = getEnergyStatesCombinations(
+            pVector, pSquared,
+            complex(0.0), c1, complex(0.0), c3);
+        complex2 spinorNeg = getEnergyStatesCombinations(
+            -pVector, pSquared,
+            c0, complex(0.0), c2, complex(0.0));
+        complex wPos = wavepacketPeriodic(r, waveNumber);
+        complex wNeg = wavepacketPeriodic(r, -waveNumber);
+        if (invertNegativeEnergyMomentum) {
+            fragColor = c1C2(wPos, spinorPos) 
+                        + c1C2(wNeg, spinorNeg);
+        } else {
+            fragColor = c1C2(w, spinor2);
+        }
     }
 }

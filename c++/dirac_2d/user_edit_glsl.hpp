@@ -24,5 +24,6 @@ struct UserProgramsManager {
     void add_seen_variable(std::string variable, float value);
     void queue_current();
     bool program_queued();
+    bool is_time_dependent();
     UserDefinedProgram expend_program();
 };

@@ -1,71 +1,374 @@
 <!DOCTYPE html>
-<meta charset="utf-8"/>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
 <html>
     <head>
+        <title>Visualization of the 3D Dirac Equation</title>
+        <!--
+			Originally, I had numerous issues trying to get consistent and proper scaling
+			on mobile devices. To fix this, it turns out that the viewport throught the meta tag 
+			needs to be explicitly set to use the device's screen width,
+			as this is not done by defualt. 
+			As well as this, some browser specific adjustments need to be turned off.
+			I personally found this blog post by S. Sutoris helpful:
+			https://www.rismosch.com/article?id=css-on-mobile-and-the-most-important-header-tag
+			And of course I looked at the MDN documentation:
+			https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/meta/name/viewport
+		-->
+
+        <!--
+            Load KaTeX. This is from the starter template provided on KaTeX's repository ReadMe:
+            https://github.com/KaTeX/KaTeX
+        -->
+        <link rel="stylesheet"
+            id="katex-stylesheet"
+            href="https://cdn.jsdelivr.net/npm/katex@0.17.0/dist/katex.min.css"
+            integrity="sha384-vlBdW0r3AcZO/HboRPznQNowvexd3fY8qHOWkBi5q7KGgqJ+F48+DceybYmrVbmB"
+            onerror="this.onerror=null; this.href='./other-ext-libraries/katex.min.css'"
+            crossorigin="anonymous">
+        <script 
+            src="https://cdn.jsdelivr.net/npm/katex@0.17.0/dist/katex.min.js"
+            integrity="sha384-AtrdNsnxl/75rvBneBVH7DtOvCxSVahR2zWqle1coBKd8DEmLoviqNeJSx64gNAs"
+            id="katex-script"
+            onerror="let s = document.createElement('script');
+                     s.id = 'katex-offline'; document.head.appendChild(s);"
+            crossorigin="anonymous">
+        </script>
+        <script
+            src="https://cdn.jsdelivr.net/npm/katex@0.17.0/dist/contrib/auto-render.min.js"
+            integrity="sha384-bjyGPfbij8/NDKJhSGZNP/khQVgtHUE5exjm4Ydllo42FwIgYsdLO2lXGmRBf5Mz"
+            id="katex-auto-render"
+            onload="renderMathInElement(document.body)"
+            onerror="let s = document.createElement('script');
+                     s.id = 'auto-rend-offline'; document.head.appendChild(s);"
+            crossorigin="anonymous">
+        </script>
+        <script>
+
+            if (document.getElementById('katex-offline') !== null) {
+                let katexOffline = document.getElementById('katex-offline');
+                katexOffline.src = './other-ext-libraries/katex.min.js';
+                document.head.appendChild(katexOffline);
+            }
+
+            if (document.getElementById('auto-rend-offline') !== null) {
+                let autoRendOffline 
+                    = document.getElementById('auto-rend-offline');
+                autoRendOffline.src = './other-ext-libraries/auto-render.min.js';
+                autoRendOffline.onload 
+                    = () => renderMathInElement(document.body);
+                document.head.appendChild(autoRendOffline);
+            }
+
+        </script>
+
         <style>
+            .body-style {
+                font-family: Arial;
+                background-color: rgb(255, 255, 255);
+                -moz-text-size-adjust: none; 
+                text-size-adjust: none;
+            }
             h3 {font-family:Arial, Helvetica, sans-serif; }
-            label {font-family:Arial, Helvetica, sans-serif; color: white; }
 			text {font-family:Arial, Helvetica, sans-serif; }
+            canvas {background-color: rgb(125, 125, 125); 
+                touch-action: none; 
+                border: solid black 1px; top: 0px; bottom: 0px;
+                text-align: center;}
+            .top-label {font-weight: bold; cursor: pointer;}
+            .drop-down-label {font-family:Arial, Helvetica, sans-serif; cursor: pointer;}
+            .link-label {color: grey;}
+            .dropdown {width: 95%;}
+            @media (orientation: landscape) {
+                .vec-slider {
+                    width: 90%; top: 0px; margin-top: 0px; border-top: 0px;
+                }
+                .outer-div {
+                    display: grid; grid-template-columns: 1fr 1fr;
+                }
+                .inner-div1 {
+                    grid-column: 1; width: max(25vw, 150px);
+                }
+                .inner-div2 {
+                    grid-column: 2;
+                }
+                .controls-div {
+                    overflow-y: scroll; height: 95vh; max-height: 95vh;
+                }
+            }
+            @media (orientation: portrait) {
+                .vec-slider {
+                    width: 90%; top: 0px; margin-top: 0px; border-top: 0px;
+                }
+                .outer-div {
+                    display: grid; grid-template-rows: repeat(2, auto); gap: 20px;
+                }
+                .inner-div1 {
+                    grid-row: 2; overflow-y: scroll; height: calc(100vh - 95vw);
+                }
+                .inner-div2 {
+                    grid-row: 1; overflow-y: scroll; overflow-x: hidden;
+                }
+                .controls-div {
+                    overflow-y: scroll; overflow-x: hidden; width: 84vw;
+                    max-width: 80vw; margin-left: 8vw; margin-right: 8vw;
+                }
+            }
         </style>
     </head>
-    <body style="font-family: Arial; background-color: rgb(0, 0, 0);">
+    <body class="body-style">
         <!--<h3 style="color:white; text-align: center;">Box of springs</h3>!-->
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr;">
-            <div style="grid-column: 1;" id="controls">
+        <div class="outer-div">
+            <div class="inner-div1" id="inner-div1">
+                <div id='katex-test'></div>
+                <div class="controls-div" id="controls"></div>
             </div>
-            <div style="grid-column: 2;">
-                <canvas id="canvas" oncontextmenu="event.preventDefault()"
-                    style="touch-action: none; 
-                        border: solid white 1px; top: 0px; bottom: 0px;
-                        text-align: center;">
+            <div class="inner-div2"  id="inner-div2">
+                <canvas id="canvas" oncontextmenu="event.preventDefault()">
                 </canvas>
-                <p style="color:white; font-size:14px; text-align: center;">
-                </p>
-                <!--<p style="color:white; font-size:14px; text-align: center;">
-                Use the mouse to grab and move the box of springs around.
-                </br>To reset the simulation, press the space bar.
-                </p>!-->
-            </div>
-            <div style="grid-column: 3; padding: 10px;">
-                <label for="setMouseInput">Mouse input<br>
-                <select id="setMouseInput">
-                    <option value=0>New initial conditions</option>
-                    <option value=1 selected>Rotate view</option>
-                </select><br>
             </div>
         </div>
     </body>
+    <!--
+    On MacOS with XCode installed, test multi-touch input with the
+    iPhone simulator using:
+         cd /Applications/XCode.app/Contents/Developer/Applications; open ./Simulator.app
+    !-->
     <script type='text/javascript'>
+
+        /* Sliders become invisible when setting the body colour to black
+        when using Safari on Desktop Mac OS. This workaround just sets the 
+        background colour to grayish on this particular configuration. */
+        if (window.navigator.userAgent.includes('Safari') 
+            && window.navigator.userAgent.includes('Mac OS')
+            && !window.navigator.userAgent.includes('iPhone')
+            && !window.navigator.userAgent.includes('Chrome')) {
+            let elements = document.getElementsByClassName('body-style');
+            // for (let e of elements)
+            //     e.style['background-color'] = `rgba(75, 75, 75)`;
+        }
+
+        let gOnMobile = 
+            (window.navigator.userAgent.includes('iPhone') ||
+             window.navigator.userAgent.includes('Android') ||
+             window.navigator.userAgent.includes('Mobile')
+            );
+
+        function isOnMobile() {
+            return gOnMobile;
+        }
+
+        /* Adjust the controls div height to be 95 % the height
+        of the client if the client width is greater than the client
+        height (landscape mode). This takes as parameters the client width
+        and height. Else make its width 84 % of the client's screen. */
+        function adjustControlsDimensions(width, height) {
+            if (width >= height)
+                document.getElementById("controls").style.maxHeight 
+                    = `${Number.parseInt(0.95*height)}px`;
+            if (height > width) {
+                document.getElementById("inner-div1").style.maxHeight
+                    = `${Number.parseInt(height - 0.95*width)}px`
+                document.getElementById("controls").style.maxWidth
+                        = `${Number.parseInt(0.84*width)}px`;
+            }
+        }
+
         var canvas = document.getElementById('canvas');
         let clientW = document.documentElement.clientWidth;
         let clientH = document.documentElement.clientHeight;
+
+        function isProbablyOnAnIPad() {
+            return (window.navigator.userAgent.includes('Safari')
+                && clientH > clientW);
+        }
+
+        // adjustControlsDimensions(clientW, clientH);
         let sideLength = Number.parseInt(
             0.94*((clientW < clientH)? clientW: clientH));
+        let args = [`${sideLength}`, `${sideLength}`];
+        if (clientH < clientW) {
+            let w = document.getElementById('inner-div1').clientWidth;
+            args = [`${Number.parseInt(0.98*(clientW - w))}`, `${sideLength}`];
+        }
+        if ((window.navigator.userAgent.includes('Safari')
+            && window.navigator.userAgent.includes('iPhone'))
+            || isProbablyOnAnIPad())
+            args.push('nearest');
+        else
+            args.push('linear');
+        if (isOnMobile())
+            args.push('IS_ON_MOBILE');
         var Module = {
           canvas: canvas,
-          arguments: [`${sideLength}`, `${sideLength}`, `1`]
+          arguments: args
         };
+        // canvas.style["max-height"] = "10%";
+        let sNumberOfTouches = 0;
+
         function getNormalizedCanvasCoordinates(e) {
-            let x = (e.clientX - canvas.offsetLeft)/canvas.offsetWidth;
-            let y = ((canvas.offsetTop + canvas.offsetHeight) 
-                        - e.clientY)/canvas.offsetHeight;
+            let x = (
+                e.clientX + window.scrollX - canvas.offsetLeft
+            )/canvas.offsetWidth;
+            let y = (
+                (canvas.offsetTop + canvas.offsetHeight - window.scrollY) 
+                - e.clientY
+            )/canvas.offsetHeight;
             return [x, y];
         }
+
+        function getMobileNormalizedCanvasCoordinates(e) {
+            let x = (
+                e.clientX - canvas.offsetLeft
+            )/canvas.offsetWidth;
+            let y = (
+                (canvas.offsetTop + canvas.offsetHeight) 
+                - e.clientY
+            )/canvas.offsetHeight;
+            return [x, y];
+        }
+
         document.getElementById('canvas').addEventListener('mousemove', e => {
             let [x, y] = getNormalizedCanvasCoordinates(e);
             Module.set_left_xy(x, y);
-            // let strings = Module.get_strings();
-            // console.log(strings);
         });
         document.getElementById('canvas').addEventListener('mouseup', e => {
             let [x, y] = getNormalizedCanvasCoordinates(e);
-            let type = 0;
             Module.set_left_xy_type(x, y, 0);
         });
         document.getElementById('canvas').addEventListener('mousedown', e => {
             let [x, y] = getNormalizedCanvasCoordinates(e);
-            let type = 1;
             Module.set_left_xy_type(x, y, 1);
+        });
+
+        function startSingleTouch(touches) {
+            let [x, y] = getMobileNormalizedCanvasCoordinates(
+                {clientX: touches[0].pageX, clientY: touches[0].pageY});
+            Module.set_left_xy_type(x, y, 1);
+        }
+
+        function continueSingleTouch(touches) {
+            let [x, y] = getMobileNormalizedCanvasCoordinates(
+                {clientX: touches[0].pageX, clientY: touches[0].pageY});
+            Module.set_left_xy(x, y);
+        }
+
+        function endSingleTouch(touches) {
+            let [x, y] = getMobileNormalizedCanvasCoordinates(
+                {clientX: touches[0].pageX, clientY: touches[0].pageY});
+            Module.set_left_xy_type(x, y, 0);
+        }
+
+        let gTouchStart = false;
+        let gDoubleTouches = {
+            isActive: false,
+            finger1: [],
+            finger2: [],
+            fingerDistances: [],
+        };
+
+        function emptyDoubleTouches() {
+            gDoubleTouches.finger1 = [];
+            gDoubleTouches.finger2 = [];
+            gDoubleTouches.fingerDistances = [];
+        }
+
+        function beginTouchZoomRotate(e) {
+            let touches = e.changedTouches;
+            if (touches.length < 2)
+                return;
+            gDoubleTouches.isActive = true;
+            let t1X = touches[0].pageX;
+            let t1Y = touches[0].pageY;
+            let t2X = touches[1].pageX;
+            let t2Y = touches[1].pageY;
+            let fingerDistance = Math.sqrt(
+                (t2X - t1X)*(t2X - t1X) + (t2Y - t1Y)*(t2Y - t1Y));
+            gDoubleTouches.finger1.push([t1X, t1Y]);
+            gDoubleTouches.finger2.push([t2X, t2Y]);
+            gDoubleTouches.fingerDistances.push(fingerDistance);
+        }
+
+        function continueTouchZoomRotate(e) {
+            let touches = e.changedTouches;
+            if (touches.length < 2)
+                return;
+            gDoubleTouches.isActive = true;
+            let t1X = touches[0].pageX;
+            let t1Y = touches[0].pageY;
+            let t2X = touches[1].pageX;
+            let t2Y = touches[1].pageY;
+            /* let delta1X = t1X - gDoubleTouches.finger1[0];
+            let delta1Y = t1Y - gDoubleTouches.finger1[1];
+            let delta2X = t2X - gDoubleTouches.finger2[0];
+            let delta2Y = t2Y - gDoubleTouches.finger2[1];*/
+            let fingerDistance = Math.sqrt(
+                (t2X - t1X)*(t2X - t1X) + (t2Y - t1Y)*(t2Y - t1Y));
+            gDoubleTouches.finger1.push([t1X, t1Y]);
+            gDoubleTouches.finger2.push([t2X, t2Y]);
+            let len1 = gDoubleTouches.finger1.length;
+            let len2 = gDoubleTouches.finger2.length;
+            /* setRotationDoubleTouch(
+                gDoubleTouches.finger1[len1 - 2],
+                gDoubleTouches.finger1[len1 - 1],
+                gDoubleTouches.finger2[len2 - 2],
+                gDoubleTouches.finger2[len2 - 1]
+            );*/
+            if (gDoubleTouches.fingerDistances.length > 1) {
+                let scaleFactor
+                    = fingerDistance/gDoubleTouches.fingerDistances.pop();
+                if (scaleFactor > 1.02)
+                    scaleFactor = 1.02;
+                if (scaleFactor < 0.98)
+                    scaleFactor = 0.98;
+                Module.multiply_scroll_value(scaleFactor);
+            }
+            gDoubleTouches.fingerDistances.push(fingerDistance);
+        }
+
+        function endTouchZoomRotate() {
+            gDoubleTouches.isActive = false;
+            emptyDoubleTouches();
+        }
+
+        document.getElementById('canvas').addEventListener('touchstart', e => {
+            gTouchStart = true;
+            let touches = e.changedTouches;
+            // This if statement is evaluated when the screen is already
+            // touched by a single finger and another finger makes contact.
+            if (sNumberOfTouches === 1)
+                endSingleTouch(touches);
+            sNumberOfTouches = touches.length;
+            if (touches.length === 1)
+                startSingleTouch(touches);
+            else
+                beginTouchZoomRotate(e);
+        });
+        document.getElementById('canvas').addEventListener('touchmove', e => {
+            // if (gDoubleTouches.isActive()) {
+            //     continueTouchZoomRotate(e);
+            //     return;
+            // }
+            let touches = e.changedTouches;
+            if (sNumberOfTouches === 1 && touches.length > 1) {
+                endSingleTouch(touches);
+            }
+            if (touches.length === 1)
+                continueSingleTouch(touches);
+            else
+                continueTouchZoomRotate(e);
+        });
+        document.getElementById('canvas').addEventListener('touchend', e => {
+            // if (gDoubleTouches.isActive()) {
+            //     endTouchZoomRotate();
+            //     return;
+            // }
+            let touches = e.changedTouches;
+            if (touches.length === 1)
+                endSingleTouch(touches);
+            else
+                endTouchZoomRotate();
+            sNumberOfTouches = 0;
         });
 
         // https://stackoverflow.com/a/47231903
@@ -78,10 +381,12 @@
                 e.stopImmediatePropagation();
         }, {capture: true});
 
-        document.getElementById('setMouseInput').addEventListener(
-            "change", e =>
-                Module.set_mouse_mode(Number.parseInt(e.target.value))
-        );
+        // document.getElementById('setMouseInput').addEventListener(
+        //     "change", e =>
+        //         Module.set_mouse_mode(Number.parseInt(e.target.value))
+        // );
+        // canvas.style.width = Number.parseInt((9.0/5.0)*sideLength);
+        // canvas.style.height = Number.parseInt((4.0/5.0)*sideLength);
 
     </script>
     <script src="sliders.js"></script>

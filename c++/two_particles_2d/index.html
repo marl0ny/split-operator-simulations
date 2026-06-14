@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<html>
+    <head>
+        <!--
+			Originally, I had numerous issues trying to get consistent and proper scaling
+			on mobile devices. To fix this, it turns out that the viewport throught the meta tag 
+			needs to be explicitly set to use the device's screen width,
+			as this is not done by defualt. 
+			As well as this, some browser specific adjustments need to be turned off.
+			I personally found this blog post by S. Sutoris helpful:
+			https://www.rismosch.com/article?id=css-on-mobile-and-the-most-important-header-tag
+			And of course I looked at the MDN documentation:
+			https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/meta/name/viewport
+		-->
+        <style>
+            .body-style {
+                font-family: Arial;
+                background-color: rgb(0, 0, 0);
+                -moz-text-size-adjust: none; 
+                text-size-adjust: none;
+            }
+            h3 {font-family:Arial, Helvetica, sans-serif; }
+            label {font-family:Arial, Helvetica, sans-serif; color: white; }
+			text {font-family:Arial, Helvetica, sans-serif; }
+            @media (orientation: landscape) {
+                .outer-div {
+                    display: grid; grid-template-columns: 1fr 1fr;
+                }
+                .inner-div1 {
+                    grid-column: 1;
+                }
+                .inner-div2 {
+                    grid-column: 2;
+                }
+                .controls-div {
+                    overflow-y: scroll; height: 95vh; max-height: 95vh;
+                }
+            }
+            @media (orientation: portrait) {
+                .outer-div {
+                    display: grid; grid-template-rows: repeat(2, auto); gap: 20px;
+                }
+                .inner-div1 {
+                    grid-row: 2; overflow-y: scroll; height: calc(100vh - 95vw);
+                }
+                .inner-div2 {
+                    grid-row: 1; overflow-y: scroll;
+                }
+                .controls-div {
+                    overflow-y: scroll; overflow-x: hidden; width: 84vw;
+                    max-width: 84vw; margin-left: 8vw; margin-right: 8vw;
+                }
+            }
+        </style>
+    </head>
+    <body class="body-style">
+        <!--<h3 style="color:white; text-align: center;">Box of springs</h3>!-->
+        <div class="outer-div">
+            <div class="inner-div1" id="inner-div1">
+                <div class="controls-div" id="controls"></div>
+            </div>
+            <div class="inner-div2">
+                <canvas id="canvas" oncontextmenu="event.preventDefault()"
+                    style="touch-action: none; 
+                        border: solid white 1px; top: 0px; bottom: 0px;
+                        text-align: center;">
+                </canvas>
+            </div>
+        </div>
+    </body>
+    <!--
+    On MacOS with XCode installed, test multi-touch input with the
+    iPhone simulator using:
+         cd /Applications/XCode.app/Contents/Developer/Applications; open ./Simulator.app
+    !-->
+    <script type='text/javascript'>
+
+        /* Sliders become invisible when setting the body colour to black
+        when using Safari on Desktop Mac OS. This workaround just sets the 
+        background colour to grayish on this particular configuration. */
+        if (window.navigator.userAgent.includes('Safari') 
+            && window.navigator.userAgent.includes('Mac OS')
+            && !window.navigator.userAgent.includes('iPhone')
+            && !window.navigator.userAgent.includes('Chrome')) {
+            let elements = document.getElementsByClassName('body-style');
+            for (let e of elements)
+                e.style['background-color'] = `rgba(75, 75, 75)`;
+        }
+
+        let gOnMobile = 
+            (window.navigator.userAgent.includes('iPhone') ||
+             window.navigator.userAgent.includes('Android') ||
+             window.navigator.userAgent.includes('Mobile')
+            );
+
+        function isOnMobile() {
+            return gOnMobile;
+        }
+
+        /* Adjust the controls div height to be 95 % the height
+        of the client if the client width is greater than the client
+        height (landscape mode). This takes as parameters the client width
+        and height. Else make its width 84 % of the client's screen. */
+        function adjustControlsDimensions(width, height) {
+            if (width >= height)
+                document.getElementById("controls").style.maxHeight 
+                    = `${Number.parseInt(0.95*height)}px`;
+            if (height > width) {
+                document.getElementById("inner-div1").style.maxHeight
+                    = `${Number.parseInt(height - 0.95*width)}px`
+                document.getElementById("controls").style.maxWidth
+                        = `${Number.parseInt(0.84*width)}px`;
+            }
+        }
+
+        var canvas = document.getElementById('canvas');
+        let clientW = document.documentElement.clientWidth;
+        let clientH = document.documentElement.clientHeight;
+        // adjustControlsDimensions(clientW, clientH);
+        let sideLength = Number.parseInt(
+            0.94*((clientW < clientH)? clientW: clientH));
+        let arguments = [`${sideLength}`, `${sideLength}`];
+        if (window.navigator.userAgent.includes('Safari')
+            && window.navigator.userAgent.includes('iPhone'))
+            arguments.push('nearest');
+        else
+            arguments.push('linear');
+        var Module = {
+          canvas: canvas,
+          arguments: arguments
+        };
+        // canvas.style["max-height"] = "10%";
+        let sNumberOfTouches = 0;
+
+        function getNormalizedCanvasCoordinates(e) {
+            let x = (
+                e.clientX + window.scrollX - canvas.offsetLeft
+            )/canvas.offsetWidth;
+            let y = (
+                (canvas.offsetTop + canvas.offsetHeight - window.scrollY) 
+                - e.clientY
+            )/canvas.offsetHeight;
+            return [x, y];
+        }
+
+        document.getElementById('canvas').addEventListener('mousemove', e => {
+            let [x, y] = getNormalizedCanvasCoordinates(e);
+            Module.set_left_xy(x, y);
+        });
+        document.getElementById('canvas').addEventListener('mouseup', e => {
+            let [x, y] = getNormalizedCanvasCoordinates(e);
+            Module.set_left_xy_type(x, y, 0);
+        });
+        document.getElementById('canvas').addEventListener('mousedown', e => {
+            let [x, y] = getNormalizedCanvasCoordinates(e);
+            Module.set_left_xy_type(x, y, 1);
+        });
+
+        function startSingleTouch(touches) {
+            let [x, y] = getNormalizedCanvasCoordinates(
+                {clientX: touches[0].pageX, clientY: touches[0].pageY});
+            Module.set_left_xy_type(x, y, 1);
+        }
+
+        function continueSingleTouch(touches) {
+            let [x, y] = getNormalizedCanvasCoordinates(
+                {clientX: touches[0].pageX, clientY: touches[0].pageY});
+            Module.set_left_xy(x, y);
+        }
+
+        function endSingleTouch(touches) {
+            let [x, y] = getNormalizedCanvasCoordinates(
+                {clientX: touches[0].pageX, clientY: touches[0].pageY});
+            Module.set_left_xy_type(x, y, 0);
+        }
+
+        function startDoubleTouches(touches) {
+            let e1 = {clientX: touches[0].pageX, clientY: touches[0].pageY};
+            let e2 = {clientX: touches[1].pageX, clientY: touches[1].pageY};
+            let [x1, y1] = getNormalizedCanvasCoordinates(e1);
+            let [x2, y2] = getNormalizedCanvasCoordinates(e2);
+            Module.set_double_touch_position_type(x1, y1, x2, y2, 1);
+        }
+
+        function continueDoubleTouches(touches) {
+            let e1 = {clientX: touches[0].pageX, clientY: touches[0].pageY};
+            let e2 = {clientX: touches[1].pageX, clientY: touches[1].pageY};
+            let [x1, y1] = getNormalizedCanvasCoordinates(e1);
+            let [x2, y2] = getNormalizedCanvasCoordinates(e2);
+            Module.set_double_touch_position(x1, y1, x2, y2);
+        }
+
+        function endDoubleTouches(touches) {
+            let e1 = {clientX: touches[0].pageX, clientY: touches[0].pageY};
+            let e2 = {clientX: touches[1].pageX, clientY: touches[1].pageY};
+            let [x1, y1] = getNormalizedCanvasCoordinates(e1);
+            let [x2, y2] = getNormalizedCanvasCoordinates(e2);
+            Module.set_double_touch_position_type(x1, y1, x2, y2, 0);
+        }
+
+        document.getElementById('canvas').addEventListener('touchstart', e => {
+            let touches = e.changedTouches;
+            // This if statement is evaluated when the screen is already
+            // touched by a single finger and another finger makes contact.
+            if (sNumberOfTouches === 1)
+                endSingleTouch(touches);
+            sNumberOfTouches = touches.length;
+            if (touches.length === 1)
+                startSingleTouch(touches);
+            else
+                startDoubleTouches(touches);
+        });
+        document.getElementById('canvas').addEventListener('touchmove', e => {
+            let touches = e.changedTouches;
+            if (sNumberOfTouches === 1 && touches.length > 1) {
+                endSingleTouch(touches);
+            }
+            if (touches.length === 1)
+                continueSingleTouch(touches);
+            else
+                continueDoubleTouches(touches);
+        });
+        document.getElementById('canvas').addEventListener('touchend', e => {
+            let touches = e.changedTouches;
+            if (touches.length === 1)
+                endSingleTouch(touches);
+            else
+                endDoubleTouches(touches);
+            sNumberOfTouches = 0;
+        });
+
+        // https://stackoverflow.com/a/47231903
+        window.addEventListener("keydown", e => {
+            if (e.code === "Backspace" || e.code === "Tab")
+                e.stopImmediatePropagation();
+        }, {capture: true});
+        window.addEventListener("keyup", e => {
+            if (e.code === "Backspace" || e.code === "Tab")
+                e.stopImmediatePropagation();
+        }, {capture: true});
+
+        // document.getElementById('setMouseInput').addEventListener(
+        //     "change", e =>
+        //         Module.set_mouse_mode(Number.parseInt(e.target.value))
+        // );
+        // canvas.style.width = Number.parseInt((9.0/5.0)*sideLength);
+        // canvas.style.height = Number.parseInt((4.0/5.0)*sideLength);
+
+    </script>
+    <script src="sliders.js"></script>
+    <script src="main.js"></script>
+</html>

@@ -60,8 +60,22 @@ static std::vector<Vec3> line_from_screen_cursor(
     return {cursor_pos0_3d_v, cursor_pos1_3d_v};
 }
 
+static Vec2 get_intersection_from_user_input(
+    Quaternion rotation, float scale, Vec2 user_input_loc) {
+    Vec3 plane_vector1 {.x=1.0, .y=0.0, .z=0.0};
+    Vec3 plane_vector2 {.x=0.0, .y=1.0, .z=0.0};
+    auto lines = line_from_screen_cursor(
+        rotation, scale, user_input_loc);
+    Vec3 intersection = get_line_plane_intersection(
+        lines[0], lines[1],
+        plane_vector1, plane_vector2,
+        Vec3{.x=0.0, .y=0.0, .z=0.0});
+    Vec2 location2d = Vec2{.x=intersection.x + 0.5F, .y=intersection.y + 0.5F};
+    return location2d;
+}
+
 static int convert_side_length_selector_value(int val) {
-    return std::powl(2, (long)(val + 7));
+    return std::pow(2, (val + 7));
 }
 
 inline static void set_preset_potential(
@@ -91,9 +105,9 @@ inline static void set_preset_potential(
     } else if (val == DOUBLE_SLIT) {
         std::string double_slit_string = "";
         double_slit_string 
-            += "20*step(thickness*0.02 - abs((y/height+0.5) - 0.5))";
+            += "40*step(thickness*0.02 - abs((y/height+0.5) - 0.5))";
         double_slit_string 
-            += "- 20*step(thickness*0.02 - abs((y/height+0.5) - 0.5)) * (";
+            += "- 40*step(thickness*0.02 - abs((y/height+0.5) - 0.5)) * (";
         double_slit_string
             += "step(thickness*0.02 - abs((x/width+0.5) - 0.45))";
         double_slit_string
@@ -122,12 +136,16 @@ template <typename T> T static max(T a, T b) {
     return (a > b)? a: b;
 }
 
+static double get_scaled_scroll() {
+    return 0.1*Interactor::get_scroll();
+}
+
 void dirac_2d(MainGLFWQuad main_render,
-             int window_width, int window_height,
+             TextureParams default_tex_params,
              sim_2d::SimParams &params,
              Interactor interactor) {
     
-    sim_2d::Simulation sim(params, window_width, window_height);
+    sim_2d::Simulation sim(params, default_tex_params);
     UserProgramsManager programs_manager {};
 
     {
@@ -178,7 +196,7 @@ void dirac_2d(MainGLFWQuad main_render,
             params.set(c, u);
             if (c == params.POS_E) {
                 std::string text_content
-                    = "Negative energy (-E) content = ";
+                    = "Proportion of -E solutions = ";
                 int i_val = int(100.0*(1.0 - u.f32));
                 std::string string_val;
                 if (i_val == 100)
@@ -221,9 +239,54 @@ void dirac_2d(MainGLFWQuad main_render,
     };
     std::vector<Vec2> start_position {};
     std::vector<Vec2> curr_position {};
+    std::vector<Vec2> start_intersection {};
     enum MouseSelection {
         NEW_WAVE_FUNC=0, SCALAR_SKETCH=1, SCALAR_ERASE=2, VEC_SKETCH=3, VEC_ERASE=4,
         ROTATE_ZOOM=5
+    };
+
+    auto init_wave_function = [&]() -> bool {
+        Vec2 location = start_position[0], dist;
+        if (params.show3D) {
+            dist = Vec2{.ind{0.0, 0.0}};
+            if (start_intersection.empty()) 
+                start_intersection.push_back(get_intersection_from_user_input(
+                        rotation, get_scaled_scroll(), 
+                        location));
+            Vec2 location2 = get_intersection_from_user_input(
+                rotation, get_scaled_scroll(), 
+                curr_position[curr_position.size() - 1]);
+            dist = 64.0*(location2 - start_intersection[0]);
+            float dist_length = dist.length();
+            int texel_side_length 
+                = convert_side_length_selector_value(
+                    params.texelSideLengthSelector.selected);
+            if (dist_length > float(texel_side_length)/2.0)
+                dist = (float(texel_side_length)/2.0)*dist.normalized();
+            if (start_intersection[0].x > 1.0 
+                || start_intersection[0].x < 0.0 
+                || start_intersection[0].y > 1.0 
+                || start_intersection[0].y < 0.0) {
+                rotation = increment_rotation(rotation, interactor);
+                return false;
+            } else {
+                sim.new_wave_function(
+                    params, start_intersection[0], dist);
+                return true;
+            }
+            // printf("intersection: %g, %g\n", location.x, location.y);
+        } else {
+            dist = 64.0*(curr_position[curr_position.size() - 1] 
+                - start_position[0]);
+            // float dist_length = dist.length();
+            // int texel_side_length 
+            //     = convert_side_length_selector_value(
+            //         params.texelSideLengthSelector.selected);
+            // if (dist_length > float(texel_side_length)/2.0)
+            //     dist = (float(texel_side_length)/2.0)*dist.normalized();
+            sim.new_wave_function(params, location, dist);
+        }
+        return true;
     };
 
     s_loop = [&] {
@@ -232,58 +295,83 @@ void dirac_2d(MainGLFWQuad main_render,
             sim.modify_potential_with_user_program(
                 params, program.program, program.uniforms);
         }
-        if (start_position.size() > 0 && params.show3D) {
+        // if (start_position.size() > 0 && params.show3D) {
+        //     rotation = increment_rotation(rotation, interactor);
+        // }
+        if (start_position.size() > 0  && params.show3D &&
+            params.mouseSelector.selected == MouseSelection::ROTATE_ZOOM)
             rotation = increment_rotation(rotation, interactor);
-        }
         if (params.mouseSelector.selected == MouseSelection::NEW_WAVE_FUNC
-            && start_position.size() > 0) {
-            // printf("Mouse selector: %d", params.mouseSelector.selected);
-            Vec2 location = start_position[0], dist;
-            if (params.show3D) {
-                dist = Vec2{.x=0.0, .y=0.0};
-                Vec3 plane_vector1 {.x=1.0, .y=0.0, .z=0.0};
-                Vec3 plane_vector2 {.x=0.0, .y=1.0, .z=0.0};
-                float scale =  0.25*Interactor::get_scroll();
-                auto lines = line_from_screen_cursor(
-                    rotation, scale, location);
-                get_line_plane_intersection(
-                    lines[0], lines[1],
-                    plane_vector1, plane_vector2,
-                    Vec3{.x=0.0, .y=0.0, .z=0.0});
-
-            } else {
-                dist = 64.0*(curr_position[curr_position.size() - 1] - start_position[0]);
-            }
-            sim.new_wave_function(params, location, dist);
+            && start_position.size() > 0 && init_wave_function()) {
         } else {
             sim.time_steps(params);
             sim.increment_time(params);
         }
-        if (!params.show3D && start_position.size() > 0) {
+        if (start_position.size() > 0) {
             Vec2 pos = curr_position[curr_position.size() - 1];
-            if (params.mouseSelector.selected
-                == MouseSelection::SCALAR_SKETCH) {
-                sim.sketch_modify_scalar_potential(params, pos);
-            } else if (params.mouseSelector.selected
-                        == MouseSelection::VEC_SKETCH ||
-                        params.mouseSelector.selected
-                        == MouseSelection::VEC_ERASE) {
-                Vec2 dir = 1000.0*(
-                    curr_position[curr_position.size() - 1] 
-                    - curr_position[max<int>(curr_position.size() - 2, 0)]);
-                printf("Vector potential: %g, %g\n", dir.x, dir.y);
-                if (params.mouseSelector.selected == MouseSelection::VEC_SKETCH)
-                    sim.sketch_modify_vector_potential(params, pos, dir);
-                else
-                    sim.erase_modify_vector_potential(params, pos, dir);
-            } else if (params.mouseSelector.selected == MouseSelection::SCALAR_ERASE) {
-                sim.erase_modify_scalar_potential(params, pos);
+            if (params.mouseSelector.selected == MouseSelection::SCALAR_SKETCH
+                || params.mouseSelector.selected 
+                == MouseSelection::SCALAR_ERASE) {
+                if (params.show3D) {
+                    pos = get_intersection_from_user_input(
+                        rotation, get_scaled_scroll(), pos);
+                    if (pos.x > 1.0 || pos.x < 0.0 
+                        || pos.y > 1.0 || pos.y < 0.0) {
+                        rotation = increment_rotation(rotation, interactor);
+                    } else {
+                        if (params.mouseSelector.selected == SCALAR_SKETCH)
+                            sim.sketch_modify_scalar_potential(params, pos);
+                        else
+                            sim.erase_modify_scalar_potential(params, pos);
+                    }
+                } else {
+                    if (params.mouseSelector.selected == SCALAR_SKETCH)
+                        sim.sketch_modify_scalar_potential(params, pos);
+                    else
+                        sim.erase_modify_scalar_potential(params, pos);
+                }
+            } else if (
+                params.mouseSelector.selected == MouseSelection::VEC_SKETCH ||
+                params.mouseSelector.selected == MouseSelection::VEC_ERASE) {
+                if (params.show3D) {
+                    Vec2 pos1 = curr_position[curr_position.size() - 1];
+                    Vec2 pos2 
+                        = curr_position[
+                            max<int>(curr_position.size() - 2, 0)];
+                    Vec2 pos2d = get_intersection_from_user_input(
+                        rotation, get_scaled_scroll(), pos1);
+                    Vec2 pos2d2 = get_intersection_from_user_input(
+                        rotation, get_scaled_scroll(), pos2);
+                    if (pos2d.x > 1.0 || pos2d.x < 0.0 
+                        || pos2d.y > 1.0 || pos2d.y < 0.0) {
+                        rotation = increment_rotation(rotation, interactor);
+                        } else {
+                        Vec2 dir = 1000.0*(pos2d2 - pos2d);
+                        printf("Vector potential: %g, %g\n", dir.x, dir.y);
+                        if (params.mouseSelector.selected == MouseSelection::VEC_SKETCH)
+                            sim.sketch_modify_vector_potential(
+                                params, pos2d, dir);
+                        else
+                            sim.erase_modify_vector_potential(
+                            params, pos2d, dir);
+                    }
+                } else {
+                    Vec2 dir = 1000.0*(
+                        curr_position[curr_position.size() - 1] 
+                        - curr_position[
+                            max<int>(curr_position.size() - 2, 0)]);
+                    printf("Vector potential: %g, %g\n", dir.x, dir.y);
+                    if (params.mouseSelector.selected == MouseSelection::VEC_SKETCH)
+                        sim.sketch_modify_vector_potential(params, pos, dir);
+                    else
+                        sim.erase_modify_vector_potential(params, pos, dir);
+                }
             }
         }
 
         Vec2 mouse_pos = interactor.get_mouse_position();
         main_render.draw(sim.render_view(
-            params, mouse_pos, rotation, 0.25*Interactor::get_scroll()));
+            params, mouse_pos, rotation, get_scaled_scroll()));
         
         auto poll_events = [&] {
             glfwPollEvents();
@@ -301,6 +389,8 @@ void dirac_2d(MainGLFWQuad main_render,
                     start_position.pop_back();
                     curr_position.clear();
                 }
+                if (!start_intersection.empty())
+                    start_intersection.clear();
             }
         };
         poll_events();
@@ -329,6 +419,22 @@ int main(int argc, char *argv[]) {
         window_width = std::atoi(argv[1]);
         window_height = std::atoi(argv[2]);
     }
+    int filter_type = GL_LINEAR;
+    if (argc >= 4) {
+        std::string s(argv[3]);
+        if (s == "nearest")
+            filter_type = GL_NEAREST;
+    }
+    TextureParams default_tex_params = {
+        .format=GL_RGBA32F,
+        .width=(unsigned int)window_width,
+        .height=(unsigned int)window_height,
+        .generate_mipmap=!(filter_type == GL_NEAREST),
+        .wrap_s=GL_CLAMP_TO_EDGE,
+        .wrap_t=GL_CLAMP_TO_EDGE,
+        .mag_filter=(unsigned int)filter_type,
+        .min_filter=(unsigned int)filter_type
+    };
     auto main_quad = MainGLFWQuad(window_width, window_height);
 
     // Initialize Interactor instance
@@ -336,7 +442,7 @@ int main(int argc, char *argv[]) {
     sim_2d::SimParams sim_params;
 
     dirac_2d(
-        main_quad, window_width, window_height, 
+        main_quad, default_tex_params, 
         sim_params, interactor);
     return 1;
 }

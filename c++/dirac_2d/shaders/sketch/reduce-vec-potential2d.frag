@@ -1,4 +1,4 @@
-/* Shader for sketching a potential */
+/* Shader used for interactively  "erasing" the 3-vector potential. */
 #if (__VERSION__ >= 330) || (defined(GL_ES) && __VERSION__ >= 300)
 #define texture2D texture
 #else

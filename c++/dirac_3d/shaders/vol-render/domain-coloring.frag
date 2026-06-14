@@ -37,6 +37,7 @@ out vec4 fragColor;
 uniform sampler2D tex;
 uniform float brightness;
 uniform float phaseAdjust;
+uniform bool useBA;
 
 uniform int brightnessMode;
 const int ABS_VAL = 1;
@@ -78,6 +79,8 @@ vec3 argumentToColor(float argVal) {
 
 void main() {
     complex z1 = texture2D(tex, UV).xy;
+    if (useBA)
+        z1 = texture2D(tex, UV).zw;
     complex phaseFactor = complex(cos(phaseAdjust), sin(phaseAdjust));
     complex z2 = mul(phaseFactor, z1);
     vec3 color = argumentToColor(atan(z2.y, z2.x));

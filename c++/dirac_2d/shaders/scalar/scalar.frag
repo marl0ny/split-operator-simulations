@@ -27,8 +27,8 @@ out vec4 fragColor;
 #define complex vec2
 #define complex2 vec4
 
-uniform sampler2D uTex;
-uniform sampler2D vTex;
+uniform sampler2D psiUpperTex;
+uniform sampler2D psiLowerTex;
 
 const int DIRAC_REP = 0;
 const int WEYL_REP = 1;
@@ -47,10 +47,10 @@ complex innerProd(complex2 w, complex2 z) {
 }
 
 void main() {
-    complex2 u = texture2D(uTex, UV);
-    complex2 v = texture2D(vTex, UV);
+    complex2 psi0 = texture2D(psiUpperTex, UV);
+    complex2 psi1 = texture2D(psiLowerTex, UV);
     if (representation == DIRAC_REP)
-        fragColor = vec4(innerProd(u, u).r - innerProd(v, v).r);
+        fragColor = vec4(innerProd(psi0, psi0).r - innerProd(psi1, psi1).r);
     else
-        fragColor = vec4(2.0*innerProd(u, v).r);
+        fragColor = vec4(2.0*innerProd(psi0, psi1).r);
 }

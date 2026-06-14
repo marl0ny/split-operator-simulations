@@ -1,0 +1,12 @@
+__pycache__
+.*
+~*
+*.pyc
+*.o
+*.gch
+!.gitignore
+*.mem
+/imgui
+imgui.ini
+program
+/other-ext-libraries

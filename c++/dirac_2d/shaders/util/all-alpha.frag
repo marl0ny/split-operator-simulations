@@ -1,4 +1,5 @@
-/* Add two textures together */
+/*Get alpha components of an input texture and make all channels of
+the output the alpha values.*/
 #if (__VERSION__ >= 330) || (defined(GL_ES) && __VERSION__ >= 300)
 #define texture2D texture
 #else

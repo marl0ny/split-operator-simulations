@@ -44,7 +44,8 @@ static int convert_side_length_selector_value(int val) {
 }
 
 Frames::Frames(
-    const SimParams &sim_params, int view_width, int view_height):
+    const SimParams &sim_params, int view_width, int view_height, 
+    unsigned int min_filter, unsigned int mag_filter):
     view_tex_params(
         {
             .format=GL_RGBA16F,
@@ -52,8 +53,8 @@ Frames::Frames(
             .height=(uint32_t)view_height,
             .wrap_s=GL_CLAMP_TO_EDGE,
             .wrap_t=GL_CLAMP_TO_EDGE,
-            .min_filter=GL_LINEAR,
-            .mag_filter=GL_LINEAR,
+            .min_filter=min_filter,
+            .mag_filter=mag_filter,
         }
     ),
     sim_tex_params(
@@ -65,16 +66,22 @@ Frames::Frames(
                 sim_params.texelSideLengthSelector.selected),
             .wrap_s=GL_REPEAT,
             .wrap_t=GL_REPEAT,
-            .min_filter=GL_LINEAR,
-            .mag_filter=GL_LINEAR,
+            .min_filter=min_filter,
+            .mag_filter=mag_filter,
         }
     ),
     visual_intermediate(Quad(sim_tex_params)),
     psi({sim_tex_params}),
     potential(Quad(sim_tex_params)),
     temps {
-            .psi_p {{sim_tex_params}, {sim_tex_params}},
-            .psi_x {{sim_tex_params}, {sim_tex_params}},
+            .psi_p {
+                    {sim_tex_params}, {sim_tex_params}, 
+                    // {sim_tex_params}, {sim_tex_params}
+                },
+            .psi_x {
+                {sim_tex_params}, {sim_tex_params},
+                {sim_tex_params}, {sim_tex_params},
+            },
             .fft {.ind{Quad(sim_tex_params), Quad(sim_tex_params)}}
     },
     view(view_tex_params),
@@ -86,26 +93,32 @@ Frames::Frames(
 }
 
 void Frames::change_simulation_dimensions(IVec2 d_2d) {
+    unsigned int min_filter = this->sim_tex_params.min_filter;
+    unsigned int mag_filter = this->sim_tex_params.mag_filter;
     this->sim_tex_params = {
         .format=GL_RGBA32F,
         .width=(uint32_t)d_2d[0],
         .height=(uint32_t)d_2d[1],
         .wrap_s=GL_REPEAT,
         .wrap_t=GL_REPEAT,
-        .min_filter=GL_LINEAR,
-        .mag_filter=GL_LINEAR};
+        .min_filter=min_filter,
+        .mag_filter=mag_filter};
     this->visual_intermediate.reset(this->sim_tex_params);
-    this->psi.u.reset(this->sim_tex_params);
-    this->psi.v.reset(this->sim_tex_params);
+    this->psi.upper.reset(this->sim_tex_params);
+    this->psi.lower.reset(this->sim_tex_params);
     this->potential.reset(this->sim_tex_params);
-    this->temps.psi_p[0].u.reset(this->sim_tex_params);
-    this->temps.psi_p[0].v.reset(this->sim_tex_params);
-    this->temps.psi_p[1].u.reset(this->sim_tex_params);
-    this->temps.psi_p[1].v.reset(this->sim_tex_params);
-    this->temps.psi_x[0].u.reset(this->sim_tex_params);
-    this->temps.psi_x[0].v.reset(this->sim_tex_params);
-    this->temps.psi_x[1].u.reset(this->sim_tex_params);
-    this->temps.psi_x[1].v.reset(this->sim_tex_params);
+    this->temps.psi_p[0].upper.reset(this->sim_tex_params);
+    this->temps.psi_p[0].lower.reset(this->sim_tex_params);
+    this->temps.psi_p[1].upper.reset(this->sim_tex_params);
+    this->temps.psi_p[1].lower.reset(this->sim_tex_params);
+    this->temps.psi_x[0].upper.reset(this->sim_tex_params);
+    this->temps.psi_x[0].lower.reset(this->sim_tex_params);
+    this->temps.psi_x[1].upper.reset(this->sim_tex_params);
+    this->temps.psi_x[1].lower.reset(this->sim_tex_params);
+    this->temps.psi_x[2].upper.reset(this->sim_tex_params);
+    this->temps.psi_x[2].lower.reset(this->sim_tex_params);
+    this->temps.psi_x[3].upper.reset(this->sim_tex_params);
+    this->temps.psi_x[3].lower.reset(this->sim_tex_params);
     this->temps.fft.ind[0].reset(this->sim_tex_params);
     this->temps.fft.ind[1].reset(this->sim_tex_params);
 }
@@ -114,10 +127,14 @@ GLSLPrograms::GLSLPrograms() {
     this->split_operator = {
         .momentum_step
             =Quad::make_program_from_path(
-                "./shaders/split-step/kinetic.frag"),
+                "./shaders/split-step/kinetic-f.frag"),
         .spatial_step
             =Quad::make_program_from_path(
                 "./shaders/split-step/spatial.frag"),
+        .add
+            =Quad::make_program_from_path(
+                "./shaders/util/add2.frag"
+            ),
         .fft={
             .fft_iter
                 = Quad::make_program_from_path(
@@ -204,9 +221,13 @@ GLSLPrograms::GLSLPrograms() {
 }
 
 Simulation::Simulation(
-    const SimParams &sim_params, int view_width, int view_height):
+    const SimParams &sim_params, TextureParams default_tex_params):
     m_programs(),
-    m_frames(sim_params, view_width, view_height)
+    m_frames(sim_params,
+        (int)default_tex_params.width,
+        (int)default_tex_params.height,
+        default_tex_params.min_filter,
+        default_tex_params.mag_filter)
     {
 
 }
@@ -464,6 +485,11 @@ void Simulation::new_momentum_space_wave_function(
     std::complex<float> c1 = pos_amount*inner_prod(p_u, pos_state);
     std::complex<float> c2 = neg_amount*inner_prod(p_d, neg_state);
     std::complex<float> c3 = pos_amount*inner_prod(p_d, pos_state);
+    bool invert_negative_energy_momentum = true;
+    if (invert_negative_energy_momentum) {
+        c0 = neg_amount*inner_prod(p_d, neg_state);
+        c2 = neg_amount*inner_prod(p_u, neg_state);
+    }
     // std::complex<float> c1 = {1.0, 0.0};
     // std::complex<float> c2 = {0.0, 0.0};
     // std::complex<float> c3 = {0.0, 0.0};
@@ -502,7 +528,7 @@ void Simulation::new_momentum_space_wave_function(
                     spinors::Spinor(0.0, 0.0))
             },
             .use_energy_states_combinations=int(1),
-            .invert_negative_energy_momentum=int(0),
+            .invert_negative_energy_momentum=invert_negative_energy_momentum,
             .dimensions2d=get_dimensions(params.sideLength),
             .texel_dimensions2d=get_texel_dimensions(texel_side_length),
             .coefficients={
@@ -540,6 +566,11 @@ void Simulation::new_position_space_wave_function(
     std::complex<float> c1 = pos_amount*inner_prod(p_u, pos_state);
     std::complex<float> c2 = neg_amount*inner_prod(p_d, neg_state);
     std::complex<float> c3 = pos_amount*inner_prod(p_d, pos_state);
+    bool invert_negative_energy_momentum = false;
+    if (invert_negative_energy_momentum) {
+        c0 = neg_amount*inner_prod(p_d, neg_state);
+        c2 = neg_amount*inner_prod(p_u, neg_state);
+    }
     Vec2 d_2d = get_dimensions(params.sideLength);
     printf("+ spin up direction: (%g, %g, %g)",
         pos_spin_dir.x, pos_spin_dir.y, pos_spin_dir.z);
@@ -568,6 +599,8 @@ void Simulation::new_position_space_wave_function(
                     spinors::Spinor(0.0, 0.0))
             },
             .use_energy_states_combinations=int(1),
+            .invert_negative_energy_momentum
+                =invert_negative_energy_momentum,
             .dimensions2d=get_dimensions(params.sideLength),
             .texel_dimensions2d=get_texel_dimensions(texel_side_length),
             .coefficients={c0, c1, c2, c3},

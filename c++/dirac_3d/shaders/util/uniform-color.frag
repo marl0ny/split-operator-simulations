@@ -1,3 +1,4 @@
+/* Make a texture have a uniform rgba color.*/
 #if (__VERSION__ >= 330) || (defined(GL_ES) && __VERSION__ >= 300)
 #define texture2D texture
 #else
@@ -7,7 +8,7 @@
 #if (__VERSION__ > 120) || defined(GL_ES)
 precision highp float;
 #endif
-
+    
 #if __VERSION__ <= 120
 varying vec2 UV;
 #define fragColor gl_FragColor

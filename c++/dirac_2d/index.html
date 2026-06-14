@@ -13,7 +13,7 @@
         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr;">
             <div style="grid-column: 1;">
                 <!--<p style="color:white; font-size:14px; text-align: center;">
-                &nabla; &times; &delta; &#x2202; &#x1D404;
+                &nabla; &times; &delta; &#x2202; &#x1D404; &bull;
                 </p>!-->
                 <div style="overflow-y: scroll; max-height: 700px;" id="controls"></div>
             </div>
@@ -42,37 +42,121 @@
             </div>
         </div>
     </body>
+    <!--
+    On MacOS with XCode installed, test multi-touch input with the
+    iPhone simulator using:
+         cd /Applications/XCode.app/Contents/Developer/Applications; open ./Simulator.app
+    !-->
     <script type='text/javascript'>
         var canvas = document.getElementById('canvas');
         let clientW = document.documentElement.clientWidth;
         let clientH = document.documentElement.clientHeight;
         let sideLength = Number.parseInt(
             0.94*((clientW < clientH)? clientW: clientH));
+        let arguments = [`${sideLength}`, `${sideLength}`];
+        if (window.navigator.userAgent.includes('Safari')
+            && window.navigator.userAgent.includes('iPhone'))
+            arguments.push('nearest');
+        else
+            arguments.push('linear');
         var Module = {
           canvas: canvas,
-          arguments: [`${sideLength}`, `${sideLength}`, `1`]
+          arguments: arguments
         };
+        let sNumberOfTouches = 0;
+
         function getNormalizedCanvasCoordinates(e) {
+            // TODO: account for scroll location on the page as well!
             let x = (e.clientX - canvas.offsetLeft)/canvas.offsetWidth;
             let y = ((canvas.offsetTop + canvas.offsetHeight) 
                         - e.clientY)/canvas.offsetHeight;
             return [x, y];
         }
+
         document.getElementById('canvas').addEventListener('mousemove', e => {
             let [x, y] = getNormalizedCanvasCoordinates(e);
             Module.set_left_xy(x, y);
-            // let strings = Module.get_strings();
-            // console.log(strings);
         });
         document.getElementById('canvas').addEventListener('mouseup', e => {
             let [x, y] = getNormalizedCanvasCoordinates(e);
-            let type = 0;
             Module.set_left_xy_type(x, y, 0);
         });
         document.getElementById('canvas').addEventListener('mousedown', e => {
             let [x, y] = getNormalizedCanvasCoordinates(e);
-            let type = 1;
             Module.set_left_xy_type(x, y, 1);
+        });
+
+        function startSingleTouch(touches) {
+            let [x, y] = getNormalizedCanvasCoordinates(
+                {clientX: touches[0].pageX, clientY: touches[0].pageY});
+            Module.set_left_xy_type(x, y, 1);
+        }
+
+        function continueSingleTouch(touches) {
+            let [x, y] = getNormalizedCanvasCoordinates(
+                {clientX: touches[0].pageX, clientY: touches[0].pageY});
+            Module.set_left_xy(x, y);
+        }
+
+        function endSingleTouch(touches) {
+            let [x, y] = getNormalizedCanvasCoordinates(
+                {clientX: touches[0].pageX, clientY: touches[0].pageY});
+            Module.set_left_xy_type(x, y, 0);
+        }
+
+        function startDoubleTouches(touches) {
+            let e1 = {clientX: touches[0].pageX, clientY: touches[0].pageY};
+            let e2 = {clientX: touches[1].pageX, clientY: touches[1].pageY};
+            let [x1, y1] = getNormalizedCanvasCoordinates(e1);
+            let [x2, y2] = getNormalizedCanvasCoordinates(e2);
+            Module.set_double_touch_position_type(x1, y1, x2, y2, 1);
+        }
+
+        function continueDoubleTouches(touches) {
+            let e1 = {clientX: touches[0].pageX, clientY: touches[0].pageY};
+            let e2 = {clientX: touches[1].pageX, clientY: touches[1].pageY};
+            let [x1, y1] = getNormalizedCanvasCoordinates(e1);
+            let [x2, y2] = getNormalizedCanvasCoordinates(e2);
+            Module.set_double_touch_position(x1, y1, x2, y2);
+        }
+
+        function endDoubleTouches(touches) {
+            let e1 = {clientX: touches[0].pageX, clientY: touches[0].pageY};
+            let e2 = {clientX: touches[1].pageX, clientY: touches[1].pageY};
+            let [x1, y1] = getNormalizedCanvasCoordinates(e1);
+            let [x2, y2] = getNormalizedCanvasCoordinates(e2);
+            Module.set_double_touch_position_type(x1, y1, x2, y2, 0);
+        }
+
+        document.getElementById('canvas').addEventListener('touchstart', e => {
+            let touches = e.changedTouches;
+            // This if statement is evaluated when the screen is already
+            // touched by a single finger and another finger makes contact.
+            if (sNumberOfTouches === 1)
+                endSingleTouch(touches);
+            sNumberOfTouches = touches.length;
+            if (touches.length === 1)
+                startSingleTouch(touches);
+            else
+                startDoubleTouches(touches);
+        });
+        document.getElementById('canvas').addEventListener('touchmove', e => {
+            let touches = e.changedTouches;
+            if (sNumberOfTouches === 1 && touches.length > 1) {
+                endSingleTouch(touches);
+            }
+            if (touches.length === 1)
+                continueSingleTouch(touches);
+            else
+                continueDoubleTouches(touches);
+        });
+        document.getElementById('canvas').addEventListener('touchend', e => {
+            let touches = e.changedTouches;
+            if (touches.length === 1)
+                endSingleTouch(touches);
+            else
+                endDoubleTouches(touches);
+            sNumberOfTouches = 0;
         });
 
         // https://stackoverflow.com/a/47231903
@@ -85,10 +169,12 @@
                 e.stopImmediatePropagation();
         }, {capture: true});
 
-        document.getElementById('setMouseInput').addEventListener(
-            "change", e =>
-                Module.set_mouse_mode(Number.parseInt(e.target.value))
-        );
+        // document.getElementById('setMouseInput').addEventListener(
+        //     "change", e =>
+        //         Module.set_mouse_mode(Number.parseInt(e.target.value))
+        // );
+        // canvas.style.width = Number.parseInt((9.0/5.0)*sideLength);
+        // canvas.style.height = Number.parseInt((4.0/5.0)*sideLength);
 
     </script>
     <script src="sliders.js"></script>

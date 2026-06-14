@@ -34,20 +34,28 @@ uniform vec2 dimensions2D;
 uniform ivec3 texelDimensions3D;
 uniform vec3 dimensions3D;
 
-uniform sampler2D uTex;
-uniform sampler2D vTex;
+// The following represents the first two complex components of the bispinor
+// psi, where these two components require four real numbers in total, which
+// is the max number of channels that a texture can support.
+uniform sampler2D psiUpperTex;
+// Last two components of psi.
+uniform sampler2D psiLowerTex;
+
 uniform float dt;
 uniform float m;
 uniform float c;
 uniform float hbar;
 
 uniform int spinorIndex;
-const int TOP = 0;
-const int BOTTOM = 1;
 
 const int DIRAC_REP = 0;
 const int WEYL_REP = 1;
 uniform int representation;
+
+const bool POSITIVE_E = true;
+const bool NEGATIVE_E = !POSITIVE_E;
+const bool SPIN_UP = true;
+const bool SPIN_DOWN = !SPIN_UP;
 
 #define complex vec2
 #define complex2 vec4
@@ -75,6 +83,10 @@ complex mul(complex z1, complex z2) {
                    z1.x*z2.y + z1.y*z2.x);
 }
 
+complex expI(float angle) {
+    return complex(cos(angle), sin(angle));
+}
+
 complex conj(complex z) {
     return vec2(z.x, -z.y);
 }
@@ -97,7 +109,9 @@ complex frac(complex z1, complex z2) {
     return mul(z1, invZ2);
 }
 
-vec3 getMomentum() {
+/* Compute the 3-momentum that corresponds to the texture coordinates
+ of the texel which this shader program is currently operating on. */
+vec3 getMomentum(vec2 texCoord) {
     float u, v, w;
     float width, height, length_;
     int texelWidth, texelHeight, texelLength;
@@ -108,7 +122,7 @@ vec3 getMomentum() {
         texelWidth = texelDimensions3D[0];
         texelHeight = texelDimensions3D[1];
         texelLength = texelDimensions3D[2];
-        vec3 uvw = to3DTextureCoordinates(UV);
+        vec3 uvw = to3DTextureCoordinates(texCoord);
         u = uvw[0], v = uvw[1], w = uvw[2];
     } else {
         width = dimensions2D[0];
@@ -117,7 +131,7 @@ vec3 getMomentum() {
         texelWidth = texelDimensions2D[0];
         texelHeight = texelDimensions2D[1];
         texelLength = 0;
-        u = UV[0], v = UV[1], w = 0.0;
+        u = texCoord[0], v = texCoord[1], w = 0.0;
     }
     float freqU = ((u < 0.5)? u: -1.0 + u)*float(texelWidth) - 0.5;
     float freqV = ((v < 0.5)? v: -1.0 + v)*float(texelHeight) - 0.5;
@@ -126,248 +140,154 @@ vec3 getMomentum() {
                 2.0*PI*freqW/length_);
 }
 
-/* Compute the spin up eigenvector for a Pauli matrix oriented in an
-arbitrary direction. Although easily accomplishable by pencil and paper,
-this was instead done using 
-Python with [Sympy](https://www.sympy.org/en/index.html).
-The representation used for the Pauli matrices are found here:
-https://en.wikipedia.org/wiki/Pauli_matrices.
-
->>> from sympy import Symbol, sqrt
->>> from sympy import Matrix
->>> nx = Symbol('nx', real=True)
->>> ny = Symbol('ny', real=True)
->>> nz = Symbol('nz', real=True)
->>> n = sqrt(nx**2 + ny**2 + nz**2)
->>> H = Matrix([[nz, nx - 1j*ny],
->>>             [nx + 1j*ny, -nz]])
->>> eigvects, diag_matrix = H.diagonalize(normalize=True)
->>> eigvects = eigvects.subs(n, 'n')
->>> print(eigvects, diag_matrix)
-
-*/
-complex2 getSpinUpState(vec3 orientation, float len) {
-    float n = len;
-    float nx = orientation.x, ny = orientation.y, nz = orientation.z;
-    complex a = frac(complex(n + nz, 0.0),
-                     complex(nx, ny)*sqrt((nz + n)*(nz + n)/(nx*nx + ny*ny)
-                                          + 1.0));
-    complex b = complex(1.0/sqrt((nz + n)*(nz + n)/(nx*nx + ny*ny) + 1.0),
-                        0.0);
-    if ((nx*nx + ny*ny) == 0.0)
-        return (nz >= 0.0)? 
+/* Get the spin up eigenvector corresponding to the given axis orientation.
+ For computational efficiency reasons, the length of this axis axisLength
+ is passed in as a parameter as well.*/
+complex2 getSpinUpState(vec3 axis, float axisLength) {
+    if (dot(axis.xy, axis.xy) == 0.0)
+        return (axis.z >= 0.0)? 
             complex2(complex(1.0, 0.0), complex(0.0)):
             complex2(complex(0.0), complex(1.0, 0.0));
-    return complex2(a, b);
+    return complex2(
+        complex(axis.z + axisLength, 0.0),
+        complex(axis.x, axis.y) 
+    )/sqrt(2.0*axisLength*(axisLength + axis.z));
 }
 
-/*Compute the spin down eigenvector for a Pauli matrix oriented in an
-arbitrary direction. See documentation for getSpinUpState for more 
-information.*/
-complex2 getSpinDownState(vec3 orientation, float len) {
-    float n = len;
-    float nx = orientation.x, ny = orientation.y, nz = orientation.z;
-    complex a = frac(complex(-n + nz, 0.0),
-                     complex(nx, ny)*sqrt((nz - n)*(nz - n)/(nx*nx + ny*ny)
-                                          + 1.0));
-    complex b = complex(1.0/sqrt((nz - n)*(nz - n)/(nx*nx + ny*ny) + 1.0),
-                        0.0);
-    if ((nx*nx + ny*ny) == 0.0)
-        return (nz >= 0.0)? 
+/* Get the spin down eigenvector corresponding to the given axis orientation.
+ For computational efficiency reasons, the length of this axis axisLength
+ is passed in as a parameter as well.*/
+complex2 getSpinDownState(vec3 axis, float axisLength) {
+    if (dot(axis.xy, axis.xy) == 0.0)
+        return (axis.z >= 0.0)? 
             complex2(complex(0.0), complex(1.0, 0.0)):
             complex2(complex(1.0, 0.0), complex(0.0));
-    return complex2(a, b);
+    return complex2(
+        complex(axis.z - axisLength, 0.0),
+        complex(axis.x, axis.y) 
+    )/sqrt(2.0*axisLength*(axisLength - axis.z));
 }
 
-float pow2(float val) {
-    return val*val;
-} 
-
-/*
-Find the eigenvalues of a real symmetric 2x2 matrix.
-The argument i indexes which eigenvalue to get, 
-while d0 and d1 denote the top and bottom diagonal elements respectively.
-The variable nd corresponds to the non-diagonal element.
-
-It is assumed that the eigenvalues of the matrix is purely real,
-which implies that 
-    d0*d0 - 2*d0*d1 + d1*d1 + 4*nd*nd > 0.
-
-The eigenvalues and eigenvectors are found using Python
-with [Sympy](https://www.sympy.org/en/index.html):
-
->>> from sympy import Matrix
->>> from sympy import Symbol
->>> d0 = Symbol('d0', real=True)
->>> d1 = Symbol('d1', real=True)
->>> nd = Symbol('nd', real=True)
->>> mat = Matrix([[d0, nd], [nd, d1]])
->>> mat_eigenvects = mat.eigenvects()
->>> for eig_info in mat_eigenvects:
->>>     eigval, degeneracy, eigvects = eig_info
->>>     print('Eigenvalue: ', eigval, '\nDegeneracy: ', degeneracy)
->>>     for eigvect in eigvects:
->>>         eigvect_normalized = eigvect/eigvect.norm()
->>>         eigvect_normalized.simplify()
->>>         print(eigvect_normalized)
->>>         print()
-
-*/
-float eigenvalueRealSymmetric2x2(int i, float d0, float d1, float nd) {
-    if (nd == 0.0)
-        return (i == 0)? d0: d1;
-    if (i == 0)
-        return d0/2.0 + d1/2.0
-                 - sqrt(d0*d0 - 2.0*d0*d1 + d1*d1 + 4.0*nd*nd)/2.0;
-    else
-        return d0/2.0 + d1/2.0 
-                 + sqrt(d0*d0 - 2.0*d0*d1 + d1*d1 + 4.0*nd*nd)/2.0;
+complex2 getWeylRepresentationEigenvector(
+    int spinorIndex, bool isPositiveE, bool isSpinUp, vec3 p) {
+    bool isNegativeE = !isPositiveE, isSpinDown = !isSpinUp;
+    float E = sqrt(m*m*c*c*c*c + c*c*dot(p, p));
+    float absP = length(p);
+    complex2 spin = (isSpinUp)? 
+        getSpinUpState(p, absP): getSpinDownState(p, absP);
+    float c0, c1;
+    if (absP == 0.0) {
+        c0 = 1.0/sqrt(2.0), c1 = ((isPositiveE)? 1.0: -1.0)/sqrt(2.0);
+        return (spinorIndex == 0)? c0*spin: c1*spin;
+    } else {
+        if (isSpinUp && isPositiveE) {
+            c0 = sqrt(E - c*absP);
+            c1 = sqrt(E + c*absP);
+        } else if (isSpinDown && isPositiveE) {
+            c0 = sqrt(E + c*absP);
+            c1 = sqrt(E - c*absP);
+        } else if (isSpinUp && isNegativeE) {
+            c0 = -sqrt(E + c*absP);
+            c1 = sqrt(E - c*absP);
+        } else if (isSpinDown && isNegativeE) {
+            c0 = -sqrt(E - c*absP);
+            c1 = sqrt(E + c*absP);
+        }
+        return ((spinorIndex == 0)? c0*spin: c1*spin)/sqrt(2.0*E);
+    }   
 }
 
-/*
-Find the eigenvectors of a real symmetric 2x2 matrix.
-The argument i indexes which eigenvector to get, 
-while d0 and d1 denote the top and bottom diagonal elements respectively.
-The variable nd corresponds to the non-diagonal element.
+complex2 getDiracRepresentationEigenvector(
+    int spinorIndex, bool isPositiveE, bool isSpinUp, vec3 p) {
+    bool isNegativeE = !isPositiveE, isSpinDown = !isSpinUp;
+    float scaledE = sqrt(m*m + dot(p/c, p/c));  // Energy divided by c^2
+    float absP = length(p);
+    complex2 spin = (isSpinUp)? 
+        getSpinUpState(p, absP): getSpinDownState(p, absP);
+    float c0, c1;
+    if (absP == 0.0) {
+        c0 = (isPositiveE)? 1.0: 0.0;
+        c1 = (isNegativeE)? 0.0: 1.0; 
+        return (spinorIndex == 0)? c0*spin: c1*spin;
+    } else {
+        if (isSpinUp && isPositiveE) {
+            c0 = 1.0;
+            c1 = (absP/c)/(m + scaledE);
+        } else if (isSpinDown && isPositiveE) {
+            c0 = 1.0;
+            c1 = -(absP/c)/(m + scaledE);
+        } else if (isSpinUp && isNegativeE) {
+            c0 = (absP/c)/(m + scaledE);
+            c1 = 1.0;
+        } else if (isSpinDown && isNegativeE) {
+            c0 = -(absP/c)/(m + scaledE);
+            c1 = 1.0;
+        }
+        return sqrt((m + scaledE)/(2.0*scaledE))
+            *((spinorIndex == 0)? c0*spin: c1*spin);
+    }
+}
 
-It is assumed that the eigenvalues of the matrix is purely real,
-which implies that 
-    d0*d0 - 2*d0*d1 + d1*d1 + 4*nd*nd > 0.
-
-The eigenvalues and eigenvectors are found using Python
-with [Sympy](https://www.sympy.org/en/index.html):
-
->>> from sympy import Matrix
->>> from sympy import Symbol
->>> d0 = Symbol('d0', real=True)
->>> d1 = Symbol('d1', real=True)
->>> nd = Symbol('nd', real=True)
->>> mat = Matrix([[d0, nd], [nd, d1]])
->>> mat_eigenvects = mat.eigenvects()
->>> for eig_info in mat_eigenvects:
->>>     eigval, degeneracy, eigvects = eig_info
->>>     print('Eigenvalue: ', eigval, '\nDegeneracy: ', degeneracy)
->>>     for eigvect in eigvects:
->>>         eigvect_normalized = eigvect/eigvect.norm()
->>>         eigvect_normalized.simplify()
->>>         print(eigvect_normalized)
->>>         print()
-
-*/
-vec2 eigenvectorRealSymmetric2x2(int i, float d0, float d1, float nd) {
-    if (nd == 0.0)
-        return (i == 0)? vec2(1.0, 0.0): vec2(0.0, 1.0);
-    if (i == 0)
-        return vec2(
-            (d0 - d1 - sqrt(d0*d0 - 2.0*d0*d1 + d1*d1 + 4.0*nd*nd))
-             / (nd*sqrt(pow2((-d0 + d1
-                              + sqrt(d0*d0 - 2.0*d0*d1 + d1*d1 + 4.0*nd*nd)
-                             )/nd
-                            ) + 4.0
-                        )
-                ),
-            2.0/sqrt(pow2((-d0 + d1
-                           + sqrt(d0*d0 - 2.0*d0*d1 + d1*d1 + 4.0*nd*nd)
-                          )/nd
-                          ) + 4.0)
-        );
-    else
-        return vec2(
-            (d0 - d1 + sqrt(d0*d0 - 2.0*d0*d1 + d1*d1 + 4.0*nd*nd))
-             / (nd*sqrt(pow2((d0 - d1 
-                              + sqrt(d0*d0 - 2.0*d0*d1 + d1*d1 + 4.0*nd*nd)
-                             )/nd
-                            ) + 4.0
-                        )
-                ),
-            2.0/sqrt(pow2((d0 - d1
-                           + sqrt(d0*d0 - 2.0*d0*d1 + d1*d1 + 4.0*nd*nd)
-                          )/nd
-                          ) + 4.0)
-        );
+/* Get the eigenvectors of the kinetic energy matrix in
+momentum space. For a free particle this is the same as
+the eigenvectors of the momentum space Hamiltonian. */
+complex2 getEigenvector(
+    int spinorIndex, bool isPositiveE, bool isSpinUp, vec3 p
+) {
+    if (representation == DIRAC_REP)
+        return getDiracRepresentationEigenvector(
+            spinorIndex, isPositiveE, isSpinUp, p);
+    else if (representation == WEYL_REP)
+        return getWeylRepresentationEigenvector(
+            spinorIndex, isPositiveE, isSpinUp, p);
 }
 
 void main() {
 
-    vec3 pVec = getMomentum();
-    float px = pVec.x, py = pVec.y, pz = pVec.z;
-    float p2 = px*px + py*py + pz*pz;
-    float p = sqrt(p2);
-    float mc = m*c;
+    // Get each bispinor component of the wave function.
+    complex2 psi0 = texture2D(psiUpperTex, UV);
+    complex2 psi1 = texture2D(psiLowerTex, UV);
 
-    // Get the eigenvectors of that Pauli matrix that is
-    // orientated in the same direction as the momentum
-    complex2 up = getSpinUpState(pVec, p);
-    complex2 down = getSpinDownState(pVec, p);
+    // Compute the 3-momentum from the texture coordinates UV that this
+    // shader program is currently using.
+    vec3 p = getMomentum(UV);
 
-    // Scaled eigenvalues of the kinetic energy matrix for the given momenta.
-    float e0, e1, e2, e3;
+    // Declare then define the eigenvectors of the kinetic energy matrix
+    // in momentum space.
+    complex2 uUp0, uUp1;  // Positive energy, and spin up w.r.t. momentum axis
+    complex2 uDown0, uDown1;  // Positive energy, spin down "    "
+    complex2 vUp0, vUp1;  // Negative energy, spin up "    "
+    complex2 vDown0, vDown1;  // Negative energy, spin down "   "
+    uUp0 = getEigenvector(0, POSITIVE_E, SPIN_UP, p),
+    uUp1 = getEigenvector(1, POSITIVE_E, SPIN_UP, p);
+    uDown0 = getEigenvector(0, POSITIVE_E, SPIN_DOWN, p),
+    uDown1 = getEigenvector(1, POSITIVE_E, SPIN_DOWN, p);
+    vUp0 = getEigenvector(0, NEGATIVE_E, SPIN_UP, -p),
+    vUp1 = getEigenvector(1, NEGATIVE_E, SPIN_UP, -p);
+    vDown0 = getEigenvector(0, NEGATIVE_E, SPIN_DOWN, -p),
+    vDown1 = getEigenvector(1, NEGATIVE_E, SPIN_DOWN, -p);
 
-    vec2 vUp0, vUp1, vDown0, vDown1;
-    // These will be used to compute the actual corresponding eigenvectors
-    // of the eigenvalues declared previously.
+    // Express the wave function in terms of the eigenvectors of the 
+    // kinetic energy matrix
+    complex psiUUp = innerProd(uUp0, psi0) + innerProd(uUp1, psi1);
+    complex psiUDown = innerProd(uDown0, psi0) + innerProd(uDown1, psi1);
+    complex psiVUp = innerProd(vUp0, psi0) + innerProd(vUp1, psi1);
+    complex psiVDown = innerProd(vDown0, psi0) + innerProd(vDown1, psi1);
 
-    if (representation == DIRAC_REP) {
+    // Time evolve the wave function using the energy eigenvalues of
+    // the kinetic energy matrix.
+    float scaledE = sqrt(m*m + dot(p/c, p/c));  // E/c^2
+    psiUUp = mul(expI(-scaledE*(c*c*dt)/hbar), psiUUp);
+    psiUDown = mul(expI(-scaledE*(c*c*dt)/hbar), psiUDown);
+    psiVUp = mul(expI(scaledE*(c*c*dt)/hbar), psiVUp);
+    psiVDown = mul(expI(scaledE*(c*c*dt)/hbar), psiVDown);
 
-        // Suggestion: note that for the second and third arguments 
-        // of the function eigenvalueRealSymmetric2x2, d0 and d1,
-        // the relation d0 + d1 = 0 always holds for this system.
-        // Use this to do some further simplifications to the problem
-        // at hand.
-        e0 = eigenvalueRealSymmetric2x2(0, mc, -mc, p);
-        vUp0 = eigenvectorRealSymmetric2x2(0, mc, -mc, p);
-        e1 = eigenvalueRealSymmetric2x2(1, mc, -mc, p);
-        vUp1 = eigenvectorRealSymmetric2x2(1, mc, -mc, p);
-        e2 = eigenvalueRealSymmetric2x2(0, mc, -mc, -p);
-        vDown0 = eigenvectorRealSymmetric2x2(0, mc, -mc, -p);
-        e3 = eigenvalueRealSymmetric2x2(1, mc, -mc, -p);
-        vDown1 = eigenvectorRealSymmetric2x2(1, mc, -mc, -p);
+    // Transform the wave function back to its initial representation.
+    psi0 = c1C2(psiUUp, uUp0) + c1C2(psiUDown, uDown0);
+    psi1 = c1C2(psiUUp, uUp1) + c1C2(psiUDown, uDown1);
+    psi0 += c1C2(psiVUp, vUp0) + c1C2(psiVDown, vDown0);
+    psi1 += c1C2(psiVUp, vUp1) + c1C2(psiVDown, vDown1);
 
-    } else if (representation == WEYL_REP) {
-
-        e0 = eigenvalueRealSymmetric2x2(0, -p, p, mc);
-        vUp0 = eigenvectorRealSymmetric2x2(0, -p, p, mc);
-        e1 = eigenvalueRealSymmetric2x2(1, -p, p, mc);
-        vUp1 = eigenvectorRealSymmetric2x2(1, -p, p, mc);
-        e2 = eigenvalueRealSymmetric2x2(0, p, -p, mc);
-        vDown0 = eigenvectorRealSymmetric2x2(0, p, -p, mc);
-        e3 = eigenvalueRealSymmetric2x2(1, p, -p, mc);
-        vDown1 = eigenvectorRealSymmetric2x2(1, p, -p, mc);
-    }
-
-    // Compute the eigenvectors of the kinetic energy matrix for
-    // the given momentum.
-    // Note that v00 denotes the first 2 components of the v0 eigenvector,
-    // and v01 the last two. Likewise v1 is split into v10 and v11,
-    // v2 into v20 and v21, and v3 into v30 and v31.
-    complex2 v00 = vUp0[0]*up,     v01 = vUp0[1]*up; 
-    complex2 v10 = vUp1[0]*up,     v11 = vUp1[1]*up;
-    complex2 v20 = vDown0[0]*down, v21 = vDown0[1]*down;
-    complex2 v30 = vDown1[0]*down, v31 = vDown1[1]*down;
-
-    // Get each bispinor component of the wave function
-    complex2 psi0 = texture2D(uTex, UV);
-    complex2 psi1 = texture2D(vTex, UV);
-
-    // Using the eigenvectors of the kinetic energy matrix
-    // for the given momenta, express the wave function in terms
-    // of it.
-    complex d0 = innerProd(v00, psi0) + innerProd(v01, psi1);
-    complex d1 = innerProd(v10, psi0) + innerProd(v11, psi1);
-    complex d2 = innerProd(v20, psi0) + innerProd(v21, psi1);
-    complex d3 = innerProd(v30, psi0) + innerProd(v31, psi1);
-
-    // Advance the wave function in time
-    d0 = mul(complex(cos(e0*c*dt/hbar), -sin(e0*c*dt/hbar)), d0);
-    d1 = mul(complex(cos(e1*c*dt/hbar), -sin(e1*c*dt/hbar)), d1);
-    d2 = mul(complex(cos(e2*c*dt/hbar), -sin(e2*c*dt/hbar)), d2);
-    d3 = mul(complex(cos(e3*c*dt/hbar), -sin(e3*c*dt/hbar)), d3); 
-
-    // Transform the wave function back to its initial representation
-    psi0 = c1C2(d0, v00) + c1C2(d1, v10) + c1C2(d2, v20) + c1C2(d3, v30);
-    psi1 = c1C2(d0, v01) + c1C2(d1, v11) + c1C2(d2, v21) + c1C2(d3, v31);
-
-    fragColor = (spinorIndex == TOP)? psi0: psi1;
+    fragColor = (spinorIndex == 0)? psi0: psi1;
 
 }
-

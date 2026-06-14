@@ -5,7 +5,7 @@ the structure and layout of simulation code that utilize GLSL shaders
 for numerical computations and visualizations.
 
 A useful resource for writing this source file is Learn OpenGL
-(https://learnopengl.com). It is especially helpful for learning
+(https://learnopengl.com), which is especially helpful for learning
 OpenGL for the first time.
 */
 // #include <sys/_types/_u_int32_t.h>
@@ -240,6 +240,78 @@ IVec4 operator*(int, const IVec4 &);
 IVec4 operator-(int, const IVec4 &);
 IVec4 operator/(int, const IVec4 &);
 
+struct U8Vec2 {
+    union {
+        struct { unsigned char ind[2]; };
+        struct { unsigned char x, y; };
+        struct { unsigned char u, v; };
+        struct { unsigned char s, t; };
+    };
+    unsigned char &operator[](size_t index);
+    unsigned char operator[](size_t index) const;
+    U8Vec2 operator+(const U8Vec2 &) const;
+    U8Vec2 operator*(const U8Vec2 &) const;
+    U8Vec2 operator-(const U8Vec2 &) const;
+    U8Vec2 operator/(const U8Vec2 &) const;
+    U8Vec2 operator+(unsigned char) const;
+    U8Vec2 operator*(unsigned char) const;
+    U8Vec2 operator-(unsigned char) const;
+    U8Vec2 operator/(unsigned char) const;
+};
+
+U8Vec2 operator+(unsigned char, const U8Vec2 &);
+U8Vec2 operator*(unsigned char, const U8Vec2 &);
+U8Vec2 operator-(unsigned char, const U8Vec2 &);
+U8Vec2 operator/(unsigned char, const U8Vec2 &);
+
+struct U8Vec3 {
+    union {
+        struct { unsigned char ind[3]; };
+        struct { unsigned char x, y, z; };
+        struct { unsigned char r, g, b; };
+        struct { unsigned char s, t, p; };
+    };
+    unsigned char &operator[](size_t index);
+    unsigned char operator[](size_t index) const;
+    U8Vec3 operator+(const U8Vec3 &) const;
+    U8Vec3 operator*(const U8Vec3 &) const;
+    U8Vec3 operator-(const U8Vec3 &) const;
+    U8Vec3 operator/(const U8Vec3 &) const;
+    U8Vec3 operator+(unsigned char) const;
+    U8Vec3 operator*(unsigned char) const;
+    U8Vec3 operator-(unsigned char) const;
+    U8Vec3 operator/(unsigned char) const;
+};
+
+U8Vec3 operator+(int, const U8Vec3 &);
+U8Vec3 operator*(int, const U8Vec3 &);
+U8Vec3 operator-(int, const U8Vec3 &);
+U8Vec3 operator/(int, const U8Vec3 &);
+
+struct U8Vec4 {
+    union {
+        struct { unsigned char ind[4]; };
+        struct { unsigned char x, y, z, w; };
+        struct { unsigned char r, g, b, a; };
+        struct { unsigned char s, t, p, q; };
+    };
+    unsigned char &operator[](size_t index);
+    unsigned char operator[](size_t index) const;
+    U8Vec4 operator+(const U8Vec4 &) const;
+    U8Vec4 operator*(const U8Vec4 &) const;
+    U8Vec4 operator-(const U8Vec4 &) const;
+    U8Vec4 operator/(const U8Vec4 &) const;
+    U8Vec4 operator+(unsigned char) const;
+    U8Vec4 operator*(unsigned char) const;
+    U8Vec4 operator-(unsigned char) const;
+    U8Vec4 operator/(unsigned char) const;
+};
+
+U8Vec4 operator+(int, const U8Vec4 &);
+U8Vec4 operator*(int, const U8Vec4 &);
+U8Vec4 operator-(int, const U8Vec4 &);
+U8Vec4 operator/(int, const U8Vec4 &);
+
 float dot(const Vec2 &, const Vec2 &);
 
 int dot(const IVec2 &, const IVec2 &);
@@ -276,8 +348,7 @@ struct Config {
         c._viewport[3] = height;
         return c;
     }
-    static Config viewport(
-        int x0, int y0, int width, int height) {
+    static Config viewport(int x0, int y0, int width, int height) {
         Config c;
         c.usage = VIEWPORT;
         c._viewport[0] = x0;
@@ -317,6 +388,20 @@ class RenderTarget;
 class MultidimensionalDataQuad;
 
 
+struct QuadRefContainer {
+    const Quad &ref;
+    QuadRefContainer(const Quad &ref): ref(ref) {}
+};
+
+struct RenderTargetRefContainer {
+    const RenderTarget &ref;
+    RenderTargetRefContainer(const RenderTarget &ref): ref(ref) {}
+};
+
+class GLSLProgram {
+
+};
+
 struct Uniform {
     enum {
         BOOL,
@@ -325,6 +410,7 @@ struct Uniform {
         QUATERNION,
         DOUBLE, DOUBLE2,
         QUAD, RENDER_TARGET,
+        QUAD_CONTAINER, RENDER_TARGET_CONTAINER,
         MULTIDIMENSIONAL_DATA_QUAD,
     };
     int type;
@@ -341,6 +427,8 @@ struct Uniform {
             const Quad *quad;
             const RenderTarget *render_target;
             const MultidimensionalDataQuad *multidimensional_data_quad;
+            QuadRefContainer quad_ref_container;
+            RenderTargetRefContainer render_target_ref_container;
         };
         Vec3 vec3;
         IVec3 ivec3;
@@ -369,6 +457,13 @@ struct Uniform {
     Uniform(const Quad *q): quad(q) {type=Uniform::QUAD;}
     Uniform(const RenderTarget *t): render_target(t) {
         type=Uniform::RENDER_TARGET;
+    }
+    Uniform(const QuadRefContainer &c): quad_ref_container(c) {
+        type=Uniform::QUAD_CONTAINER;
+    }
+    Uniform(const RenderTargetRefContainer &c): 
+    render_target_ref_container(c) {
+        type=Uniform::RENDER_TARGET_CONTAINER;
     }
     Uniform() {}
     Uniform(
@@ -410,7 +505,7 @@ class WireFrame {
     int draw_type;
     public:
     enum {
-        TRIANGLES=0, LINES
+        TRIANGLES=0, LINES, POINTS
     };
     WireFrame(const Attributes &attributes,
               const std::vector<float> &vertices,
@@ -455,6 +550,9 @@ class RenderTarget {
               const Uniforms &uniforms, 
               WireFrame &wire_frame,
               const Config config = Config());
+    void fill_array_with_contents(float *arr) const;
+    void fill_array_with_contents(unsigned char *arr) const;
+    ~RenderTarget();
 };
 
 class Quad {
@@ -470,6 +568,7 @@ class Quad {
     void init(const TextureParams &);
     friend class MultidimensionalDataQuad;
     friend class MainQuad;
+    void substitute_array(void *array, IVec4 viewport);
     public:
     Quad(const TextureParams &);
     Quad(Quad &&);
@@ -482,11 +581,20 @@ class Quad {
     int get_id() const;
     void clear();
     void reset(const TextureParams &);
-    uint32_t width();
-    uint32_t height();
-    uint32_t format();
+    uint32_t width() const;
+    uint32_t height() const;
+    uint32_t format() const;
     void draw(uint32_t program, const Uniforms &uniforms,
               const Config = Config());
+    void set_pixels(std::vector<float>);
+    void set_pixels(const std::vector<float> &, IVec4);
+    void set_pixels(float *arr);
+    std::vector<float> get_float_pixels();
+    std::vector<float> get_float_pixels(IVec4 viewport);
+    void fill_array_with_contents(float *arr) const;
+    void fill_array_with_contents(unsigned char *arr) const;
+    std::vector<uint8_t> get_byte_pixels();
+    std::vector<uint8_t> get_byte_pixels(IVec4 viewport);
     ~Quad();
 };
 

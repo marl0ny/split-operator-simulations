@@ -5,10 +5,10 @@
 static GLFWwindow *init_window(int width, int height) {
     if (glfwInit() != GL_TRUE) {
         #ifndef __EMSCRIPTEN__
-	fprintf(stderr, "%s\n", glfwGetError(NULL));
+	fprintf(stderr, "GLFW error %d\n", glfwGetError(NULL));
         fprintf(stderr, "Unable to create glfw window.\n");
         exit(1);
-        #endif
+        #endif 
     }
     #ifdef __EMSCRIPTEN__
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);

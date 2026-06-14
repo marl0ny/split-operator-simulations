@@ -27,8 +27,10 @@ out vec4 fragColor;
 #define complex vec2
 #define complex2 vec4
 
-uniform sampler2D uTex;
-uniform sampler2D vTex;
+#define hermitian2x2 vec4
+
+uniform sampler2D psiUpperTex;
+uniform sampler2D psiLowerTex;
 
 const int DIRAC_REP = 0;
 const int WEYL_REP = 1;
@@ -46,8 +48,55 @@ complex innerProd(complex2 w, complex2 z) {
     return mul(conj(w.rg), z.rg) + mul(conj(w.ba), z.ba);
 }
 
+complex2 matrixMul(hermitian2x2 m, complex2 v) {
+    complex m00 = complex(m[0], 0.0);
+    complex m11 = complex(m[1], 0.0);
+    complex m01 = complex(m[2], m[3]);
+    complex m10 = conj(m01);
+    complex v0 = v.rg;
+    complex v1 = v.ba;
+    return complex2(mul(m00, v0) + mul(m01, v1),
+                    mul(m10, v0) + mul(m11, v1));
+}
+
+complex2 matrixMul(int index,
+                   hermitian2x2 m00, hermitian2x2 m01, complex2 v0,
+                   hermitian2x2 m10, hermitian2x2 m11, complex2 v1) {
+    if (index == 0)
+        return matrixMul(m00, v0) + matrixMul(m01, v1);
+    else
+        return matrixMul(m10, v0) + matrixMul(m11, v1);
+}
+
+complex diracProd(complex2 psi0, complex2 psi1, 
+                  complex2 phi0, complex2 phi1) {
+    if (representation == DIRAC_REP)
+        return innerProd(psi0, phi0) - innerProd(psi1, phi1);
+    else
+        return innerProd(psi1, phi0) + innerProd(psi0, phi1);
+}
+
 void main() {
-    complex2 u = texture2D(uTex, UV);
-    complex2 v = texture2D(vTex, UV);
-    fragColor = vec4((innerProd(u, v) - innerProd(v, u)).g);
+    complex2 psi0 = texture2D(psiUpperTex, UV);
+    complex2 psi1 = texture2D(psiLowerTex, UV);
+    hermitian2x2 zeros = hermitian2x2(0.0);
+    hermitian2x2 id = hermitian2x2(1.0, 1.0, complex(0.0));
+    complex2 gamma5Psi0, gamma5Psi1;
+    if (representation == DIRAC_REP) {
+        gamma5Psi0 = matrixMul(0, 
+            zeros, id, psi0, 
+            id, zeros, psi1);
+        gamma5Psi1 = matrixMul(1, 
+            zeros, id, psi0, 
+            id, zeros, psi1);
+    } else if (representation == WEYL_REP) {
+        gamma5Psi0 = matrixMul(0, 
+            -id, zeros, psi0, 
+            zeros, id, psi1);
+        gamma5Psi1 = matrixMul(1, 
+            -id, zeros, psi0, 
+            zeros, id, psi1);
+    }
+    complex pseudoScalar = diracProd(psi0, psi1, gamma5Psi0, gamma5Psi1);
+    fragColor = vec4(pseudoScalar.r);
 }

@@ -32,8 +32,13 @@ uniform float dt;
 uniform float c;
 uniform float hbar;
 
-uniform sampler2D uTex;
-uniform sampler2D vTex;
+// The following represents the first two complex components of the bispinor
+// psi, where these two components require four real numbers in total, which
+// is the max number of channels that a texture can support.
+uniform sampler2D psiUpperTex;
+// Last two components of psi.
+uniform sampler2D psiLowerTex;
+
 uniform sampler2D potentialTex;
 // uniform sampler2D imaginaryPotentialTex;
 
@@ -82,7 +87,7 @@ complex complexExp(complex z) {
 
 /* 
 Compute the eigenvectors for a Pauli matrix oriented in an
-arbitrary dimension. Although easily double by pencil and paper,
+arbitrary dimension. Although easily accomplishable using pencil and paper,
 this was instead done using 
 Python with [Sympy](https://www.sympy.org/en/index.html).
 The representation used for the Pauli matrices are found here:
@@ -134,8 +139,8 @@ complex2 getSpinUpState(vec3 orientation, float len) {
 void main() {
 
     // Wave function
-    complex2 psi01 = texture2D(uTex, UV);
-    complex2 psi23 = texture2D(vTex, UV);
+    complex2 psi01 = texture2D(psiUpperTex, UV);
+    complex2 psi23 = texture2D(psiLowerTex, UV);
 
     // 4-vector potential
     vec4 potential = texture2D(potentialTex, UV);

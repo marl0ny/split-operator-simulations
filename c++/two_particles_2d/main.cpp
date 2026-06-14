@@ -1,3 +1,5 @@
+#include <cmath>
+
 #include "gl_wrappers.hpp"
 #include "glfw_window.hpp"
 #include "split_step4d.hpp"
@@ -5,8 +7,8 @@
 #include "interactor.hpp"
 
 
-const IVec4 DIMENSIONS_4D {.ind{64, 64, 64, 64}};
-// const IVec4 DIMENSIONS_4D {.ind{32, 32, 32, 32}};
+// const IVec4 DIMENSIONS_4D {.ind{64, 64, 64, 64}};
+const IVec4 DIMENSIONS_4D {.ind{32, 32, 32, 32}};
 const double PI = 3.141592653589793;
 
 Quad quad_with_dimensions(
@@ -159,10 +161,11 @@ int main(int argc, char **argv) {
         .spatial_step = Quad::make_program_from_path(
             "./shaders/split-step/spatial.frag"),
         .fft{
-            .fft_iter = Quad::make_program_from_path(
-                "./shaders/fft/fft-iter-hypercube.frag"),
             .rev_bit_sort2 = Quad::make_program_from_path(
-                "./shaders/fft/rev-bit-sort2-4d.frag")}};
+                "./shaders/fft/rev-bit-sort2-4d.frag"),
+            .fft_iter = Quad::make_program_from_path(
+                "./shaders/fft/fft-iter-hypercube.frag")
+                }};
 
     int_potential.draw(
         interaction_program,

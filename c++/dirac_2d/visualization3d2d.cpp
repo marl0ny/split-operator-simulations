@@ -24,8 +24,8 @@ static void compute_current(
             {"sigmaX", {encode_2x2(0.0, 0.0, hbar/2.0F)}},
             {"sigmaY", {encode_2x2(0.0, 0.0, -i*hbar/2.0F)}},
             {"sigmaZ", {encode_2x2(hbar/2.0F, -hbar/2.0F, 0.0)}},
-            {"uTex", {&psi.u}},
-            {"vTex", {&psi.v}},
+            {"psiUpperTex", {&psi.upper}},
+            {"psiLowerTex", {&psi.lower}},
             {"representation", {params.representation}}
         }
     );
@@ -39,8 +39,8 @@ static void compute_scalar(
     scalar.draw(
         draw_scalar_program,
         {
-            {"uTex", {&psi.u}},
-            {"vTex", {&psi.v}},
+            {"psiUpperTex", {&psi.upper}},
+            {"psiLowerTex", {&psi.lower}},
             {"representation", {int(0)}}
         }
     );
@@ -182,22 +182,22 @@ void visualization3d2d::scalar_or_single_component_quantities(
         int data_type, index;
         float phase_adjust;
         if (options.component_magnitude_w_phase[0]) {
-            height_tex = &psi.u;
+            height_tex = &psi.upper;
             index = 0;
             data_type = COMPLEX_DATA_TYPE_FRONT;
             phase_adjust = params.c*params.c*params.m*params.t;
         } else if (options.component_magnitude_w_phase[1]) {
-            height_tex = &psi.u;
+            height_tex = &psi.upper;
             index = 1;
             data_type = COMPLEX_DATA_TYPE_BACK;
             phase_adjust = params.c*params.c*params.m*params.t;
         } else if (options.component_magnitude_w_phase[2]) {
-            height_tex = &psi.v;
+            height_tex = &psi.lower;
             index = 0;
             data_type = COMPLEX_DATA_TYPE_FRONT;
             phase_adjust = -params.c*params.c*params.m*params.t;
         } else {
-            height_tex = &psi.v;
+            height_tex = &psi.lower;
             index = 1;
             data_type = COMPLEX_DATA_TYPE_BACK;
             phase_adjust = -params.c*params.c*params.m*params.t;

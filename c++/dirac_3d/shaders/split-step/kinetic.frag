@@ -113,7 +113,7 @@ vec3 getMomentum() {
     } else {
         width = dimensions2D[0];
         height = dimensions2D[1];
-        length_ = 0.0;
+        length_ = 1.0;
         texelWidth = texelDimensions2D[0];
         texelHeight = texelDimensions2D[1];
         texelLength = 0;
