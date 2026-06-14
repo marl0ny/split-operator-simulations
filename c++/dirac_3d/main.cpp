@@ -115,18 +115,34 @@ void simulation_ui_interface_handler(
                         program, latex_out, params.fourVectorPotential);
                 potential_text_edit.add_new_program(program, variables_set);
                 display_parameters_as_sliders(c, variables_set,  {"t"});
-                edit_katex_label_display(params.LATEX_LABEL1, 
-                    (latex_out[0].size() == 0)? 
-                    "": ("V(x, y, z, t) = " + latex_out[0]));
-                edit_katex_label_display(params.LATEX_LABEL2, 
-                    (latex_out[1].size() == 0)? 
-                    "": ("A_x(x, y, z, t) = " + latex_out[1]));
-                edit_katex_label_display(params.LATEX_LABEL3, 
-                    (latex_out[2].size() == 0)? 
-                    "": ("A_y(x, y, z, t) = " + latex_out[2]));
-                edit_katex_label_display(params.LATEX_LABEL4, 
-                    (latex_out[3].size() == 0)? 
-                    "": ("A_z(x, y, z, t) = " + latex_out[3]));
+                std::string full_latex_text = "";
+                if (latex_out[0].size() > 0)
+                    full_latex_text += "V(x, y, z, t) = " + latex_out[0];
+                if (latex_out[1].size() > 0)
+                    full_latex_text += 
+                        std::string((full_latex_text.size() == 0)? "": "\\\\\\\\")
+                             + "A_x(x, y, z, t) = " + latex_out[1];
+                if (latex_out[2].size() > 0)
+                    full_latex_text += 
+                        std::string((full_latex_text.size() == 0)? "": "\\\\\\\\")
+                             + "A_y(x, y, z, t) = " + latex_out[2];
+                if (latex_out[3].size() > 0)
+                    full_latex_text += 
+                        std::string((full_latex_text.size() == 0)? "": "\\\\\\\\")
+                            + "A_z(x, y, z, t) = " + latex_out[3];
+                edit_katex_label_display(params.LATEX_LABEL1, full_latex_text);
+                // edit_katex_label_display(params.LATEX_LABEL1, 
+                //     (latex_out[0].size() == 0)? 
+                //     "": ("V(x, y, z, t) = " + latex_out[0]));
+                // edit_katex_label_display(params.LATEX_LABEL2, 
+                //     (latex_out[1].size() == 0)? 
+                //     "": ("A_x(x, y, z, t) = " + latex_out[1]));
+                // edit_katex_label_display(params.LATEX_LABEL3, 
+                //     (latex_out[2].size() == 0)? 
+                //     "": ("A_y(x, y, z, t) = " + latex_out[2]));
+                // edit_katex_label_display(params.LATEX_LABEL4, 
+                //     (latex_out[3].size() == 0)? 
+                //     "": ("A_z(x, y, z, t) = " + latex_out[3]));
             }
         };
         /* Perform an action upon the press of a button. */
@@ -152,21 +168,44 @@ void simulation_ui_interface_handler(
         it matches the dropdown.*/
         s_selection_set = [&params, &potential_text_edit, &sim]
             (int c, int val) {
-            /* if (c == params.PRESET_FUNCTIONS_DROPDOWN) {
-                params.presetFunctionsDropdown.selected = val;
+            if (c == params.PRESET_POTENTIALS_DROPDOWN) {
+                params.presetPotentialsDropdown.selected = val;
                 int program;
-                std::vector<std::string> latex_out = std::vector<std::string> {""};
+                std::vector<std::string> latex_out = std::vector<std::string> {
+                    "", "", "", ""};
                 std::set<std::string> variables_set = 
                     initialize_glsl_program_from_strings(
                         program, latex_out,
-                        {params.presetFunctionsDropdown.options[val]});
+                        {params.presetPotentialsDropdown.options[val]});
                 potential_text_edit.add_new_program(program, variables_set);
                 display_parameters_as_sliders(
-                    params.USER_TEXT_ENTRY, variables_set, {"t"});
-                edit_katex_label_display(params.LATEX_LABEL, 
-                    (latex_out[0].size() == 0)? 
-                    "": ("f(x, y, z) = " + latex_out[0]));
-            }*/
+                    params.FOUR_VECTOR_POTENTIAL, variables_set, {"t"});
+                std::string full_latex_text = "";
+                if (latex_out[0].size() > 0)
+                    full_latex_text += "V(x, y, z, t) = " + latex_out[0];
+                if (latex_out[1].size() > 0)
+                    full_latex_text += 
+                        std::string((full_latex_text.size() == 0)? "": "\\\\\\\\")
+                             + "A_x(x, y, z, t) = " + latex_out[1];
+                if (latex_out[2].size() > 0)
+                    full_latex_text += 
+                        std::string((full_latex_text.size() == 0)? "": "\\\\\\\\")
+                             + "A_y(x, y, z, t) = " + latex_out[2];
+                if (latex_out[3].size() > 0)
+                    full_latex_text += 
+                        std::string((full_latex_text.size() == 0)? "": "\\\\\\\\")
+                            + "A_z(x, y, z, t) = " + latex_out[3];
+                edit_katex_label_display(params.LATEX_LABEL1, full_latex_text);
+                // edit_katex_label_display(params.LATEX_LABEL2, 
+                //     (latex_out[1].size() == 0)? 
+                //     "": ("A_x(x, y, z, t) = " + latex_out[1]));
+                // edit_katex_label_display(params.LATEX_LABEL3, 
+                //     (latex_out[2].size() == 0)? 
+                //     "": ("A_y(x, y, z, t) = " + latex_out[2]));
+                // edit_katex_label_display(params.LATEX_LABEL4, 
+                //     (latex_out[3].size() == 0)? 
+                //     "": ("A_z(x, y, z, t) = " + latex_out[3]));
+            }
             if (c == params.VISUALIZATION_SELECT) {
                 params.visualizationSelect.selected = val;
             }
@@ -184,12 +223,21 @@ void simulation_ui_interface_handler(
                 sim.reset_data_reduce_dimensions(IVec3{.ind{
                     texel_side_length, texel_side_length, texel_side_length
                 }});
+                params.simulationDimensions3D.x = texel_side_length;
+                params.simulationDimensions3D.y = texel_side_length;
+                params.simulationDimensions3D.z = texel_side_length;
+                params.dataTexelDimensions3D.x = texel_side_length;
+                params.dataTexelDimensions3D.y = texel_side_length;
+                params.dataTexelDimensions3D.z = texel_side_length;
                 params.dt = params.cdtdx
                 * ((params.sideLength/float(params.texelSideLength))/params.c);
                 std::string string_val = std::to_string(params.dt);
                 std::string text_content
                     = "Time step Δt (a.u.) = ";
                 text_content += string_val;
+                sim.init(
+                    params, params.position, params.wavenumber, params.sigma);
+                potential_text_edit.queue_current();
                 edit_label_display(params.DT_LABEL, text_content);
             }
         };
@@ -222,14 +270,52 @@ void simulation_ui_interface_handler(
 
     { // Initial configuration from the default preset option
         int program;
-        /* int index = params.presetFunctionsDropdown.selected;
+        int index = params.presetPotentialsDropdown.selected;
+        std::vector<std::string> latex_out {"", "", "", ""};
         std::set<std::string> variables_set 
             = initialize_glsl_program_from_strings(
-                program,
-                {params.presetFunctionsDropdown.options[index]});
-        potential_text_edit.add_new_program(program, variables_set);*/
+                program, latex_out,
+                {params.presetPotentialsDropdown.options[index]});
+        potential_text_edit.add_new_program(program, variables_set);
+        display_parameters_as_sliders(
+                    params.FOUR_VECTOR_POTENTIAL, variables_set, {"t"});
+        std::string full_latex_text = "";
+        if (latex_out[0].size() > 0)
+            full_latex_text += "V(x, y, z, t) = " + latex_out[0];
+        if (latex_out[1].size() > 0)
+            full_latex_text += 
+                std::string((full_latex_text.size() == 0)? "": "\\\\\\\\")
+                        + "A_x(x, y, z, t) = " + latex_out[1];
+        if (latex_out[2].size() > 0)
+            full_latex_text += 
+                std::string((full_latex_text.size() == 0)? "": "\\\\\\\\")
+                        + "A_y(x, y, z, t) = " + latex_out[2];
+        if (latex_out[3].size() > 0)
+            full_latex_text += 
+                std::string((full_latex_text.size() == 0)? "": "\\\\\\\\")
+                    + "A_z(x, y, z, t) = " + latex_out[3];
+        edit_katex_label_display(params.LATEX_LABEL1, full_latex_text);
+                // edit_katex_label_display(params.LATEX_LABEL1, 
+                //     (latex_out[0].size() == 0)? 
+                //     "V(x, y, z, t) = 0": ("V(x, y, z, t) = " + latex_out[0]));
+                // edit_katex_label_display(params.LATEX_LABEL2, 
+                //     (latex_out[1].size() == 0)? 
+                //     "A_x(x, y, z, t) = 0": ("A_x(x, y, z, t) = " + latex_out[1]));
+                // edit_katex_label_display(params.LATEX_LABEL3, 
+                //     (latex_out[2].size() == 0)? 
+                //     "A_x(x, y, z, t) = 0": ("A_y(x, y, z, t) = " + latex_out[2]));
+                // edit_katex_label_display(params.LATEX_LABEL4, 
+                //     (latex_out[3].size() == 0)? 
+                //     "A_x(x, y, z, t) = 0": ("A_z(x, y, z, t) = " + latex_out[3]));
         edit_bool_display(params.USE_LINEAR, 
             default_tex_params.min_filter == GL_LINEAR);
+        params.dt = params.cdtdx
+                * ((params.sideLength/float(params.texelSideLength))/params.c);
+        std::string string_val = std::to_string(params.dt);
+        std::string text_content
+            = "Time step Δt (a.u.) = ";
+        text_content += string_val;
+        edit_label_display(params.DT_LABEL, text_content);
         sim.init(params,
                 Vec3{.x=0.5, 0.5, 0.5},
                 IVec3{.x=5, 0, 0}, 0.05);

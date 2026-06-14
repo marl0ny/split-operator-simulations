@@ -26,50 +26,11 @@
     "texelSideLength": {
         "name": "Grid Side Length (Cubic)", "type": "int", "value": 64},
     "sideLength": {
-        "name": "Simulation Side Length", "type": "float", "value": 2.0},
+        "name": "Simulation Side Length", "type": "float", "value": 1.0},
     "simulationDimensions3D": {
         "name": "Discretization dimensions", "type": "IVec3", "value": [64, 64, 64]},
     "dataTexelDimensions3D": {
             "name": "Volume dimensions", "type": "IVec3", "value": [64, 64, 64]},
-
-
-    "initializeWaveFunctionStart": {"name": "Initialize New Wave Function Controls", "type": "SubSectionStart", "value": {}},
-        "sigma": {
-            "name": "Size", "type": "float", "value": 0.1, "min": 0.03, "max": 0.3, "step": 0.001},
-        "posE": {
-            "name": "Positive energy (+E) content", "type":  "float", "value": 1.0, "min": 0.0, "max": 1.0, "step": 0.01},
-        "negE": {
-            "name": "Negative energy (-E) content = 0", "type": "Label", "value": "{}", "style": "font-weight: normal;"}, 
-        "posSpinDir": {
-            "name": "Spin up orientation for +E solutions (sx, sy, sz)", "type":  "Vec3", "value": [0.0, 0.0, 1.0], "min": [-1.0, -1.0, -1.0], "max": [1.0, 1.0, 1.0], "step": [0.01, 0.01, 0.01]},
-        "orientationsMSGLabel": {
-            "name": "(Orientations get normalized. (0, 0, 0) changed to (0, 0, 1).)", "type": "Label", "value": "{}", "style": "font-weight: normal;"},
-        "negSpinDir": {
-            "name": "Spin up orientation for -E solutions", "type":  "Vec3", "value": [0.0, 0.0, 1.0], "min": [-1.0, -1.0, -1.0], "max": [1.0, 1.0, 1.0], "step": [0.01, 0.01, 0.01]},
-        "momentumSpaceInit": {
-            "name": "Apply spinor and +E/-E configuration to each momentum plane wave individually. Plane waves then summed up to form wave packet.", "type": "bool", "value": false},
-        "wavenumber": {
-            "name": "Wave number, w.r.t. simulation domain", "type": "IVec3", "value": [0, 0, 0], "min": [-16, -16, -16], "max": [16, 16, 16], "step": [1, 1, 1]},
-        "position": {
-            "name": "Position (norm. coord.)", "type": "Vec3", "value": [0.5, 0.5, 0.5], "min": [0.0, 0.0, 0.0], "max": [1.0, 1.0, 1.0], "step": [0.01, 0.01, 0.01]
-        },
-        "initializeNewWaveFunctionButton": {
-            "name": "Initialize new wave function", "type": "Button", "value": {}
-        },
-    "initializeWaveFunctionEnd": {"name": "Initialize New Wave Function Controls", "type": "SubSectionEnd", "value": {}},
-
-    "initializePotentialStart": {"name": "Initialize Potential Controls", "type": "SubSectionStart", "value": {}},
-        "fourVectorPotential": {
-            "name": "4-Vector Potential", "type": "EntryBoxes", "value": "{\"0\", \"0\", \"0\", \"0\"}", "subLabels": ["V(x, y, z, t)", "Ax(x, y, z, t)", "Ay(x, y, z, t)", "Az(x, y, z, t)"]},
-        "latexLabel1": {
-            "name": "KaTeX Label", "type": "KaTeXLabel", "value": {}},
-        "latexLabel2": {
-            "name": "KaTeX Label", "type": "KaTeXLabel", "value": {}},
-        "latexLabel3": {
-            "name": "KaTeX Label", "type": "KaTeXLabel", "value": {}},
-        "latexLabel4": {
-            "name": "KaTeX Label", "type": "KaTeXLabel", "value": {}},
-    "initializePotentialEnd": {"name": "Initialize Potential Controls", "type": "SubSectionEnd", "value": {}},
 
     "visualizationControlsStart": {"name": "Visualization Controls", "type": "SubSectionStart", "value": {}},
 
@@ -103,6 +64,10 @@
                 "name": "Spatial current (bar(𝜓(r))γⁱ𝜓(r), i=1,2,3)", "type": "bool", "value": false},
             "showPseudospatialCurrent": {
                 "name": "Spatial pseudocurrent (bar(𝜓(r))γⁱγ⁵𝜓(r))", "type": "bool", "value": false},
+            "showPsi01Spin": {
+                "name": "Spin axis where (𝜓₁(r), 𝜓₂(r)) is spin up", "type": "bool", "value": false},
+            "showPsi23Spin": {
+                "name": "Spin axis where (𝜓₃(r), 𝜓₄(r)) is spin up", "type": "bool", "value": false},
         "waveFuncVisEnd": {"name": "Wave Function Visualization Options", "type": "SubSectionEnd", "value": "{}"},
 
         "volumeRenderSectionStart": {"name": "Volume Render Controls", "type": "SubSectionStart", "value": {}},
@@ -135,6 +100,45 @@
         "arrows3DLineSectionEnd": {"name": "Arrows Plot", "type": "SubSectionEnd", "value": {}},
 
     "visualizationControlsEnd": {"name": "Visualization Controls", "type": "SubSectionEnd", "value": {}},
+
+    "initializeWaveFunctionStart": {"name": "Initialize New Wave Function Controls", "type": "SubSectionStart", "value": {}},
+        "sigma": {
+            "name": "Size", "type": "float", "value": 0.1, "min": 0.03, "max": 0.3, "step": 0.001},
+        "posE": {
+            "name": "Positive energy (+E) content", "type":  "float", "value": 1.0, "min": 0.0, "max": 1.0, "step": 0.01},
+        "negE": {
+            "name": "Negative energy (-E) content = 0", "type": "Label", "value": "{}", "style": "font-weight: normal;"}, 
+        "posSpinDir": {
+            "name": "Spin up orientation for +E solutions (sx, sy, sz)", "type":  "Vec3", "value": [0.0, 0.0, 1.0], "min": [-1.0, -1.0, -1.0], "max": [1.0, 1.0, 1.0], "step": [0.01, 0.01, 0.01]},
+        "orientationsMSGLabel": {
+            "name": "(Orientations get normalized. (0, 0, 0) changed to (0, 0, 1).)", "type": "Label", "value": "{}", "style": "font-weight: normal;"},
+        "negSpinDir": {
+            "name": "Spin up orientation for -E solutions", "type":  "Vec3", "value": [0.0, 0.0, 1.0], "min": [-1.0, -1.0, -1.0], "max": [1.0, 1.0, 1.0], "step": [0.01, 0.01, 0.01]},
+        "momentumSpaceInit": {
+            "name": "Apply spinor and +E/-E configuration to each momentum plane wave individually. Plane waves then summed up to form wave packet.", "type": "bool", "value": false},
+        "wavenumber": {
+            "name": "Wave number, w.r.t. simulation domain", "type": "IVec3", "value": [0, 0, 0], "min": [-16, -16, -16], "max": [16, 16, 16], "step": [1, 1, 1]},
+        "position": {
+            "name": "Position (norm. coord.)", "type": "Vec3", "value": [0.5, 0.5, 0.5], "min": [0.0, 0.0, 0.0], "max": [1.0, 1.0, 1.0], "step": [0.01, 0.01, 0.01]
+        },
+        "absCoeff": {
+            "name": "Absorbtion", "type": "float", "value": 10.0, "min": 0.0, "max": 10.0, "step": 0.01
+        },
+        "initializeNewWaveFunctionButton": {
+            "name": "Initialize new wave function", "type": "Button", "value": {}
+        },
+    "initializeWaveFunctionEnd": {"name": "Initialize New Wave Function Controls", "type": "SubSectionEnd", "value": {}},
+
+    "initializePotentialStart": {"name": "Initialize Potential Controls", "type": "SubSectionStart", "value": {}},
+        "presetPotentialsDropdown": {
+            "name": "Presets", "type": "SelectionList", 
+            "value": "{0, {\"0\", \"abs(a/2)*(x^2 + y^2 + z^2)\", \"a/sqrt(x^2 + y^2 + z^2)\", \"10.0*(step(-y^2+(height*0.04*s1)^2)+step(y^2-(height*0.06*s2)^2))*step(-x^2+(width*0.04*w)^2)\"}}"},
+        "latexLabel1": {
+            "name": "KaTeX Label", "type": "KaTeXLabel", "value": {}},
+        "fourVectorPotential": {
+            "name": "4-Vector Potential", "type": "EntryBoxes", "value": "{\"0\", \"0\", \"0\", \"0\"}", "subLabels": ["V(x, y, z, t)", "Ax(x, y, z, t)", "Ay(x, y, z, t)", "Az(x, y, z, t)"]},
+    "initializePotentialEnd": {"name": "Initialize Potential Controls", "type": "SubSectionEnd", "value": {}},
+
 
     "takeScreenshots": {"name": "Take screenshots at every frame (uncompressed bitmap)", "type": "BMPRecord", "value": "{false, 1440, 1440}"},
 

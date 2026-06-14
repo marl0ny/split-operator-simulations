@@ -438,9 +438,14 @@ function editKaTeXLabel(
         katex.render(latexText, 
             label, {
             throwOnError: true
-        });
+         });
     } catch {
-
+        label.style['visibility'] = 'hidden';
+    }
+    if (latexText.length === 0) {
+        label.style['visibility'] = 'hidden';
+    } else {
+        label.style['visibility'] = 'visible';
     }
 }
 

@@ -152,6 +152,36 @@ Vec2 eigenvector_real_symmetric2x2(int i, RealSymmetric2x2 m) {
         }};
 }
 
+BiSpinor eigenvector_dirac_rep(
+    bool is_positive,
+    bool is_spin_up, Vec3 p, float m, float c) {
+    bool is_negative = !is_positive, is_spin_down = !is_spin_up;
+    float E = sqrt(m*m*c*c*c*c + c*c*dot(p, p));
+    float abs_p = p.length();
+    Spinor spin = (is_spin_up)? 
+        get_spin_up_state(p, abs_p): get_spin_down_state(p, abs_p);
+    float c0 = (is_positive)? 1.0: 0.0;
+    float c1 = (is_negative)? 0.0: 1.0; 
+    if (abs_p == 0.0) {
+        return {c0*spin, c1*spin};
+    } else {
+        if (is_spin_up && is_positive) {
+            c0 = 1.0;
+            c1 = c*abs_p/(m*c*c + E);
+        } else if (is_spin_down && is_positive) {
+            c0 = 1.0;
+            c1 = -c*abs_p/(m*c*c + E);
+        } else if (is_spin_up && is_negative) {
+            c0 = -c*abs_p/(m*c*c + E);
+            c1 = 1.0;
+        } else if (is_spin_down && is_negative) {
+            c0 = c*abs_p/(m*c*c + E);
+            c1 = 1.0;
+        }
+        return {sqrt((m*c*c + E)/(2.0*E))*c0*spin, sqrt((m*c*c + E)/(2.0*E))*c1*spin};
+    }
+}
+
 enum {DIRAC=0, WEYL=1};
 
 BiSpinor get_spinor_plane_wave(
@@ -161,29 +191,30 @@ BiSpinor get_spinor_plane_wave(
     float c = params.c;
     Spinor up = spinors::get_spin_up_state(p.normalized(), p.length());
     Spinor down = spinors::get_spin_down_state(p.normalized(), p.length());
-    Vec2 up0, up1, down0, down1;
-    RealSymmetric2x2 matrix_up, matrix_down;
     if (representation == DIRAC) {
-        matrix_up 
-            = RealSymmetric2x2(m*c, p.length(), -m*c);
-        matrix_down
-            = RealSymmetric2x2(m*c, -p.length(), -m*c);
+        BiSpinor v0 = eigenvector_dirac_rep(false, true, p, m, c);
+        BiSpinor v1 = eigenvector_dirac_rep(true, true, p, m, c);
+        BiSpinor v2 = eigenvector_dirac_rep(false, false, p, m, c);
+        BiSpinor v3 = eigenvector_dirac_rep(true, false, p, m, c);
+        return e[0]*v0 + e[1]*v1 + e[2]*v2 + e[3]*v3;
     } else if (representation == WEYL) {
+        RealSymmetric2x2 matrix_up, matrix_down;
+        Vec2 up0, up1, down0, down1;
         matrix_up 
             = RealSymmetric2x2(-p.length(),  m*c, p.length());
         matrix_down
             = RealSymmetric2x2(p.length(), m*c, -p.length());
+        up0 = eigenvector_real_symmetric2x2(0, matrix_up);
+        up1 = eigenvector_real_symmetric2x2(1, matrix_up);
+        down0 = eigenvector_real_symmetric2x2(0, matrix_down);
+        down1 = eigenvector_real_symmetric2x2(1, matrix_down);
+        printf("%g, %g\n",up0[0], up0[1]);
+        BiSpinor v0 {up0[0]*up, up0[1]*up};
+        BiSpinor v1 {down0[0]*down, down0[1]*down};
+        BiSpinor v2 {up1[0]*up, up1[1]*up};
+        BiSpinor v3 {down1[0]*down, down1[1]*down};
+        return e[0]*v0 + e[1]*v1 + e[2]*v2 + e[3]*v3;
     }
-    up0 = eigenvector_real_symmetric2x2(0, matrix_up);
-    up1 = eigenvector_real_symmetric2x2(1, matrix_up);
-    down0 = eigenvector_real_symmetric2x2(0, matrix_down);
-    down1 = eigenvector_real_symmetric2x2(1, matrix_down);
-    printf("%g, %g\n",up0[0], up0[1]);
-    BiSpinor v0 {up0[0]*up, up0[1]*up};
-    BiSpinor v1 {down0[0]*down, down0[1]*down};
-    BiSpinor v2 {up1[0]*up, up1[1]*up};
-    BiSpinor v3 {down1[0]*down, down1[1]*down};
-    return e[0]*v0 + e[1]*v1 + e[2]*v2 + e[3]*v3;
 }
 
 };

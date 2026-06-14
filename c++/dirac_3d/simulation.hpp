@@ -40,6 +40,8 @@ struct Programs {
         unsigned int cursor_outline;
         unsigned int axes_3d;
         unsigned int axes_labels_3d;
+        unsigned int scalar;
+        unsigned int current;
     } visualization;
     unsigned int init;
     unsigned int init_momentum;
@@ -84,6 +86,10 @@ class Simulation {
         const Quad &u, const Quad &v, const Quad &potential,
         SimParams sim_params, float dt);
     void split_step(const SimParams &sim_params);
+    void vector_field_view(
+        const SimParams &params,
+        const std::optional<Vec2> &hover,
+        ::Quaternion rotation, float scale);
 
     public:
     Simulation(const TextureParams &default_tex_params,

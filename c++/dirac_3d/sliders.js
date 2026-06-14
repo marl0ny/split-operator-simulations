@@ -14,61 +14,62 @@ const ENUM_CODES = {
     SIDE_LENGTH: 12,
     SIMULATION_DIMENSIONS3_D: 13,
     DATA_TEXEL_DIMENSIONS3_D: 14,
-    INITIALIZE_WAVE_FUNCTION_START: 15,
-    SIGMA: 16,
-    POS_E: 17,
-    NEG_E: 18,
-    POS_SPIN_DIR: 19,
-    ORIENTATIONS_M_S_G_LABEL: 20,
-    NEG_SPIN_DIR: 21,
-    MOMENTUM_SPACE_INIT: 22,
-    WAVENUMBER: 23,
-    POSITION: 24,
-    INITIALIZE_NEW_WAVE_FUNCTION_BUTTON: 25,
-    INITIALIZE_WAVE_FUNCTION_END: 26,
-    INITIALIZE_POTENTIAL_START: 27,
-    FOUR_VECTOR_POTENTIAL: 28,
-    LATEX_LABEL1: 29,
-    LATEX_LABEL2: 30,
-    LATEX_LABEL3: 31,
-    LATEX_LABEL4: 32,
-    INITIALIZE_POTENTIAL_END: 33,
-    VISUALIZATION_CONTROLS_START: 34,
-    VISUALIZATION_SELECT: 35,
-    USE_PERSPECTIVE_PROJECTION: 36,
-    BRIGHTNESS: 37,
-    WAVE_FUNC_VIS_START: 38,
-    ADJ_NOTE_LABEL: 39,
-    SHOW_CURRENT0: 40,
-    SHOW_PSUEDOCURRENT0: 41,
-    SHOW_SCALAR: 42,
-    SHOW_PSEUDOSCALAR: 43,
-    SHOW_PSI0_W_PHASE: 44,
-    SHOW_PSI1_W_PHASE: 45,
-    SHOW_PSI2_W_PHASE: 46,
-    SHOW_PSI3_W_PHASE: 47,
-    SHOW_SPATIAL_CURRENT: 48,
-    SHOW_PSEUDOSPATIAL_CURRENT: 49,
-    WAVE_FUNC_VIS_END: 50,
-    VOLUME_RENDER_SECTION_START: 51,
-    USE_LINEAR: 52,
-    ALPHA_BRIGHTNESS: 53,
-    COLOR_BRIGHTNESS: 54,
-    VOLUME_TEXEL_DIMENSIONS3_D: 55,
-    APPLY_BLUR: 56,
-    BLUR_SIZE: 57,
-    VOLUME_RENDER_SECTION_END: 58,
-    PLANAR_SLICES_SECTION_START: 59,
-    PLANAR_NORM_COORD_OFFSETS: 60,
-    PLANAR_SLICES_SECTION_END: 61,
-    ARROWS3_D_LINE_SECTION_START: 62,
-    ARROW_DIMENSIONS: 63,
-    USE_CONES: 64,
-    ARROWS3_D_LINE_SECTION_END: 65,
-    VISUALIZATION_CONTROLS_END: 66,
-    TAKE_SCREENSHOTS: 67,
-    CANVAS_HOVER_DISPLAY: 68,
-    DUMMY_VALUE: 69,
+    VISUALIZATION_CONTROLS_START: 15,
+    VISUALIZATION_SELECT: 16,
+    USE_PERSPECTIVE_PROJECTION: 17,
+    BRIGHTNESS: 18,
+    WAVE_FUNC_VIS_START: 19,
+    ADJ_NOTE_LABEL: 20,
+    SHOW_CURRENT0: 21,
+    SHOW_PSUEDOCURRENT0: 22,
+    SHOW_SCALAR: 23,
+    SHOW_PSEUDOSCALAR: 24,
+    SHOW_PSI0_W_PHASE: 25,
+    SHOW_PSI1_W_PHASE: 26,
+    SHOW_PSI2_W_PHASE: 27,
+    SHOW_PSI3_W_PHASE: 28,
+    SHOW_SPATIAL_CURRENT: 29,
+    SHOW_PSEUDOSPATIAL_CURRENT: 30,
+    SHOW_PSI01_SPIN: 31,
+    SHOW_PSI23_SPIN: 32,
+    WAVE_FUNC_VIS_END: 33,
+    VOLUME_RENDER_SECTION_START: 34,
+    USE_LINEAR: 35,
+    ALPHA_BRIGHTNESS: 36,
+    COLOR_BRIGHTNESS: 37,
+    VOLUME_TEXEL_DIMENSIONS3_D: 38,
+    APPLY_BLUR: 39,
+    BLUR_SIZE: 40,
+    VOLUME_RENDER_SECTION_END: 41,
+    PLANAR_SLICES_SECTION_START: 42,
+    PLANAR_NORM_COORD_OFFSETS: 43,
+    PLANAR_SLICES_SECTION_END: 44,
+    ARROWS3_D_LINE_SECTION_START: 45,
+    ARROW_DIMENSIONS: 46,
+    USE_CONES: 47,
+    ARROWS3_D_LINE_SECTION_END: 48,
+    VISUALIZATION_CONTROLS_END: 49,
+    INITIALIZE_WAVE_FUNCTION_START: 50,
+    SIGMA: 51,
+    POS_E: 52,
+    NEG_E: 53,
+    POS_SPIN_DIR: 54,
+    ORIENTATIONS_M_S_G_LABEL: 55,
+    NEG_SPIN_DIR: 56,
+    MOMENTUM_SPACE_INIT: 57,
+    WAVENUMBER: 58,
+    POSITION: 59,
+    ABS_COEFF: 60,
+    INITIALIZE_NEW_WAVE_FUNCTION_BUTTON: 61,
+    INITIALIZE_WAVE_FUNCTION_END: 62,
+    INITIALIZE_POTENTIAL_START: 63,
+    PRESET_POTENTIALS_DROPDOWN: 64,
+    LATEX_LABEL1: 65,
+    FOUR_VECTOR_POTENTIAL: 66,
+    INITIALIZE_POTENTIAL_END: 67,
+    TAKE_SCREENSHOTS: 68,
+    CANVAS_HOVER_DISPLAY: 69,
+    DUMMY_VALUE: 70,
 };
 
 let gVecParams = {};
@@ -492,9 +493,14 @@ function editKaTeXLabel(
         katex.render(latexText, 
             label, {
             throwOnError: true
-        });
+         });
     } catch {
-
+        label.style['visibility'] = 'hidden';
+    }
+    if (latexText.length === 0) {
+        label.style['visibility'] = 'hidden';
+    } else {
+        label.style['visibility'] = 'visible';
     }
 }
 
@@ -584,49 +590,50 @@ createSelectionList(controls, 3, 0, "Grid discretization size", [ "64x64x64",  "
 createLabel(controls, 4, "Time step Δt (a.u.) = 0.000028", "font-weight: normal;");
 createScalarParameterSlider(controls, 5, "c|Δt|/Δx", "float", {'value': 0.99, 'min': 0.0, 'max': 1.0, 'step': 0.01});
 createScalarParameterSlider(controls, 8, "mass (a.u.)", "float", {'value': 1.0, 'min': 0.0, 'max': 10.0, 'step': 0.1});
-let subControls0 = createSubDiv(controls, "Initialize New Wave Function Controls", "");
-createScalarParameterSlider(subControls0, 16, "Size", "float", {'value': 0.1, 'min': 0.03, 'max': 0.3, 'step': 0.001});
-createScalarParameterSlider(subControls0, 17, "Positive energy (+E) content", "float", {'value': 1.0, 'min': 0.0, 'max': 1.0, 'step': 0.01});
-createLabel(subControls0, 18, "Negative energy (-E) content = 0", "font-weight: normal;");
-createVectorParameterSliders(subControls0, 19, "Spin up orientation for +E solutions (sx, sy, sz)", "Vec3", {'value': [0.0, 0.0, 1.0], 'min': [-1.0, -1.0, -1.0], 'max': [1.0, 1.0, 1.0], 'step': [0.01, 0.01, 0.01]});
-createLabel(subControls0, 20, "(Orientations get normalized. (0, 0, 0) changed to (0, 0, 1).)", "font-weight: normal;");
-createVectorParameterSliders(subControls0, 21, "Spin up orientation for -E solutions", "Vec3", {'value': [0.0, 0.0, 1.0], 'min': [-1.0, -1.0, -1.0], 'max': [1.0, 1.0, 1.0], 'step': [0.01, 0.01, 0.01]});
-createCheckbox(subControls0, 22, "Apply spinor and +E/-E configuration to each momentum plane wave individually. Plane waves then summed up to form wave packet.", false);
-createVectorParameterSliders(subControls0, 23, "Wave number, w.r.t. simulation domain", "IVec3", {'value': [0, 0, 0], 'min': [-16, -16, -16], 'max': [16, 16, 16], 'step': [1, 1, 1]});
-createVectorParameterSliders(subControls0, 24, "Position (norm. coord.)", "Vec3", {'value': [0.5, 0.5, 0.5], 'min': [0.0, 0.0, 0.0], 'max': [1.0, 1.0, 1.0], 'step': [0.01, 0.01, 0.01]});
-createButton(subControls0, 25, "Initialize new wave function");
-let subControls1 = createSubDiv(controls, "Initialize Potential Controls", "");
-createEntryBoxes(subControls1, 28, "4-Vector Potential", 4, ['V(x, y, z, t)', 'Ax(x, y, z, t)', 'Ay(x, y, z, t)', 'Az(x, y, z, t)']);
-createKaTeXLabel(subControls1, 29, "KaTeX Label");
-createKaTeXLabel(subControls1, 30, "KaTeX Label");
-createKaTeXLabel(subControls1, 31, "KaTeX Label");
-createKaTeXLabel(subControls1, 32, "KaTeX Label");
-let subControls2 = createSubDiv(controls, "Visualization Controls", "");
-createSelectionList(subControls2, 35, 0, "Visualization select", [ "Volume render",  "Three orthogonal planar slices",  "Vector field",  "Three orthogonal planar slices,  vector field",  "Volume render,  vector field"]);
-createCheckbox(subControls2, 36, "Use perspective projection", true);
-createScalarParameterSlider(subControls2, 37, "Overall scaling", "float", {'value': 0.5, 'min': 0.0, 'max': 20.0, 'step': 0.01});
-let subControls3 = createSubDiv(subControls2, "Wave Function Visualization Options", "");
-createLabel(subControls3, 39, "(Please note: bar(𝜓) = 𝜓†γ⁰)", "font-weight: normal;");
-createCheckbox(subControls3, 40, "Current 0th component (𝜓(r)†𝜓(r))", false, "scalarVis");
-createCheckbox(subControls3, 41, "Pseudocurrent 0th component (𝜓(r)†γ⁵𝜓(r))", false, "scalarVis");
-createCheckbox(subControls3, 42, "Scalar (bar(𝜓(r))𝜓(r))", false, "scalarVis");
-createCheckbox(subControls3, 43, "Pseudoscalar (bar(𝜓(r))γ⁵𝜓(r))", false, "scalarVis");
-createCheckbox(subControls3, 44, "|𝜓₁(r)|² component with phase", true, "scalarVis");
-createCheckbox(subControls3, 45, "|𝜓₂(r)|² component with phase", false, "scalarVis");
-createCheckbox(subControls3, 46, "|𝜓₃(r)|² component with phase", false, "scalarVis");
-createCheckbox(subControls3, 47, "|𝜓₄(r)|² component with phase", false, "scalarVis");
-createCheckbox(subControls3, 48, "Spatial current (bar(𝜓(r))γⁱ𝜓(r), i=1,2,3)", false);
-createCheckbox(subControls3, 49, "Spatial pseudocurrent (bar(𝜓(r))γⁱγ⁵𝜓(r))", false);
-let subControls4 = createSubDiv(subControls2, "Volume Render Controls", "");
-createCheckbox(subControls4, 52, "Linear interpolation", false);
-createScalarParameterSlider(subControls4, 53, "Alpha brightness", "float", {'value': 2.0, 'min': 0.0, 'max': 10.0, 'step': 0.01});
-createScalarParameterSlider(subControls4, 54, "Color brightness", "float", {'value': 1.0, 'min': 0.0, 'max': 10.0, 'step': 0.01});
-createVectorParameterSliders(subControls4, 55, "Volume dimensions", "IVec3", {'value': [128, 128, 192], 'min': [16, 16, 16], 'max': [512, 512, 512], 'step': [2, 2, 4]});
-createCheckbox(subControls4, 56, "Enable bloom", true);
-createScalarParameterSlider(subControls4, 57, "Bloominess", "int", {'value': 5, 'min': 0, 'max': 10});
-let subControls5 = createSubDiv(subControls2, "Three Orthogonal Planar Slices Controls", "");
-createVectorParameterSliders(subControls5, 60, "Planar slices offsets (in normalized coordinates) for xy, yz, xz", "Vec3", {'value': [0.5, 0.5, 0.5], 'min': [0.0, 0.0, 0.0], 'max': [1.0, 1.0, 1.0], 'step': [0.001, 0.001, 0.001]});
-let subControls6 = createSubDiv(subControls2, "Arrows Plot", "");
-createVectorParameterSliders(subControls6, 63, "Arrows dimensions", "IVec3", {'value': [8, 8, 8], 'min': [8, 8, 8], 'max': [128, 128, 128]});
-createCheckbox(subControls6, 64, "Use conical arrows", false);
-createHoveringLabelOnCanvas(68, "");
+let subControls0 = createSubDiv(controls, "Visualization Controls", "");
+createSelectionList(subControls0, 16, 0, "Visualization select", [ "Volume render",  "Three orthogonal planar slices",  "Vector field",  "Three orthogonal planar slices,  vector field",  "Volume render,  vector field"]);
+createCheckbox(subControls0, 17, "Use perspective projection", true);
+createScalarParameterSlider(subControls0, 18, "Overall scaling", "float", {'value': 0.5, 'min': 0.0, 'max': 20.0, 'step': 0.01});
+let subControls1 = createSubDiv(subControls0, "Wave Function Visualization Options", "");
+createLabel(subControls1, 20, "(Please note: bar(𝜓) = 𝜓†γ⁰)", "font-weight: normal;");
+createCheckbox(subControls1, 21, "Current 0th component (𝜓(r)†𝜓(r))", false, "scalarVis");
+createCheckbox(subControls1, 22, "Pseudocurrent 0th component (𝜓(r)†γ⁵𝜓(r))", false, "scalarVis");
+createCheckbox(subControls1, 23, "Scalar (bar(𝜓(r))𝜓(r))", false, "scalarVis");
+createCheckbox(subControls1, 24, "Pseudoscalar (bar(𝜓(r))γ⁵𝜓(r))", false, "scalarVis");
+createCheckbox(subControls1, 25, "|𝜓₁(r)|² component with phase", true, "scalarVis");
+createCheckbox(subControls1, 26, "|𝜓₂(r)|² component with phase", false, "scalarVis");
+createCheckbox(subControls1, 27, "|𝜓₃(r)|² component with phase", false, "scalarVis");
+createCheckbox(subControls1, 28, "|𝜓₄(r)|² component with phase", false, "scalarVis");
+createCheckbox(subControls1, 29, "Spatial current (bar(𝜓(r))γⁱ𝜓(r), i=1,2,3)", false);
+createCheckbox(subControls1, 30, "Spatial pseudocurrent (bar(𝜓(r))γⁱγ⁵𝜓(r))", false);
+createCheckbox(subControls1, 31, "Spin axis where (𝜓₁(r), 𝜓₂(r)) is spin up", false);
+createCheckbox(subControls1, 32, "Spin axis where (𝜓₃(r), 𝜓₄(r)) is spin up", false);
+let subControls2 = createSubDiv(subControls0, "Volume Render Controls", "");
+createCheckbox(subControls2, 35, "Linear interpolation", false);
+createScalarParameterSlider(subControls2, 36, "Alpha brightness", "float", {'value': 2.0, 'min': 0.0, 'max': 10.0, 'step': 0.01});
+createScalarParameterSlider(subControls2, 37, "Color brightness", "float", {'value': 1.0, 'min': 0.0, 'max': 10.0, 'step': 0.01});
+createVectorParameterSliders(subControls2, 38, "Volume dimensions", "IVec3", {'value': [128, 128, 192], 'min': [16, 16, 16], 'max': [512, 512, 512], 'step': [2, 2, 4]});
+createCheckbox(subControls2, 39, "Enable bloom", true);
+createScalarParameterSlider(subControls2, 40, "Bloominess", "int", {'value': 5, 'min': 0, 'max': 10});
+let subControls3 = createSubDiv(subControls0, "Three Orthogonal Planar Slices Controls", "");
+createVectorParameterSliders(subControls3, 43, "Planar slices offsets (in normalized coordinates) for xy, yz, xz", "Vec3", {'value': [0.5, 0.5, 0.5], 'min': [0.0, 0.0, 0.0], 'max': [1.0, 1.0, 1.0], 'step': [0.001, 0.001, 0.001]});
+let subControls4 = createSubDiv(subControls0, "Arrows Plot", "");
+createVectorParameterSliders(subControls4, 46, "Arrows dimensions", "IVec3", {'value': [8, 8, 8], 'min': [8, 8, 8], 'max': [128, 128, 128]});
+createCheckbox(subControls4, 47, "Use conical arrows", false);
+let subControls5 = createSubDiv(controls, "Initialize New Wave Function Controls", "");
+createScalarParameterSlider(subControls5, 51, "Size", "float", {'value': 0.1, 'min': 0.03, 'max': 0.3, 'step': 0.001});
+createScalarParameterSlider(subControls5, 52, "Positive energy (+E) content", "float", {'value': 1.0, 'min': 0.0, 'max': 1.0, 'step': 0.01});
+createLabel(subControls5, 53, "Negative energy (-E) content = 0", "font-weight: normal;");
+createVectorParameterSliders(subControls5, 54, "Spin up orientation for +E solutions (sx, sy, sz)", "Vec3", {'value': [0.0, 0.0, 1.0], 'min': [-1.0, -1.0, -1.0], 'max': [1.0, 1.0, 1.0], 'step': [0.01, 0.01, 0.01]});
+createLabel(subControls5, 55, "(Orientations get normalized. (0, 0, 0) changed to (0, 0, 1).)", "font-weight: normal;");
+createVectorParameterSliders(subControls5, 56, "Spin up orientation for -E solutions", "Vec3", {'value': [0.0, 0.0, 1.0], 'min': [-1.0, -1.0, -1.0], 'max': [1.0, 1.0, 1.0], 'step': [0.01, 0.01, 0.01]});
+createCheckbox(subControls5, 57, "Apply spinor and +E/-E configuration to each momentum plane wave individually. Plane waves then summed up to form wave packet.", false);
+createVectorParameterSliders(subControls5, 58, "Wave number, w.r.t. simulation domain", "IVec3", {'value': [0, 0, 0], 'min': [-16, -16, -16], 'max': [16, 16, 16], 'step': [1, 1, 1]});
+createVectorParameterSliders(subControls5, 59, "Position (norm. coord.)", "Vec3", {'value': [0.5, 0.5, 0.5], 'min': [0.0, 0.0, 0.0], 'max': [1.0, 1.0, 1.0], 'step': [0.01, 0.01, 0.01]});
+createScalarParameterSlider(subControls5, 60, "Absorbtion", "float", {'value': 10.0, 'min': 0.0, 'max': 10.0, 'step': 0.01});
+createButton(subControls5, 61, "Initialize new wave function");
+let subControls6 = createSubDiv(controls, "Initialize Potential Controls", "");
+createSelectionList(subControls6, 64, 0, "Presets", [ "0",  "abs(a/2)*(x^2 + y^2 + z^2)",  "a/sqrt(x^2 + y^2 + z^2)",  "10.0*(step(-y^2+(height*0.04*s1)^2)+step(y^2-(height*0.06*s2)^2))*step(-x^2+(width*0.04*w)^2)"]);
+createKaTeXLabel(subControls6, 65, "KaTeX Label");
+createEntryBoxes(subControls6, 66, "4-Vector Potential", 4, ['V(x, y, z, t)', 'Ax(x, y, z, t)', 'Ay(x, y, z, t)', 'Az(x, y, z, t)']);
+createHoveringLabelOnCanvas(69, "");

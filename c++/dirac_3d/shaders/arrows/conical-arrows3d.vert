@@ -206,7 +206,7 @@ void main() {
     float z = localCoord[2];
     float cosTheta = localCoord[3];
     vec3 direction = sample2DTextureAs3D(vecTex, arrowPos).xyz;
-    direction.z = -direction.z;
+    // direction.z = -direction.z;
     if (length(direction) > maxLength)
         direction = normalize(direction)*maxLength;
     LENGTH = length(direction);

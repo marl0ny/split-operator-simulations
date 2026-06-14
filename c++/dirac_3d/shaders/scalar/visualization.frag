@@ -1,17 +1,3 @@
-/* Interpret the first two channels of a texel as complex value
-and convert it to a colour
-
-References:
-
-Wikipedia - Domain coloring
-https://en.wikipedia.org/wiki/Domain_coloring
-
-Wikipedia - Hue
-https://en.wikipedia.org/wiki/Hue
-
-https://en.wikipedia.org/wiki/Hue#/media/File:HSV-RGB-comparison.svg
-
-*/
 #if (__VERSION__ >= 330) || (defined(GL_ES) && __VERSION__ >= 300)
 #define texture2D texture
 #else
@@ -21,7 +7,7 @@ https://en.wikipedia.org/wiki/Hue#/media/File:HSV-RGB-comparison.svg
 #if (__VERSION__ > 120) || defined(GL_ES)
 precision highp float;
 #endif
-    
+ 
 #if __VERSION__ <= 120
 varying vec2 UV;
 #define fragColor gl_FragColor
@@ -31,21 +17,48 @@ out vec4 fragColor;
 #endif
 
 #define complex vec2
+#define complex2 vec4
+
+uniform sampler2D uTex;
+uniform sampler2D vTex;
+
+const int DIRAC_REP = 0;
+const int WEYL_REP = 1;
+uniform int representation;
+
+const int SCALAR = 0;
+const int PSEUDOSCALAR = 1;
+uniform int scalarType;
+
+uniform float brightness;
 
 #define PI 3.141592653589793
 
-uniform sampler2D tex;
-uniform float brightness;
-uniform float phaseAdjust;
-uniform bool useBA;
-
-uniform int brightnessMode;
-const int ABS_VAL = 1;
-const int ABS_VAL_SQUARED = 2;
-const int INV_ABS_VAL = -1;
+complex conj(complex z) {
+    return complex(z[0], -z[1]);
+}
 
 complex mul(complex w, complex z) {
-    return complex(w.x*z.x - w.y*z.y, w.x*z.y + w.y*z.x);
+    return complex(w[0]*z[0] - w[1]*z[1], w[0]*z[1] + w[1]*z[0]);
+}
+
+complex innerProd(complex2 w, complex2 z) {
+    return mul(conj(w.rg), z.rg) + mul(conj(w.ba), z.ba);
+}
+
+float getScalar() {
+    complex2 u = texture2D(uTex, UV);
+    complex2 v = texture2D(vTex, UV);
+    if (representation == DIRAC_REP)
+        return innerProd(u, u).r - innerProd(v, v).r;
+    else
+        return 2.0*innerProd(u, v).r;
+}
+
+float getPsuedoScalar() {
+    complex2 u = texture2D(uTex, UV);
+    complex2 v = texture2D(vTex, UV);
+    return (innerProd(u, v) - innerProd(v, u)).g;
 }
 
 vec3 argumentToColor(float argVal) {
@@ -78,20 +91,10 @@ vec3 argumentToColor(float argVal) {
 }
 
 void main() {
-    complex z1 = texture2D(tex, UV).xy;
-    if (useBA)
-        z1 = texture2D(tex, UV).zw;
-    complex phaseFactor = complex(cos(phaseAdjust), sin(phaseAdjust));
-    complex z2 = mul(phaseFactor, z1);
-    vec3 color = argumentToColor(atan(z2.y, z2.x));
-    fragColor = vec4(brightness*length(z2)*color, brightness*length(z2));
-    float brightness2;
-    if (brightnessMode == ABS_VAL_SQUARED) {
-        brightness2 = brightness*length(z2)*length(z2);
-    } else if (brightnessMode == INV_ABS_VAL) {
-        brightness2 = brightness/(length(z2)) - 1.0;
-    } else {
-        brightness2 = brightness*length(z2);
-    }
-    fragColor = vec4(brightness2*color, brightness2);
+    float scalarVal = getScalar();
+    if (scalarType == PSEUDOSCALAR)
+        scalarVal = getPsuedoScalar();
+    vec3 color = argumentToColor((scalarVal < 0.0)? PI: 0.0);
+    fragColor = vec4(
+        brightness*abs(scalarVal)*color, abs(scalarVal)*brightness);
 }

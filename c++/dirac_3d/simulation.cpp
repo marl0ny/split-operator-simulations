@@ -53,6 +53,12 @@ Programs::Programs() {
         "./shaders/axes/axes-labels3d.vert",
         "./shaders/axes/axes3d.frag"
     );
+    this->visualization.scalar = Quad::make_program_from_path(
+        "./shaders/scalar/visualization.frag"
+    );
+    this->visualization.current = Quad::make_program_from_path(
+        "./shaders/current/visualization.frag"
+    );
     this->init = Quad::make_program_from_path(
         "./shaders/wavepacket/gaussian-position-space.frag");
     this->init_momentum = Quad::make_program_from_path(
@@ -350,6 +356,11 @@ void Simulation::split_step_spatial(
             {"potentialTex", {&potential}},
             {"spinorIndex", {index}},
             {"representation", {int(0)}},
+            {"absCoeff", sim_params.absCoeff},
+            {"texelDimensions3D", sim_params.simulationDimensions3D},
+            {"texelDimensions2D", 
+                    IVec2{.ind{(int)m_frames.sim_tex_params.width,
+                            (int)m_frames.sim_tex_params.height}}},
         }
     );
 }
@@ -512,6 +523,9 @@ void Simulation::init_momentum(
     std::complex<float> c1 = pos_amount*inner_prod(p_u, pos_state);
     std::complex<float> c2 = neg_amount*inner_prod(p_d, neg_state);
     std::complex<float> c3 = pos_amount*inner_prod(p_d, pos_state);
+    spinors::BiSpinor s = spinors::get_spinor_plane_wave(
+        {.c=sim_params.c, .m=sim_params.m, .hbar=sim_params.hbar},
+         p, {c0, c1, c2, c3}, 0);
     Quad *tmp_quads[2] = {&m_frames.temps[2], &m_frames.temps[3]};
     for (int spinor_index = 0; spinor_index < 2; spinor_index++) {
         tmp_quads[spinor_index]->draw(
@@ -522,8 +536,9 @@ void Simulation::init_momentum(
                         .x=sim_params.sigma,
                         .y=sim_params.sigma,
                         .z=sim_params.sigma}},
-                {"p0", wave_number_to_momentum(sim_params.wavenumber, d_3d)},
+                {"p0", get_momentum(sim_params.wavenumber, d_3d)},
                 {"x0", tex_to_sim_coordinates(tex_pos, d_3d)},
+                {"spinor", s[spinor_index].store_as_vec4()},
                 {"useEnergyStatesCombinations",
                     {int(1)}},
                 {"invertNegativeEnergyMomentum", 
@@ -715,6 +730,56 @@ static Vec4 encode_2x2(float m00, float m11, std::complex<float> m01) {
         std::real(m01), std::imag(m01)}};
 }
 
+void Simulation::vector_field_view(
+    const SimParams &params,
+    const std::optional<Vec2> &hover,
+    ::Quaternion rotation, float scale) {
+    // IVec3 arrows_d3d = params.arrowDimensions;
+    // IVec2 arrows_d2d = get_2d_from_3d_dimensions(arrows_d3d);
+    // IVec3 tex_d3d = params.dataTexelDimensions3D;
+    // IVec2 tex_d2d = get_2d_from_3d_dimensions(tex_d3d);
+    // Vec3 dr = Vec3{.x=1.0F, 1.0F, 1.0F};
+    // this->m_frames.data_reduce_tmp.draw(
+    //     m_programs.visualization.gradient,
+    //     {
+    //         {"tex", &m_frames.data_reduce},
+    //         {"orderOfAccuracy", int(4)},
+    //         {"staggeredMode", int(0)},
+    //         {"index", int(0)},
+    //         {"texelDimensions3D", tex_d3d},
+    //         {"texelDimensions2D", tex_d2d},
+    //         {"dr", dr},
+    //         {"dimensions3D", params.simulationDimensions3D}
+
+    //     }
+    // );
+    // this->m_frames.render_tmp.clear();
+    // this->m_frames.render.clear();
+    if (params.useCones) {
+        m_conical_arrows3d.view(
+            this->m_frames.render, this->m_frames.data_reduce,
+            2.0*scale, rotation,
+            params.arrowDimensions,
+            params.dataTexelDimensions3D,
+            {
+                {"useOrthogonalProjection", 
+                        (params.usePerspectiveProjection)? int(0): int(1)},
+                {"rescaleZ", int(0)}
+            });
+    } else {
+        m_arrows3d.view(
+            this->m_frames.render, this->m_frames.data_reduce,
+            2.0*scale, rotation, 
+            params.arrowDimensions,
+            params.dataTexelDimensions3D,
+            {
+                {"useOrthogonalProjection", 
+                        (params.usePerspectiveProjection)? int(0): int(1)},
+                {"rescaleZ", int(0)}
+            });
+    }
+}
+
 
 const RenderTarget &Simulation
 ::view(
@@ -723,16 +788,57 @@ const RenderTarget &Simulation
     ::Quaternion rotation, float scale) {
     enum {VOL_RENDER_VIEW=0, PLANAR_SLICES_VIEW=1, VECTOR_FIELD_VIEW=2, 
         PLANR_SLICES_VECTOR_FIELD_VIEW=3, VOL_RENDER_VECTOR_FIELD_VIEW=4};
-    m_frames.data_reduce.draw(
-        m_programs.visualization.domain_color,
-        {
-            {"tex", &m_frames.spinors[0][0]},
-            {"phaseAdjust", (float)params.c*params.c*params.m*params.t},
-            {"brightness", (float)params.brightness},
-            {"brightnessMode", int(1)},
+    int index = 0;
+    bool useBA = false;
+    if (params.showPsi0WPhase) {
+        index = 0;
+        useBA = false;
+    } else if (params.showPsi1WPhase) {
+        index = 0;
+        useBA = true;
+    } else if (params.showPsi2WPhase) {
+        index = 1;
+        useBA = false;
+    } else if (params.showPsi3WPhase) {
+        index = 1;
+        useBA = true;
+    }
+    if (params.showPsi0WPhase || params.showPsi1WPhase
+        || params.showPsi2WPhase || params.showPsi3WPhase)
+        m_frames.data_reduce.draw(
+            m_programs.visualization.domain_color,
+            {
+                {"tex", &m_frames.spinors[0][index]},
+                {"phaseAdjust", (float)params.c*params.c*params.m*params.t},
+                {"brightness", (float)params.brightness},
+                {"brightnessMode", int(1)},
+                {"useBA", int(useBA)}
 
-        }
-    );
+            }
+        );
+    if (params.showScalar || params.showPseudoscalar)
+        m_frames.data_reduce.draw(
+            m_programs.visualization.scalar,
+            {
+                {"uTex", &m_frames.spinors[0][0]},
+                {"vTex", &m_frames.spinors[0][1]},
+                {"scalarType", int((params.showScalar)? 0: 1)},
+                {"brightness", (float)params.brightness}
+            }
+        );
+    if (params.showCurrent0 || params.showPsuedocurrent0)
+        m_frames.data_reduce.draw(
+            m_programs.visualization.current,
+            {
+                {"uTex", &m_frames.spinors[0][0]},
+                {"vTex", &m_frames.spinors[0][1]},
+                {"currentType", int((params.showCurrent0)? 0: 1)},
+                {"brightness", (float)params.brightness},
+                {"sigmaX", Vec4{.ind{0.0, 0.0, 1.0, 0.0}}},
+                {"sigmaY", Vec4{.ind{0.0, 0.0, 0.0, -1.0}}},
+                {"sigmaZ", Vec4{.ind{1.0, -1.0, 0.0, 0.0}}}
+            }
+        );
     // WireFrame wf = get_quad_wire_frame();
     // m_frames.data_reduce.draw(m_programs.copy, {{"tex", &m_frames.spinors[0][0]}});
     // m_frames.render.draw(m_programs.copy, {{"tex", &m_frames.data_reduce}}, wf);
@@ -775,54 +881,12 @@ const RenderTarget &Simulation
                 (hover.has_value())? scaled_hover: Vec2{.ind {0.0, 0.0}}
             );
             {
-                IVec3 arrows_d3d = params.arrowDimensions;
-                IVec2 arrows_d2d = get_2d_from_3d_dimensions(arrows_d3d);
-                IVec3 tex_d3d = params.dataTexelDimensions3D;
-                IVec2 tex_d2d = get_2d_from_3d_dimensions(tex_d3d);
-                Vec3 dr = Vec3{.x=1.0F, 1.0F, 1.0F};
-                this->m_frames.data_reduce_tmp.draw(
-                    m_programs.visualization.gradient,
-                    {
-                        {"tex", &m_frames.data_reduce},
-                        {"orderOfAccuracy", int(4)},
-                        {"staggeredMode", int(0)},
-                        {"index", int(0)},
-                        {"texelDimensions3D", tex_d3d},
-                        {"texelDimensions2D", tex_d2d},
-                        {"dr", dr},
-                        {"dimensions3D", params.simulationDimensions3D}
-
-                    }
-                );
-
                 this->m_frames.render_tmp.clear();
                 // this->m_frames.render.clear();
                 if (params.visualizationSelect.selected 
                         == PLANR_SLICES_VECTOR_FIELD_VIEW) {
-                    if (params.useCones) {
-                        m_conical_arrows3d.view(
-                            this->m_frames.render, this->m_frames.data_reduce_tmp,
-                            2.0*scale, rotation, 
-                            params.arrowDimensions,
-                            params.dataTexelDimensions3D,
-                            {
-                                {"useOrthogonalProjection",
-                                        (params.usePerspectiveProjection)? 
-                                        int(0): int(1)},
-                                {"rescaleZ", int(0)}
-                            });
-                    } else {
-                        m_arrows3d.view(
-                            this->m_frames.render, this->m_frames.data_reduce_tmp,
-                            2.0*scale, rotation, 
-                            params.arrowDimensions,
-                            params.dataTexelDimensions3D,
-                            {
-                                {"useOrthogonalProjection",
-                                        (params.usePerspectiveProjection)? 
-                                        int(0): int(1)},
-                                {"rescaleZ", int(0)}
-                            });
+                    if (params.showSpatialCurrent) {
+                        vector_field_view(params, hover, rotation, scale);
                     }
                 }
                 
@@ -856,50 +920,10 @@ const RenderTarget &Simulation
             return m_frames.render;
         }
         case VECTOR_FIELD_VIEW: {
-            IVec3 arrows_d3d = params.arrowDimensions;
-            IVec2 arrows_d2d = get_2d_from_3d_dimensions(arrows_d3d);
-            IVec3 tex_d3d = params.dataTexelDimensions3D;
-            IVec2 tex_d2d = get_2d_from_3d_dimensions(tex_d3d);
-            Vec3 dr = Vec3{.x=1.0F, 1.0F, 1.0F};
-            this->m_frames.data_reduce_tmp.draw(
-                m_programs.visualization.gradient,
-                {
-                    {"tex", &m_frames.data_reduce},
-                    {"orderOfAccuracy", int(4)},
-                    {"staggeredMode", int(0)},
-                    {"index", int(0)},
-                    {"texelDimensions3D", tex_d3d},
-                    {"texelDimensions2D", tex_d2d},
-                    {"dr", dr},
-                    {"dimensions3D", params.simulationDimensions3D}
-
-                }
-            );
-            this->m_frames.render_tmp.clear();
-            this->m_frames.render.clear();
-            if (params.useCones) {
-                m_conical_arrows3d.view(
-                    this->m_frames.render, this->m_frames.data_reduce_tmp,
-                    2.0*scale, rotation,
-                    params.arrowDimensions,
-                    params.dataTexelDimensions3D,
-                    {
-                        {"useOrthogonalProjection", 
-                                (params.usePerspectiveProjection)? int(0): int(1)},
-                        {"rescaleZ", int(0)}
-                    });
-            } else {
-                m_arrows3d.view(
-                    this->m_frames.render, this->m_frames.data_reduce_tmp,
-                    2.0*scale, rotation, 
-                    params.arrowDimensions,
-                    params.dataTexelDimensions3D,
-                    {
-                        {"useOrthogonalProjection", 
-                                (params.usePerspectiveProjection)? int(0): int(1)},
-                        {"rescaleZ", int(0)}
-                    });
-            }
+            vector_field_view(
+                        params,
+                        hover,
+                        rotation, scale);            
             WireFrame cube_outline = get_cube_outline_wire_frame();
             this->m_frames.render.draw(
                 m_programs.visualization.cube_outline,
@@ -997,47 +1021,35 @@ const RenderTarget &Simulation
             // );
             if (params.visualizationSelect.selected
                     == VOL_RENDER_VECTOR_FIELD_VIEW) {
-                IVec3 arrows_d3d = params.arrowDimensions;
-                IVec2 arrows_d2d = get_2d_from_3d_dimensions(arrows_d3d);
-                IVec3 tex_d3d = params.dataTexelDimensions3D;
-                IVec2 tex_d2d = get_2d_from_3d_dimensions(tex_d3d);
-                Vec3 dr = Vec3{.x=1.0F, 1.0F, 1.0F};
-                this->m_frames.data_reduce_tmp.draw(
-                    m_programs.visualization.gradient,
-                    {
-                        {"tex", &m_frames.data_reduce},
-                        {"orderOfAccuracy", int(4)},
-                        {"staggeredMode", int(0)},
-                        {"index", int(0)},
-                        {"texelDimensions3D", tex_d3d},
-                        {"texelDimensions2D", tex_d2d},
-                        {"dr", dr},
-                        {"dimensions3D", params.simulationDimensions3D}
-
-                    }
-                );
-                if (params.useCones) {
-                    m_conical_arrows3d.view(
-                        this->m_frames.render, this->m_frames.data_reduce_tmp,
-                        2.0*scale, rotation, 
-                        params.arrowDimensions,
-                        params.dataTexelDimensions3D,
+                if (params.showSpatialCurrent) {
+                    m_frames.data_reduce.draw(
+                        m_programs.visualization.current,
                         {
-                            {"useOrthogonalProjection",
-                                (params.usePerspectiveProjection)? int(0): int(1)},
-                            {"rescaleZ", int(1)}
-                        });
-                } else {
-                    m_arrows3d.view(
-                        this->m_frames.render, this->m_frames.data_reduce_tmp,
-                        2.0*scale, rotation, 
-                        params.arrowDimensions,
-                        params.dataTexelDimensions3D,
+                            {"uTex", &m_frames.spinors[0][0]},
+                            {"vTex", &m_frames.spinors[0][1]},
+                            {"currentType", int(2)},
+                            {"brightness", 10.0F*(float)params.brightness},
+                            {"sigmaX", Vec4{.ind{0.0, 0.0, 1.0, 0.0}}},
+                            {"sigmaY", Vec4{.ind{0.0, 0.0, 0.0, -1.0}}},
+                            {"sigmaZ", Vec4{.ind{1.0, -1.0, 0.0, 0.0}}}
+                        }
+                    );
+                    vector_field_view(params, hover, rotation, scale);
+                }
+                if (params.showPseudospatialCurrent) {
+                    m_frames.data_reduce.draw(
+                        m_programs.visualization.current,
                         {
-                            {"useOrthogonalProjection",
-                                (params.usePerspectiveProjection)? int(0): int(1)},
-                            {"rescaleZ", int(1)}
-                        });
+                            {"uTex", &m_frames.spinors[0][0]},
+                            {"vTex", &m_frames.spinors[0][1]},
+                            {"currentType", int(3)},
+                            {"brightness", (float)params.brightness},
+                            {"sigmaX", Vec4{.ind{0.0, 0.0, 1.0, 0.0}}},
+                            {"sigmaY", Vec4{.ind{0.0, 0.0, 0.0, -1.0}}},
+                            {"sigmaZ", Vec4{.ind{1.0, -1.0, 0.0, 0.0}}}
+                        }
+                    );
+                    vector_field_view(params, hover, rotation, scale);
                 }
             }
             this->m_frames.render.draw(
