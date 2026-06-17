@@ -28,6 +28,9 @@ Programs::Programs() {
         "./shaders/util/copy.frag"
     );
     this->user_defined = 0;
+    this->roll_0to3 = Quad::make_program_from_path(
+        "./shaders/util/roll-0to3.frag"
+    );
     this->visualization.domain_color = Quad::make_program_from_path(
         "./shaders/vol-render/domain-coloring.frag"
     );
@@ -59,10 +62,19 @@ Programs::Programs() {
     this->visualization.current = Quad::make_program_from_path(
         "./shaders/current/visualization.frag"
     );
-    this->init = Quad::make_program_from_path(
+    this->visualization.vector_potential = Quad::make_program_from_path(
+        "./shaders/potential/three-vector-vis.frag"
+    );
+    this->wavepacket.position = Quad::make_program_from_path(
         "./shaders/wavepacket/gaussian-position-space.frag");
-    this->init_momentum = Quad::make_program_from_path(
+    this->wavepacket.momentum = Quad::make_program_from_path(
         "./shaders/wavepacket/gaussian-momentum-space.frag"
+    );
+    this->sketch.scalar_potential = Quad::make_program_from_path(
+        "./shaders/potential/sketch.frag"
+    );
+    this->sketch.erase_vector_potential = Quad::make_program_from_path(
+        "./shaders/potential/sketch-erase.frag"
     );
     this->split_step.momentum = Quad::make_program_from_path(
         "./shaders/split-step/kinetic.frag"
@@ -81,6 +93,12 @@ Programs::Programs() {
     );
     this->quantities.pseudo_scalar = Quad::make_program_from_path(
         "./shaders/scalar/pseudoscalar.frag"
+    );
+    this->em_field.e = Quad::make_program_from_path(
+        "./shaders/em-fields/electric3d.frag"  
+    );
+    this->em_field.m = Quad::make_program_from_path(
+        "./shaders/em-fields/magnetic3d.frag"
     );
     this->fft.iter_cube = Quad::make_program_from_path(
         "./shaders/fft/fft-iter-cube.frag"
@@ -123,9 +141,7 @@ Frames(const TextureParams &default_tex_params, const SimParams &params):
     render_tmp(default_tex_params),
     render(default_tex_params),
     data_reduce(data_reduce_tex_params),
-    data_reduce_tmp(data_reduce_tex_params),
     temps{
-        Quad(sim_tex_params), Quad(sim_tex_params),
         Quad(sim_tex_params), Quad(sim_tex_params),
         Quad(sim_tex_params), Quad(sim_tex_params)
     },
@@ -134,6 +150,7 @@ Frames(const TextureParams &default_tex_params, const SimParams &params):
         {Quad(sim_tex_params), Quad(sim_tex_params)},
     },
     potential (Quad(sim_tex_params)),
+    potential_prev(Quad(sim_tex_params)),
     quad_wire_frame(get_quad_wire_frame()),
     arrows3d_frame(
         line_arrows3d::get_3d_vector_field_wire_frame(
@@ -147,7 +164,7 @@ void Frames::reset_simulation_dimensions(IVec3 texel_dimensions3d) {
     IVec2 texel_dimensions2d = get_2d_from_3d_dimensions(texel_dimensions3d);
     this->sim_tex_params.width = texel_dimensions2d[0];
     this->sim_tex_params.height = texel_dimensions2d[1];
-    for (int i = 0; i < 6; i++)
+    for (int i = 0; i < 4; i++)
         this->temps[i].reset(this->sim_tex_params);
     for (int i = 0; i < 2; i++)
         for (int j = 0; j < 2; j++)
@@ -160,7 +177,7 @@ void Frames::reset_data_reduce_dimensions(IVec3 texel_dimensions3d) {
     this->data_reduce_tex_params.width = texel_dimensions2d[0];
     this->data_reduce_tex_params.height = texel_dimensions2d[1];
     this->data_reduce.reset(this->data_reduce_tex_params);
-    this->data_reduce_tmp.reset(this->data_reduce_tex_params);
+    // this->data_reduce_tmp.reset(this->data_reduce_tex_params);
 }
 
 void Simulation::reset_simulation_dimensions(IVec3 simulation_dimensions3d) {
@@ -356,6 +373,7 @@ void Simulation::split_step_spatial(
             {"potentialTex", {&potential}},
             {"spinorIndex", {index}},
             {"representation", {int(0)}},
+            {"useAbsorbingBoundaries", int(sim_params.useAbsorbingBoundaries)},
             {"absCoeff", sim_params.absCoeff},
             {"texelDimensions3D", sim_params.simulationDimensions3D},
             {"texelDimensions2D", 
@@ -529,14 +547,14 @@ void Simulation::init_momentum(
     Quad *tmp_quads[2] = {&m_frames.temps[2], &m_frames.temps[3]};
     for (int spinor_index = 0; spinor_index < 2; spinor_index++) {
         tmp_quads[spinor_index]->draw(
-            m_programs.init_momentum, 
+            m_programs.wavepacket.momentum, 
             {
                 {"amplitude", {1.0F}},
                 {"sigma", Vec3{
                         .x=sim_params.sigma,
                         .y=sim_params.sigma,
                         .z=sim_params.sigma}},
-                {"p0", get_momentum(sim_params.wavenumber, d_3d)},
+                {"p0", get_momentum(wave_num, d_3d)},
                 {"x0", tex_to_sim_coordinates(tex_pos, d_3d)},
                 {"spinor", s[spinor_index].store_as_vec4()},
                 {"useEnergyStatesCombinations",
@@ -606,7 +624,7 @@ void Simulation::init(const SimParams &sim_params,
     for (int j = 0; j < 2; j++) {
         for (int i = 0; i < 2; i++) {
             m_frames.spinors[j][i].draw(
-                m_programs.init,
+                m_programs.wavepacket.position,
                 {
                     {"amplitude", {1.0F}},
                     {"waveNumber", {Vec3{.ind={
@@ -632,6 +650,54 @@ void Simulation::init(const SimParams &sim_params,
             );
         }
     }
+}
+
+bool Simulation::is_inside(
+    const SimParams &params, Quaternion rotate, float scale,
+    const Vec2 &cursor_pos) const {
+    IVec2 tex_dims = m_frames.render.texture_dimensions();
+    Vec3 r = Vec3{
+        .x=cursor_pos.x,
+        .y=cursor_pos.y*(float(tex_dims[1])/float(tex_dims[0]))
+        + 0.5F*(1.0F - float(tex_dims[1])/float(tex_dims[0])),
+        .z=0.0};
+    r = scale_rotate(r, scale, rotate);
+    return (r.x > -0.5 && r.y > -0.5 && r.z > -0.5 && 
+            r.x < 0.5 && r.y < 0.5 && r.z < 0.5);
+}
+
+void Simulation::init_from_cursor_positions(
+    const SimParams &sim_params,
+    Quaternion rotate, float scale,
+    const Vec2 &cursor_pos1, const Vec2 &cursor_pos2, float sigma
+    ) {
+    IVec2 tex_dims = m_frames.render.texture_dimensions();
+    Vec3 r0 = Vec3{
+        .x=cursor_pos1.x,
+        .y=cursor_pos1.y*(float(tex_dims[1])/float(tex_dims[0]))
+            + 0.5F*(1.0F - float(tex_dims[1])/float(tex_dims[0])),
+        .z=0.0};
+    r0 = scale_rotate(r0, scale, rotate) - Vec3{.x=0.5, 0.5, 0.5};
+    Vec3 r1 = Vec3{
+        .x=cursor_pos2.x,
+        .y=cursor_pos2.y*(float(tex_dims[1])/float(tex_dims[0]))
+            + 0.5F*(1.0F - float(tex_dims[1])/float(tex_dims[0])),
+        .z=0.0};
+    r1 = scale_rotate(r1, scale, rotate) - Vec3{.x=0.5, 0.5, 0.5};
+    Vec3 r = r1 - r0;
+    IVec3 wavenum = {.ind{
+        int(r.x*sim_params.texelSideLength),
+        int(r.y*sim_params.texelSideLength),
+        int(r.z*sim_params.texelSideLength)
+    }};
+    for (int i = 0; i < 3; i++) {
+        wavenum[i] = (wavenum[i] > sim_params.texelSideLength/4)?
+            sim_params.texelSideLength/4: wavenum[i];
+        wavenum[i] = (wavenum[i] < -sim_params.texelSideLength/4)?
+            -sim_params.texelSideLength/4: wavenum[i];
+    }
+    printf("%g, %g, %g\n", r.x, r.y, r.z);
+    this->init(sim_params, r0, wavenum, sigma);
 }
 
 void Simulation::init_from_cursor_position(
@@ -687,6 +753,128 @@ void Simulation::init_from_cursor_positions(
     this->init(sim_params, intersection, wave_num, sigma);
 }
 
+void Simulation::sketch_modify_potential(
+    const SimParams &params,
+    Quaternion rotation, float scale, const Vec2 cursor_pos,
+    float amplitude, float size) {
+    IVec2 tex_dims = m_frames.render.texture_dimensions();
+    Vec3 r0 = Vec3{
+        .x=cursor_pos.x,
+        .y=cursor_pos.y*(float(tex_dims[1])/float(tex_dims[0]))
+            + 0.5F*(1.0F - float(tex_dims[1])/float(tex_dims[0])),
+        .z=0.0};
+    r0 = scale_rotate(r0, scale, rotation) + Vec3{.x=0.5, 0.5, 0.5};
+    // printf("%g, %g, %g\n", r0.x, r0.y, r0.z);
+    Vec3 d_3d = Vec3{
+        .x=params.sideLength, .y=params.sideLength, .z=params.sideLength};
+    this->m_frames.temps[0].draw(
+        m_programs.sketch.scalar_potential,
+        {
+            {"tex", &m_frames.potential},
+            {"texelDimensions3D", params.simulationDimensions3D},
+            {"texelDimensions2D", 
+                    get_2d_from_3d_dimensions(params.simulationDimensions3D)},
+            {"dimensions3D", d_3d},
+            {"offsetTexCoord", r0},
+            {"sigmaTexCoord", Vec3{.x=size, size, size}},
+            {"amplitude", Vec4{.ind{amplitude, 0.0, 0.0, 0.0}}},
+            {"maxScalarValue", 10.0F},
+            {"maxVectorMag", 1000.0F}
+        }
+    );
+    this->m_frames.potential.draw(
+        m_programs.copy,
+        {
+            {"tex", &m_frames.temps[0]}
+        }
+    );
+}
+
+void Simulation::erase_modify_potential(
+    const SimParams &params,
+    Quaternion rotation, float scale, 
+    const Vec2 cursor_pos,
+    float amplitude, float size
+    ) {
+    IVec2 tex_dims = m_frames.render.texture_dimensions();
+    Vec3 r0 = Vec3{
+        .x=cursor_pos.x,
+        .y=cursor_pos.y*(float(tex_dims[1])/float(tex_dims[0]))
+            + 0.5F*(1.0F - float(tex_dims[1])/float(tex_dims[0])),
+        .z=0.0};
+    r0 = scale_rotate(r0, scale, rotation) + Vec3{.x=0.5, 0.5, 0.5};
+    // Vec3 d_3d = Vec3{
+    //     .x=params.sideLength, .y=params.sideLength, .z=params.sideLength};
+    this->m_frames.temps[0].draw(
+        m_programs.sketch.scalar_potential,
+        {
+            {"tex", &m_frames.potential},
+            {"texelDimensions3D", params.simulationDimensions3D},
+            {"texelDimensions2D", 
+                    get_2d_from_3d_dimensions(params.simulationDimensions3D)},
+            // {"dimensions3D", d_3d},
+            {"offsetTexCoord", r0},
+            {"sigmaTexCoord", Vec3{.x=size, size, size}},
+            {"amplitude", amplitude},
+            // {"maxScalarValue", 10.0F},
+            // {"maxVectorMag", 1000.0F}
+        }
+    );
+    this->m_frames.potential.draw(
+        m_programs.copy,
+        {
+            {"tex", &m_frames.temps[0]}
+        }
+    );
+}
+
+void Simulation::sketch_modify_potential(
+    const SimParams &params,
+    Quaternion rotation, float scale,
+    const Vec2 cursor_pos1, const Vec2 cursor_pos2,
+    float amplitude, float size) {
+    IVec2 tex_dims = m_frames.render.texture_dimensions();
+    Vec3 r0 = Vec3{
+        .x=cursor_pos1.x,
+        .y=cursor_pos1.y*(float(tex_dims[1])/float(tex_dims[0]))
+            + 0.5F*(1.0F - float(tex_dims[1])/float(tex_dims[0])),
+        .z=0.0};
+    r0 = scale_rotate(r0, scale, rotation) + Vec3{.x=0.5, 0.5, 0.5};
+    Vec3 r1 = Vec3{
+        .x=cursor_pos2.x,
+        .y=cursor_pos2.y*(float(tex_dims[1])/float(tex_dims[0]))
+            + 0.5F*(1.0F - float(tex_dims[1])/float(tex_dims[0])),
+        .z=0.0};
+    r1 = scale_rotate(r1, scale, rotation) + Vec3{.x=0.5, 0.5, 0.5};
+    Vec3 d_3d = Vec3{
+        .x=params.sideLength, .y=params.sideLength, .z=params.sideLength};
+    Vec3 r = (r1 - r0);
+    if (r.length() > 1.0)
+        r = r.normalized();
+    r = amplitude*r;
+    this->m_frames.temps[0].draw(
+        m_programs.sketch.scalar_potential,
+        {
+            {"tex", &m_frames.potential},
+            {"texelDimensions3D", params.simulationDimensions3D},
+            {"texelDimensions2D", 
+                    get_2d_from_3d_dimensions(params.simulationDimensions3D)},
+            {"dimensions3D", d_3d},
+            {"offsetTexCoord", r0},
+            {"sigmaTexCoord", Vec3{.x=size, size, size}},
+            {"amplitude", Vec4{.ind{0.0, r.x, r.y, r.z}}},
+            {"maxScalarValue", 10.0F},
+            {"maxVectorMag", 1000.0F}
+        }
+    );
+    this->m_frames.potential.draw(
+        m_programs.copy,
+        {
+            {"tex", &m_frames.temps[0]}
+        }
+    );
+}
+
 #include <iostream>
 
 /* void Simulation::set_potential_from_program(
@@ -730,7 +918,7 @@ static Vec4 encode_2x2(float m00, float m11, std::complex<float> m01) {
         std::real(m01), std::imag(m01)}};
 }
 
-void Simulation::vector_field_view(
+void Simulation::arrows_view(
     const SimParams &params,
     const std::optional<Vec2> &hover,
     ::Quaternion rotation, float scale) {
@@ -780,14 +968,117 @@ void Simulation::vector_field_view(
     }
 }
 
+void Simulation::handle_all_arrow_views(const SimParams &params,
+        const std::optional<Vec2> &hover,
+        ::Quaternion rotation, float scale) {
+    if (params.showSpatialCurrent) {
+        m_frames.data_reduce.draw(
+            m_programs.visualization.current,
+            {
+                {"uTex", &m_frames.spinors[0][0]},
+                {"vTex", &m_frames.spinors[0][1]},
+                {"currentType", int(2)},
+                {"brightness", 10.0F*(float)params.brightness},
+                {"sigmaX", Vec4{.ind{0.0, 0.0, 1.0, 0.0}}},
+                {"sigmaY", Vec4{.ind{0.0, 0.0, 0.0, -1.0}}},
+                {"sigmaZ", Vec4{.ind{1.0, -1.0, 0.0, 0.0}}},
+                {"imposeAdditionalGrayScaleTex", int(0)}
+            }
+        );
+        arrows_view(params, hover, rotation, scale);
+    }
+    if (params.showPseudospatialCurrent) {
+        m_frames.data_reduce.draw(
+            m_programs.visualization.current,
+            {
+                {"uTex", &m_frames.spinors[0][0]},
+                {"vTex", &m_frames.spinors[0][1]},
+                {"currentType", int(3)},
+                {"brightness", (float)params.brightness},
+                {"sigmaX", Vec4{.ind{0.0, 0.0, 1.0, 0.0}}},
+                {"sigmaY", Vec4{.ind{0.0, 0.0, 0.0, -1.0}}},
+                {"sigmaZ", Vec4{.ind{1.0, -1.0, 0.0, 0.0}}},
+                {"imposeAdditionalGrayScaleTex", int(0)}
+            }
+        );
+        arrows_view(params, hover, rotation, scale);
+    }
+    if (params.showVectorPotential) {
+        m_frames.data_reduce.draw(
+            m_programs.visualization.vector_potential,
+            {
+                {"tex", &m_frames.potential},
+                {"scale", params.brightness}
+            }
+        );
+        arrows_view(params, hover, rotation, scale);
+    }
+    if (params.showMagnetic) {
+        m_frames.temps[0].draw(
+            m_programs.roll_0to3,
+            {
+                {"tex", &m_frames.potential}
+            }
+        );
+        m_frames.data_reduce.draw(
+            m_programs.em_field.m,
+            {
+                {"vecPotentialTex", &m_frames.temps[0]},
+                {"texelDimensions3D", params.simulationDimensions3D},
+                {"texelDimensions2D", 
+                    get_2d_from_3d_dimensions(params.simulationDimensions3D)},
+                {"dimensions3D", 
+                        Vec3{.ind{
+                            params.sideLength,
+                            params.sideLength,
+                            params.sideLength
+                        }}}
+            }
+        );
+        arrows_view(params, hover, rotation, scale);
+    }
+    if (params.showElectric) {
+        m_frames.temps[0].draw(
+            m_programs.roll_0to3,
+            {
+                {"tex", (this->is_time_dependent_potential)? 
+                    &m_frames.potential_prev: &m_frames.potential}
+            }
+        );
+        m_frames.temps[1].draw(
+            m_programs.roll_0to3,
+            {
+                {"tex", &m_frames.potential}
+            }
+        );
+        m_frames.data_reduce.draw(
+            m_programs.em_field.e,
+            {
+                {"prevATex", &m_frames.temps[0]},
+                {"currATex", &m_frames.temps[1]},
+                {"texelDimensions3D", params.simulationDimensions3D},
+                {"texelDimensions2D", 
+                    get_2d_from_3d_dimensions(params.simulationDimensions3D)},
+                {"dimensions3D", 
+                        Vec3{.ind{
+                            params.sideLength,
+                            params.sideLength,
+                            params.sideLength
+                        }}},
+                {"dt", {params.dt}}
+            }
+        );
+        arrows_view(params, hover, rotation, scale);
+    }
+}
+
 
 const RenderTarget &Simulation
 ::view(
     const SimParams &params,
     const std::optional<Vec2> &hover,
     ::Quaternion rotation, float scale) {
-    enum {VOL_RENDER_VIEW=0, PLANAR_SLICES_VIEW=1, VECTOR_FIELD_VIEW=2, 
-        PLANR_SLICES_VECTOR_FIELD_VIEW=3, VOL_RENDER_VECTOR_FIELD_VIEW=4};
+    enum {VOL_RENDER_VIEW=0, PLANAR_SLICES_VIEW=1};
     int index = 0;
     bool useBA = false;
     if (params.showPsi0WPhase) {
@@ -803,6 +1094,26 @@ const RenderTarget &Simulation
         index = 1;
         useBA = true;
     }
+    if (!params.showPsi0WPhase && !params.showPsi1WPhase 
+        && !params.showPsi2WPhase  && !params.showPsi3WPhase
+        && !params.showScalar && !params.showPseudoscalar 
+        && !params.showCurrent0 && !params.showPsuedocurrent0) {
+        if (!params.showScalarPotential) {
+            m_frames.data_reduce.clear();
+        } else {
+            m_frames.data_reduce.draw(
+            m_programs.visualization.domain_color,
+            {
+                {"brightness", 0.0F},
+                {"imposeAdditionalGrayScaleTex", int(params.showScalarPotential)},
+                {"tex2", &m_frames.potential},
+                {"gsOffset", 0.0F},
+                {"gsBrightness", (float)params.brightness},
+                {"gsMaxBrightness", 0.5F},
+                }
+            );
+        }
+    }
     if (params.showPsi0WPhase || params.showPsi1WPhase
         || params.showPsi2WPhase || params.showPsi3WPhase)
         m_frames.data_reduce.draw(
@@ -812,7 +1123,12 @@ const RenderTarget &Simulation
                 {"phaseAdjust", (float)params.c*params.c*params.m*params.t},
                 {"brightness", (float)params.brightness},
                 {"brightnessMode", int(1)},
-                {"useBA", int(useBA)}
+                {"useBA", int(useBA)},
+                {"imposeAdditionalGrayScaleTex", int(params.showScalarPotential)},
+                {"tex2", &m_frames.potential},
+                {"gsOffset", 0.0F},
+                {"gsBrightness", (float)params.brightness},
+                {"gsMaxBrightness", 0.5F},
 
             }
         );
@@ -823,7 +1139,12 @@ const RenderTarget &Simulation
                 {"uTex", &m_frames.spinors[0][0]},
                 {"vTex", &m_frames.spinors[0][1]},
                 {"scalarType", int((params.showScalar)? 0: 1)},
-                {"brightness", (float)params.brightness}
+                {"brightness", (float)params.brightness},
+                {"imposeAdditionalGrayScaleTex", int(params.showScalarPotential)},
+                {"tex2", &m_frames.potential},
+                {"gsOffset", 0.0F},
+                {"gsBrightness", (float)params.brightness},
+                {"gsMaxBrightness", 0.5F},
             }
         );
     if (params.showCurrent0 || params.showPsuedocurrent0)
@@ -836,7 +1157,12 @@ const RenderTarget &Simulation
                 {"brightness", (float)params.brightness},
                 {"sigmaX", Vec4{.ind{0.0, 0.0, 1.0, 0.0}}},
                 {"sigmaY", Vec4{.ind{0.0, 0.0, 0.0, -1.0}}},
-                {"sigmaZ", Vec4{.ind{1.0, -1.0, 0.0, 0.0}}}
+                {"sigmaZ", Vec4{.ind{1.0, -1.0, 0.0, 0.0}}},
+                {"imposeAdditionalGrayScaleTex", int(params.showScalarPotential)},
+                {"tex2", &m_frames.potential},
+                {"gsOffset", 0.0F},
+                {"gsBrightness", (float)params.brightness},
+                {"gsMaxBrightness", 0.5F}
             }
         );
     // WireFrame wf = get_quad_wire_frame();
@@ -844,7 +1170,7 @@ const RenderTarget &Simulation
     // m_frames.render.draw(m_programs.copy, {{"tex", &m_frames.data_reduce}}, wf);
     // return m_frames.render;
     switch(params.visualizationSelect.selected) {
-        case PLANAR_SLICES_VIEW: case PLANR_SLICES_VECTOR_FIELD_VIEW: {
+        case PLANAR_SLICES_VIEW: {
             this->m_frames.render.clear();
             this->m_frames.render_tmp.clear();
             Vec2 scaled_hover;
@@ -880,17 +1206,7 @@ const RenderTarget &Simulation
                     *params.planarNormCoordOffsets[2]),
                 (hover.has_value())? scaled_hover: Vec2{.ind {0.0, 0.0}}
             );
-            {
-                this->m_frames.render_tmp.clear();
-                // this->m_frames.render.clear();
-                if (params.visualizationSelect.selected 
-                        == PLANR_SLICES_VECTOR_FIELD_VIEW) {
-                    if (params.showSpatialCurrent) {
-                        vector_field_view(params, hover, rotation, scale);
-                    }
-                }
-                
-            }
+            this->handle_all_arrow_views(params, hover, rotation, scale);
             WireFrame axes = axes3d::get_axes_wireframe();
             WireFrame axes_labels = axes3d::get_xyz_axes_labels_wireframe();
             axes3d::draw_axes(
@@ -919,69 +1235,7 @@ const RenderTarget &Simulation
                 m_image_data, m_image_rgba_arr);
             return m_frames.render;
         }
-        case VECTOR_FIELD_VIEW: {
-            vector_field_view(
-                        params,
-                        hover,
-                        rotation, scale);            
-            WireFrame cube_outline = get_cube_outline_wire_frame();
-            this->m_frames.render.draw(
-                m_programs.visualization.cube_outline,
-                {
-                    {"rotation", rotation},
-                    {"viewScale", scale},
-                    {"color", Vec4{.ind{1.0, 1.0, 1.0, 0.5}}},
-                    {"usePerspectiveProjection",
-                        (params.usePerspectiveProjection)? int(1): int(0)},
-                    {"screenDimensions", m_frames.render.texture_dimensions()}
-                },
-                cube_outline
-            );
-            WireFrame axes = axes3d::get_axes_wireframe();
-            WireFrame axes_labels = axes3d::get_xyz_axes_labels_wireframe();
-            axes3d::draw_axes(
-                this->m_frames.render,
-                {.axes=m_programs.visualization.axes_3d,
-                           .labels=m_programs.visualization.axes_labels_3d},
-                axes, axes_labels,
-                rotation, 110, 0.0F,
-                params.usePerspectiveProjection, 
-                m_frames.render.texture_dimensions());
-            if (hover.has_value()) {
-                IVec2 tex_dims = m_frames.render.texture_dimensions();
-                Vec3 r = Vec3{
-                    .x=hover->x,
-                    .y=hover->y*(float(tex_dims[1])/float(tex_dims[0]))
-                        + 0.5F*(1.0F - float(tex_dims[1])/float(tex_dims[0])),
-                    .z=0.0};
-                r = 2.0*scale_rotate(r, scale, rotation);
-                if (r.x >= -1.0 && r.x < 1.0 && 
-                    r.y >= -1.0 && r.y < 1.0 &&
-                    r.z >= -1.0 && r.z < 1.0) {
-                    this->m_cursor_location = r;
-                    std::cout << r.x << ", " << r.y << ", " << r.z << std::endl;
-                    WireFrame cursor_frame 
-                        = cursor_outline3d::get_cursor_wire_frame();
-                    this->m_frames.render.draw(
-                        m_programs.visualization.cursor_outline,
-                        {
-                            {"rotation", rotation},
-                            {"viewScale", scale},
-                            {"cursorPosition", r},
-                            {"color", Vec4{.ind{0.3, 0.3, 0.3, 0.1}}},
-                            {"usePerspectiveProjection",
-                                (params.usePerspectiveProjection)? int(1): int(0)}
-                        },
-                        cursor_frame
-                    );
-                }
-            }
-            take_screenshot(
-                params, m_frames.render, 
-                m_image_data, m_image_rgba_arr);
-            return this->m_frames.render;
-        }
-        case VOL_RENDER_VIEW: case VOL_RENDER_VECTOR_FIELD_VIEW: {
+        case VOL_RENDER_VIEW: {
             this->m_frames.render.clear();
             this->m_frames.render_tmp.clear();
             // this->m_frames.render_tmp2.clear();
@@ -1019,39 +1273,7 @@ const RenderTarget &Simulation
             //     {{"tex", {this->m_frames.render_tmp2}}},
             //     m_frames.quad_wire_frame
             // );
-            if (params.visualizationSelect.selected
-                    == VOL_RENDER_VECTOR_FIELD_VIEW) {
-                if (params.showSpatialCurrent) {
-                    m_frames.data_reduce.draw(
-                        m_programs.visualization.current,
-                        {
-                            {"uTex", &m_frames.spinors[0][0]},
-                            {"vTex", &m_frames.spinors[0][1]},
-                            {"currentType", int(2)},
-                            {"brightness", 10.0F*(float)params.brightness},
-                            {"sigmaX", Vec4{.ind{0.0, 0.0, 1.0, 0.0}}},
-                            {"sigmaY", Vec4{.ind{0.0, 0.0, 0.0, -1.0}}},
-                            {"sigmaZ", Vec4{.ind{1.0, -1.0, 0.0, 0.0}}}
-                        }
-                    );
-                    vector_field_view(params, hover, rotation, scale);
-                }
-                if (params.showPseudospatialCurrent) {
-                    m_frames.data_reduce.draw(
-                        m_programs.visualization.current,
-                        {
-                            {"uTex", &m_frames.spinors[0][0]},
-                            {"vTex", &m_frames.spinors[0][1]},
-                            {"currentType", int(3)},
-                            {"brightness", (float)params.brightness},
-                            {"sigmaX", Vec4{.ind{0.0, 0.0, 1.0, 0.0}}},
-                            {"sigmaY", Vec4{.ind{0.0, 0.0, 0.0, -1.0}}},
-                            {"sigmaZ", Vec4{.ind{1.0, -1.0, 0.0, 0.0}}}
-                        }
-                    );
-                    vector_field_view(params, hover, rotation, scale);
-                }
-            }
+            this->handle_all_arrow_views(params, hover, rotation, scale);
             this->m_frames.render.draw(
                 m_programs.visualization.cube_outline,
                 {
@@ -1136,7 +1358,16 @@ const RenderTarget &Simulation
 
 void Simulation::add_user_defined(
     const SimParams &sim_params,
-    unsigned int program, const std::map<std::string, float> &input_uniforms) {
+    unsigned int program, const std::map<std::string, float> &input_uniforms,
+    bool is_time_dependent) {
+    this->is_time_dependent_potential = false;
+    if (is_time_dependent) {
+        m_frames.potential_prev.draw(
+            m_programs.copy,
+            {{"tex", &m_frames.potential}}
+        );
+        is_time_dependent_potential = true;
+    }
     this->m_programs.user_defined = program;
     Uniforms uniforms;
     for (const auto &e: input_uniforms)
@@ -1206,9 +1437,9 @@ Vec3 Simulation::get_cursor_location() {
 
 Vec3 Simulation::get_scaled_cursor_location(const SimParams &params) {
     return Vec3{
-        .x=m_cursor_location.x*params.simulationDimensions3D.x/2.0F,
-        .y=m_cursor_location.y*params.simulationDimensions3D.y/2.0F,
-        .z=m_cursor_location.z*params.simulationDimensions3D.z/2.0F,
+        .x=m_cursor_location.x*params.sideLength/2.0F,
+        .y=m_cursor_location.y*params.sideLength/2.0F,
+        .z=m_cursor_location.z*params.sideLength/2.0F
     };
 }
 
@@ -1216,3 +1447,12 @@ std::vector<unsigned char> &Simulation::get_image_data() {
     return m_image_data;
 }
 
+float Simulation::get_max_free_particle_energy(const SimParams &sim_params) const {
+    float c = sim_params.c;
+    float m = sim_params.m;
+    float length = sim_params.sideLength;
+    int texel_length = sim_params.texelSideLength;
+    float p_1d = 2.0*PI*float(texel_length/2.0)/length;
+    float p_max2 = 3*p_1d*p_1d;
+    return sqrt(m*m*c*c*c*c + c*c*p_max2);
+}

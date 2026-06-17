@@ -111,7 +111,7 @@ void imgui_controls(void *void_params) {
     ImGui::Text("Time step Δt (a.u.) = 0.000028");
     if (ImGui::SliderFloat("c|Δt|/Δx", &params->cdtdx, 0.0, 1.0))
            s_sim_params_set(params->CDTDX, params->cdtdx);
-    if (ImGui::SliderFloat("mass (a.u.)", &params->m, 0.0, 10.0))
+    if (ImGui::SliderFloat("mass (a.u.)", &params->m, 0.0, 1.0))
            s_sim_params_set(params->M, params->m);
     if (ImGui::TreeNode("Visualization Controls")) {
     if (ImGui::BeginMenu("Visualization select")) {
@@ -119,17 +119,11 @@ void imgui_controls(void *void_params) {
             s_selection_set(params->VISUALIZATION_SELECT, 0);
         if (ImGui::MenuItem("Three orthogonal planar slices"))
             s_selection_set(params->VISUALIZATION_SELECT, 1);
-        if (ImGui::MenuItem("Vector field"))
-            s_selection_set(params->VISUALIZATION_SELECT, 2);
-        if (ImGui::MenuItem("Three orthogonal planar slices, vector field"))
-            s_selection_set(params->VISUALIZATION_SELECT, 3);
-        if (ImGui::MenuItem("Volume render, vector field"))
-            s_selection_set(params->VISUALIZATION_SELECT, 4);
         ImGui::EndMenu();
     }
     if (ImGui::Checkbox("Use perspective projection", &params->usePerspectiveProjection))
             s_sim_params_set(params->USE_PERSPECTIVE_PROJECTION, params->usePerspectiveProjection);
-    if (ImGui::SliderFloat("Overall scaling", &params->brightness, 0.0, 20.0))
+    if (ImGui::SliderFloat("Overall scaling", &params->brightness, 0.0, 2.0))
            s_sim_params_set(params->BRIGHTNESS, params->brightness);
     if (ImGui::TreeNode("Wave Function Visualization Options")) {
     ImGui::Text("(Please note: bar(𝜓) = 𝜓†γ⁰)");
@@ -157,6 +151,18 @@ void imgui_controls(void *void_params) {
             s_sim_params_set(params->SHOW_PSI01_SPIN, params->showPsi01Spin);
     if (ImGui::Checkbox("Spin axis where (𝜓₃(r), 𝜓₄(r)) is spin up", &params->showPsi23Spin))
             s_sim_params_set(params->SHOW_PSI23_SPIN, params->showPsi23Spin);
+    ImGui::TreePop();
+    }
+ 
+    if (ImGui::TreeNode("Potential Visualization Options")) {
+    if (ImGui::Checkbox("Scalar potential (V(r))", &params->showScalarPotential))
+            s_sim_params_set(params->SHOW_SCALAR_POTENTIAL, params->showScalarPotential);
+    if (ImGui::Checkbox("3-Vector potential (𝐀(r))", &params->showVectorPotential))
+            s_sim_params_set(params->SHOW_VECTOR_POTENTIAL, params->showVectorPotential);
+    if (ImGui::Checkbox("-∇V(r) - ∂𝐀(r)/∂t", &params->showElectric))
+            s_sim_params_set(params->SHOW_ELECTRIC, params->showElectric);
+    if (ImGui::Checkbox("∇×𝐀(r)", &params->showMagnetic))
+            s_sim_params_set(params->SHOW_MAGNETIC, params->showMagnetic);
     ImGui::TreePop();
     }
  
@@ -245,30 +251,31 @@ void imgui_controls(void *void_params) {
            s_sim_params_set(params->POSITION, params->position);
     if (ImGui::SliderFloat("position[2]", &params->position.ind[2], 0.0, 1.0))
            s_sim_params_set(params->POSITION, params->position);
-    if (ImGui::SliderFloat("Absorbtion", &params->absCoeff, 0.0, 10.0))
-           s_sim_params_set(params->ABS_COEFF, params->absCoeff);
     if (ImGui::Button("Initialize new wave function"))
            s_button_pressed(params->INITIALIZE_NEW_WAVE_FUNCTION_BUTTON);
     ImGui::TreePop();
     }
  
     if (ImGui::TreeNode("Initialize Potential Controls")) {
+    ImGui::Text("(If volume render of potential is obstructing view, please deselect 'Scalar potential' under 'Visualization Controls -> Potential Visualization Options'.)");
     if (ImGui::BeginMenu("Presets")) {
         if (ImGui::MenuItem("0"))
             s_selection_set(params->PRESET_POTENTIALS_DROPDOWN, 0);
-        if (ImGui::MenuItem("abs(a/2)*(x^2 + y^2 + z^2)"))
+        if (ImGui::MenuItem("abs(a)*((x/width)^2 + (y/height)^2 + (z/depth)^2)"))
             s_selection_set(params->PRESET_POTENTIALS_DROPDOWN, 1);
-        if (ImGui::MenuItem("a/sqrt(x^2 + y^2 + z^2)"))
+        if (ImGui::MenuItem("abs(a)/sqrt(x^2 + y^2 + z^2)"))
             s_selection_set(params->PRESET_POTENTIALS_DROPDOWN, 2);
-        if (ImGui::MenuItem("10.0*(step(-y^2+(height*0.04*s1)^2)+step(y^2-(height*0.06*s2)^2))*step(-x^2+(width*0.04*w)^2)"))
+        if (ImGui::MenuItem("10.0*(step(-y^2+(height*0.084*s1)^2)+step(y^2-(height*0.126*s2)^2))*step(-x^2+(width*0.04*w)^2)"))
             s_selection_set(params->PRESET_POTENTIALS_DROPDOWN, 3);
+        if (ImGui::MenuItem("step(sqrt( (x/width)^2 + (y/height)^2 + (z/depth)^2 ) - 0.45)"))
+            s_selection_set(params->PRESET_POTENTIALS_DROPDOWN, 4);
         ImGui::EndMenu();
     }
  ImGui::Text("4-Vector Potential");  // name
     {
         std::string string_val = std::string(240, '\0');
-        /* if (global_user_text_entries.count(66) > 0) { // i
-            std::string prev = global_user_text_entries.at(66); // i
+        /* if (global_user_text_entries.count(72) > 0) { // i
+            std::string prev = global_user_text_entries.at(72); // i
             string_val = prev;
         } else {
             string_val = std::string(240, '\0');
@@ -286,31 +293,31 @@ void imgui_controls(void *void_params) {
             }
             if (string_val2[0] == '\0')
                 string_val2 = "0";
-            if (global_user_text_entries.count(66) == 0) { // i
-                global_user_text_entries.insert({66, {string_val2} }); // i
+            if (global_user_text_entries.count(72) == 0) { // i
+                global_user_text_entries.insert({72, {string_val2} }); // i
             } else {
-                if (global_user_text_entries.at(66).size() <= 0) // i, k
-                    global_user_text_entries.at(66).push_back(string_val2); // i 
-                global_user_text_entries.at(66)[0] = string_val2; // i, k
+                if (global_user_text_entries.at(72).size() <= 0) // i, k
+                    global_user_text_entries.at(72).push_back(string_val2); // i 
+                global_user_text_entries.at(72)[0] = string_val2; // i, k
             }
-            s_sim_params_set_string(66, 0, string_val2); // i, k
+            s_sim_params_set_string(72, 0, string_val2); // i, k
         }
     }
-    if (global_user_text_entries.count(66) > 0) // i
+    if (global_user_text_entries.count(72) > 0) // i
         ImGui::Text(
-            (char *)global_user_text_entries.at(66)[0].c_str()); // i, k
+            (char *)global_user_text_entries.at(72)[0].c_str()); // i, k
     // name, i, i, k, i, i, i, k, i, i, k, i, k, i, i, k
   
-    if (global_user_defined_variables_in_use.count(66) > 0
+    if (global_user_defined_variables_in_use.count(72) > 0
         ) { // i
         std::set<std::string> variables 
-            = global_user_defined_variables_in_use.at(66);  // i
+            = global_user_defined_variables_in_use.at(72);  // i
         if (variables.size() > 0) {
             for (std::string e: variables) {
-                float value = global_user_defined_variables.at(66).at(e); // i
+                float value = global_user_defined_variables.at(72).at(e); // i
                 if (ImGui::SliderFloat(e.c_str(), &value, -5.0, 5.0)) {
-                    s_sim_params_set_user_float_param(66, e, value); // i
-                    global_user_defined_variables.at(66).at(e) = value;  // i
+                    s_sim_params_set_user_float_param(72, e, value); // i
+                    global_user_defined_variables.at(72).at(e) = value;  // i
                 }
             }  
         }
@@ -318,8 +325,8 @@ void imgui_controls(void *void_params) {
  ImGui::Text("4-Vector Potential");  // name
     {
         std::string string_val = std::string(240, '\0');
-        /* if (global_user_text_entries.count(66) > 0) { // i
-            std::string prev = global_user_text_entries.at(66); // i
+        /* if (global_user_text_entries.count(72) > 0) { // i
+            std::string prev = global_user_text_entries.at(72); // i
             string_val = prev;
         } else {
             string_val = std::string(240, '\0');
@@ -337,31 +344,31 @@ void imgui_controls(void *void_params) {
             }
             if (string_val2[0] == '\0')
                 string_val2 = "0";
-            if (global_user_text_entries.count(66) == 0) { // i
-                global_user_text_entries.insert({66, {string_val2} }); // i
+            if (global_user_text_entries.count(72) == 0) { // i
+                global_user_text_entries.insert({72, {string_val2} }); // i
             } else {
-                if (global_user_text_entries.at(66).size() <= 1) // i, k
-                    global_user_text_entries.at(66).push_back(string_val2); // i 
-                global_user_text_entries.at(66)[1] = string_val2; // i, k
+                if (global_user_text_entries.at(72).size() <= 1) // i, k
+                    global_user_text_entries.at(72).push_back(string_val2); // i 
+                global_user_text_entries.at(72)[1] = string_val2; // i, k
             }
-            s_sim_params_set_string(66, 1, string_val2); // i, k
+            s_sim_params_set_string(72, 1, string_val2); // i, k
         }
     }
-    if (global_user_text_entries.count(66) > 0) // i
+    if (global_user_text_entries.count(72) > 0) // i
         ImGui::Text(
-            (char *)global_user_text_entries.at(66)[1].c_str()); // i, k
+            (char *)global_user_text_entries.at(72)[1].c_str()); // i, k
     // name, i, i, k, i, i, i, k, i, i, k, i, k, i, i, k
   
-    if (global_user_defined_variables_in_use.count(66) > 0
+    if (global_user_defined_variables_in_use.count(72) > 0
         ) { // i
         std::set<std::string> variables 
-            = global_user_defined_variables_in_use.at(66);  // i
+            = global_user_defined_variables_in_use.at(72);  // i
         if (variables.size() > 0) {
             for (std::string e: variables) {
-                float value = global_user_defined_variables.at(66).at(e); // i
+                float value = global_user_defined_variables.at(72).at(e); // i
                 if (ImGui::SliderFloat(e.c_str(), &value, -5.0, 5.0)) {
-                    s_sim_params_set_user_float_param(66, e, value); // i
-                    global_user_defined_variables.at(66).at(e) = value;  // i
+                    s_sim_params_set_user_float_param(72, e, value); // i
+                    global_user_defined_variables.at(72).at(e) = value;  // i
                 }
             }  
         }
@@ -369,8 +376,8 @@ void imgui_controls(void *void_params) {
  ImGui::Text("4-Vector Potential");  // name
     {
         std::string string_val = std::string(240, '\0');
-        /* if (global_user_text_entries.count(66) > 0) { // i
-            std::string prev = global_user_text_entries.at(66); // i
+        /* if (global_user_text_entries.count(72) > 0) { // i
+            std::string prev = global_user_text_entries.at(72); // i
             string_val = prev;
         } else {
             string_val = std::string(240, '\0');
@@ -388,31 +395,31 @@ void imgui_controls(void *void_params) {
             }
             if (string_val2[0] == '\0')
                 string_val2 = "0";
-            if (global_user_text_entries.count(66) == 0) { // i
-                global_user_text_entries.insert({66, {string_val2} }); // i
+            if (global_user_text_entries.count(72) == 0) { // i
+                global_user_text_entries.insert({72, {string_val2} }); // i
             } else {
-                if (global_user_text_entries.at(66).size() <= 2) // i, k
-                    global_user_text_entries.at(66).push_back(string_val2); // i 
-                global_user_text_entries.at(66)[2] = string_val2; // i, k
+                if (global_user_text_entries.at(72).size() <= 2) // i, k
+                    global_user_text_entries.at(72).push_back(string_val2); // i 
+                global_user_text_entries.at(72)[2] = string_val2; // i, k
             }
-            s_sim_params_set_string(66, 2, string_val2); // i, k
+            s_sim_params_set_string(72, 2, string_val2); // i, k
         }
     }
-    if (global_user_text_entries.count(66) > 0) // i
+    if (global_user_text_entries.count(72) > 0) // i
         ImGui::Text(
-            (char *)global_user_text_entries.at(66)[2].c_str()); // i, k
+            (char *)global_user_text_entries.at(72)[2].c_str()); // i, k
     // name, i, i, k, i, i, i, k, i, i, k, i, k, i, i, k
   
-    if (global_user_defined_variables_in_use.count(66) > 0
+    if (global_user_defined_variables_in_use.count(72) > 0
         ) { // i
         std::set<std::string> variables 
-            = global_user_defined_variables_in_use.at(66);  // i
+            = global_user_defined_variables_in_use.at(72);  // i
         if (variables.size() > 0) {
             for (std::string e: variables) {
-                float value = global_user_defined_variables.at(66).at(e); // i
+                float value = global_user_defined_variables.at(72).at(e); // i
                 if (ImGui::SliderFloat(e.c_str(), &value, -5.0, 5.0)) {
-                    s_sim_params_set_user_float_param(66, e, value); // i
-                    global_user_defined_variables.at(66).at(e) = value;  // i
+                    s_sim_params_set_user_float_param(72, e, value); // i
+                    global_user_defined_variables.at(72).at(e) = value;  // i
                 }
             }  
         }
@@ -420,8 +427,8 @@ void imgui_controls(void *void_params) {
  ImGui::Text("4-Vector Potential");  // name
     {
         std::string string_val = std::string(240, '\0');
-        /* if (global_user_text_entries.count(66) > 0) { // i
-            std::string prev = global_user_text_entries.at(66); // i
+        /* if (global_user_text_entries.count(72) > 0) { // i
+            std::string prev = global_user_text_entries.at(72); // i
             string_val = prev;
         } else {
             string_val = std::string(240, '\0');
@@ -439,35 +446,44 @@ void imgui_controls(void *void_params) {
             }
             if (string_val2[0] == '\0')
                 string_val2 = "0";
-            if (global_user_text_entries.count(66) == 0) { // i
-                global_user_text_entries.insert({66, {string_val2} }); // i
+            if (global_user_text_entries.count(72) == 0) { // i
+                global_user_text_entries.insert({72, {string_val2} }); // i
             } else {
-                if (global_user_text_entries.at(66).size() <= 3) // i, k
-                    global_user_text_entries.at(66).push_back(string_val2); // i 
-                global_user_text_entries.at(66)[3] = string_val2; // i, k
+                if (global_user_text_entries.at(72).size() <= 3) // i, k
+                    global_user_text_entries.at(72).push_back(string_val2); // i 
+                global_user_text_entries.at(72)[3] = string_val2; // i, k
             }
-            s_sim_params_set_string(66, 3, string_val2); // i, k
+            s_sim_params_set_string(72, 3, string_val2); // i, k
         }
     }
-    if (global_user_text_entries.count(66) > 0) // i
+    if (global_user_text_entries.count(72) > 0) // i
         ImGui::Text(
-            (char *)global_user_text_entries.at(66)[3].c_str()); // i, k
+            (char *)global_user_text_entries.at(72)[3].c_str()); // i, k
     // name, i, i, k, i, i, i, k, i, i, k, i, k, i, i, k
   
-    if (global_user_defined_variables_in_use.count(66) > 0
+    if (global_user_defined_variables_in_use.count(72) > 0
         ) { // i
         std::set<std::string> variables 
-            = global_user_defined_variables_in_use.at(66);  // i
+            = global_user_defined_variables_in_use.at(72);  // i
         if (variables.size() > 0) {
             for (std::string e: variables) {
-                float value = global_user_defined_variables.at(66).at(e); // i
+                float value = global_user_defined_variables.at(72).at(e); // i
                 if (ImGui::SliderFloat(e.c_str(), &value, -5.0, 5.0)) {
-                    s_sim_params_set_user_float_param(66, e, value); // i
-                    global_user_defined_variables.at(66).at(e) = value;  // i
+                    s_sim_params_set_user_float_param(72, e, value); // i
+                    global_user_defined_variables.at(72).at(e) = value;  // i
                 }
             }  
         }
     }
+    ImGui::TreePop();
+    }
+ 
+    if (ImGui::TreeNode("Boundary Controls")) {
+    ImGui::Text("Periodic boundary conditions.");
+    if (ImGui::Checkbox("Absorbers at boundaries (currently does not work well enough)", &params->useAbsorbingBoundaries))
+            s_sim_params_set(params->USE_ABSORBING_BOUNDARIES, params->useAbsorbingBoundaries);
+    if (ImGui::SliderFloat("Absorbtion strength", &params->absCoeff, 0.0, 500.0))
+           s_sim_params_set(params->ABS_COEFF, params->absCoeff);
     ImGui::TreePop();
     }
  

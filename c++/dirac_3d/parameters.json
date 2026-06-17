@@ -4,7 +4,7 @@
         "name": "Source", "type": "LinkedLabel", 
         "value": "https://github.com/marl0ny/split-operator-simulations"},
     "stepsPerFrame": {
-        "name": "Steps/frame", "type": "int", "value": 1, "min": 0, "max": 5},
+        "name": "Steps/frame", "type": "int", "value": 4, "min": 0, "max": 5},
     "mouseSelector": {
         "name": "Mouse usage", "type": "SelectionList", "value": "{0, {\"Rotate only\", \"New wave function\", \"Sketch modify scalar potential\", \"Erase modify scalar potential\", \"Sketch modify vector potential\", \"Erase modify vector potential\"}}"},
     "texelSideLengthSelector": {
@@ -18,7 +18,7 @@
     "hbar": {
         "name": "hbar (a.u.)", "type": "float", "value": 1.0},
     "m": {
-        "name": "mass (a.u.)", "type": "float", "value": 1.0, "min": 0.0, "max": 10.0, "step": 0.1},
+        "name": "mass (a.u.)", "type": "float", "value": 1.0, "min": 0.0, "max": 1.0, "step": 0.05},
     "dt": {
         "name": "Time Step (a.u.)", "type": "float", "value": 0.000028},
     "t": {
@@ -26,7 +26,7 @@
     "texelSideLength": {
         "name": "Grid Side Length (Cubic)", "type": "int", "value": 64},
     "sideLength": {
-        "name": "Simulation Side Length", "type": "float", "value": 1.0},
+        "name": "Simulation Side Length", "type": "float", "value": 8.0},
     "simulationDimensions3D": {
         "name": "Discretization dimensions", "type": "IVec3", "value": [64, 64, 64]},
     "dataTexelDimensions3D": {
@@ -35,11 +35,11 @@
     "visualizationControlsStart": {"name": "Visualization Controls", "type": "SubSectionStart", "value": {}},
 
         "visualizationSelect": {
-            "name": "Visualization select", "type": "SelectionList", "value": "{0, {\"Volume render\", \"Three orthogonal planar slices\", \"Vector field\", \"Three orthogonal planar slices, vector field\", \"Volume render, vector field\"}}"},
+            "name": "Visualization select", "type": "SelectionList", "value": "{0, {\"Volume render\", \"Three orthogonal planar slices\"}}"},
         "usePerspectiveProjection": {
             "name": "Use perspective projection", "type": "bool", "value": true},
         "brightness": {
-            "name": "Overall scaling", "type": "float", "value": 0.5, "min": 0.0, "max": 20.0, "step": 0.01},
+            "name": "Overall scaling", "type": "float", "value": 0.25, "min": 0.0, "max": 2.0, "step": 0.01},
         
         "waveFuncVisStart": {"name": "Wave Function Visualization Options", "type": "SubSectionStart", "value": "{}"},
             "adjNoteLabel": {
@@ -70,6 +70,17 @@
                 "name": "Spin axis where (𝜓₃(r), 𝜓₄(r)) is spin up", "type": "bool", "value": false},
         "waveFuncVisEnd": {"name": "Wave Function Visualization Options", "type": "SubSectionEnd", "value": "{}"},
 
+        "potentialVisStart": {"name": "Potential Visualization Options", "type": "SubSectionStart", "value": "{}"},
+            "showScalarPotential": {
+                "name": "Scalar potential (V(r))", "type": "bool", "value": true},
+            "showVectorPotential": {
+                "name": "3-Vector potential (𝐀(r))", "type": "bool", "value": true},
+            "showElectric": {
+                "name": "-∇V(r) - ∂𝐀(r)/∂t", "type": "bool", "value": false},
+            "showMagnetic": {
+                "name": "∇×𝐀(r)", "type": "bool", "value": false},
+        "potentialVisEnd": {"name": "Potential Visualization Options", "type": "SubSectionEnd", "value": "{}"},
+
         "volumeRenderSectionStart": {"name": "Volume Render Controls", "type": "SubSectionStart", "value": {}},
             "useLinear": {
                 "name": "Linear interpolation", "type": "bool", "value": false},
@@ -94,7 +105,7 @@
 
         "arrows3DLineSectionStart": {"name": "Arrows Plot", "type": "SubSectionStart", "value": {}},
             "arrowDimensions": {
-                "name": "Arrows dimensions", "type": "IVec3", "value": [8, 8, 8], "min": [8, 8, 8], "max": [128, 128, 128]},
+                "name": "Arrows dimensions", "type": "IVec3", "value": [16, 16, 16], "min": [8, 8, 8], "max": [128, 128, 128]},
             "useCones": {
                 "name": "Use conical arrows", "type": "bool", "value": false},
         "arrows3DLineSectionEnd": {"name": "Arrows Plot", "type": "SubSectionEnd", "value": {}},
@@ -103,7 +114,7 @@
 
     "initializeWaveFunctionStart": {"name": "Initialize New Wave Function Controls", "type": "SubSectionStart", "value": {}},
         "sigma": {
-            "name": "Size", "type": "float", "value": 0.1, "min": 0.03, "max": 0.3, "step": 0.001},
+            "name": "Size", "type": "float", "value": 0.04, "min": 0.03, "max": 0.3, "step": 0.001},
         "posE": {
             "name": "Positive energy (+E) content", "type":  "float", "value": 1.0, "min": 0.0, "max": 1.0, "step": 0.01},
         "negE": {
@@ -117,12 +128,9 @@
         "momentumSpaceInit": {
             "name": "Apply spinor and +E/-E configuration to each momentum plane wave individually. Plane waves then summed up to form wave packet.", "type": "bool", "value": false},
         "wavenumber": {
-            "name": "Wave number, w.r.t. simulation domain", "type": "IVec3", "value": [0, 0, 0], "min": [-16, -16, -16], "max": [16, 16, 16], "step": [1, 1, 1]},
+            "name": "Wave number, w.r.t. simulation domain", "type": "IVec3", "value": [16, 0, 0], "min": [-16, -16, -16], "max": [16, 16, 16], "step": [1, 1, 1]},
         "position": {
             "name": "Position (norm. coord.)", "type": "Vec3", "value": [0.5, 0.5, 0.5], "min": [0.0, 0.0, 0.0], "max": [1.0, 1.0, 1.0], "step": [0.01, 0.01, 0.01]
-        },
-        "absCoeff": {
-            "name": "Absorbtion", "type": "float", "value": 10.0, "min": 0.0, "max": 10.0, "step": 0.01
         },
         "initializeNewWaveFunctionButton": {
             "name": "Initialize new wave function", "type": "Button", "value": {}
@@ -130,14 +138,28 @@
     "initializeWaveFunctionEnd": {"name": "Initialize New Wave Function Controls", "type": "SubSectionEnd", "value": {}},
 
     "initializePotentialStart": {"name": "Initialize Potential Controls", "type": "SubSectionStart", "value": {}},
+        "potLabel": {
+            "name": 
+            "(If volume render of potential is obstructing view, please deselect 'Scalar potential' under 'Visualization Controls -> Potential Visualization Options'.)",
+            "type": "Label", "value": "{}", "style": "font-weight: normal;"},
         "presetPotentialsDropdown": {
             "name": "Presets", "type": "SelectionList", 
-            "value": "{0, {\"0\", \"abs(a/2)*(x^2 + y^2 + z^2)\", \"a/sqrt(x^2 + y^2 + z^2)\", \"10.0*(step(-y^2+(height*0.04*s1)^2)+step(y^2-(height*0.06*s2)^2))*step(-x^2+(width*0.04*w)^2)\"}}"},
+            "value": "{0, {\"0\", \"abs(a)*((x/width)^2 + (y/height)^2 + (z/depth)^2)\", \"abs(a)/sqrt(x^2 + y^2 + z^2)\", \"10.0*(step(-y^2+(height*0.084*s1)^2)+step(y^2-(height*0.126*s2)^2))*step(-x^2+(width*0.04*w)^2)\", \"step(sqrt( (x/width)^2 + (y/height)^2 + (z/depth)^2 ) - 0.45)\"}}"},
         "latexLabel1": {
             "name": "KaTeX Label", "type": "KaTeXLabel", "value": {}},
         "fourVectorPotential": {
             "name": "4-Vector Potential", "type": "EntryBoxes", "value": "{\"0\", \"0\", \"0\", \"0\"}", "subLabels": ["V(x, y, z, t)", "Ax(x, y, z, t)", "Ay(x, y, z, t)", "Az(x, y, z, t)"]},
     "initializePotentialEnd": {"name": "Initialize Potential Controls", "type": "SubSectionEnd", "value": {}},
+
+    "boundariesStart": {"name": "Boundary Controls", "type": "SubSectionStart", "value": {}},
+        "periodicLabel": {
+            "name": "Periodic boundary conditions.", "type": "Label", "value": "{}", "style":"font-weight: normal;"},
+        "useAbsorbingBoundaries": {
+            "name": "Absorbers at boundaries (currently does not work well enough)", "type": "bool", "value": false},
+        "absCoeff": {
+            "name": "Absorbtion strength", "type": "float", "value": 137.036, "min": 0.0, "max": 500.0, "step": 0.01
+        },
+    "boundariesEnd": {"name": "Boundary Controls", "type": "SubSectionEnd", "value": {}},
 
 
     "takeScreenshots": {"name": "Take screenshots at every frame (uncompressed bitmap)", "type": "BMPRecord", "value": "{false, 1440, 1440}"},

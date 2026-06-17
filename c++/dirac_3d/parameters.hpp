@@ -41,7 +41,7 @@ struct NotUsed {};
 
 struct SimParams {
     LinkedLabel link = {"https://github.com/marl0ny/split-operator-simulations"};
-    int stepsPerFrame = (int)(1);
+    int stepsPerFrame = (int)(4);
     SelectionList mouseSelector = SelectionList{0, {"Rotate only", "New wave function", "Sketch modify scalar potential", "Erase modify scalar potential", "Sketch modify vector potential", "Erase modify vector potential"}};
     SelectionList texelSideLengthSelector = SelectionList{0, {"64x64x64", "128x128x128", "256x256x256"}};
     Label dtLabel = Label{};
@@ -52,13 +52,13 @@ struct SimParams {
     float dt = (float)(2.8e-05F);
     float t = (float)(0.0F);
     int texelSideLength = (int)(64);
-    float sideLength = (float)(1.0F);
+    float sideLength = (float)(8.0F);
     IVec3 simulationDimensions3D = (IVec3)(IVec3 {.ind={64, 64, 64}});
     IVec3 dataTexelDimensions3D = (IVec3)(IVec3 {.ind={64, 64, 64}});
     SubSectionStart visualizationControlsStart = SubSectionStart{};
-    SelectionList visualizationSelect = SelectionList{0, {"Volume render", "Three orthogonal planar slices", "Vector field", "Three orthogonal planar slices, vector field", "Volume render, vector field"}};
+    SelectionList visualizationSelect = SelectionList{0, {"Volume render", "Three orthogonal planar slices"}};
     bool usePerspectiveProjection = (bool)(true);
-    float brightness = (float)(0.5F);
+    float brightness = (float)(0.25F);
     SubSectionStart waveFuncVisStart = SubSectionStart{};
     Label adjNoteLabel = Label{};
     bool showCurrent0 = (bool)(false);
@@ -74,6 +74,12 @@ struct SimParams {
     bool showPsi01Spin = (bool)(false);
     bool showPsi23Spin = (bool)(false);
     SubSectionEnd waveFuncVisEnd = SubSectionEnd{};
+    SubSectionStart potentialVisStart = SubSectionStart{};
+    bool showScalarPotential = (bool)(true);
+    bool showVectorPotential = (bool)(true);
+    bool showElectric = (bool)(false);
+    bool showMagnetic = (bool)(false);
+    SubSectionEnd potentialVisEnd = SubSectionEnd{};
     SubSectionStart volumeRenderSectionStart = SubSectionStart{};
     bool useLinear = (bool)(false);
     float alphaBrightness = (float)(2.0F);
@@ -86,28 +92,33 @@ struct SimParams {
     Vec3 planarNormCoordOffsets = (Vec3)(Vec3 {.ind={0.5, 0.5, 0.5}});
     SubSectionEnd planarSlicesSectionEnd = SubSectionEnd{};
     SubSectionStart arrows3DLineSectionStart = SubSectionStart{};
-    IVec3 arrowDimensions = (IVec3)(IVec3 {.ind={8, 8, 8}});
+    IVec3 arrowDimensions = (IVec3)(IVec3 {.ind={16, 16, 16}});
     bool useCones = (bool)(false);
     SubSectionEnd arrows3DLineSectionEnd = SubSectionEnd{};
     SubSectionEnd visualizationControlsEnd = SubSectionEnd{};
     SubSectionStart initializeWaveFunctionStart = SubSectionStart{};
-    float sigma = (float)(0.1F);
+    float sigma = (float)(0.04F);
     float posE = (float)(1.0F);
     Label negE = Label{};
     Vec3 posSpinDir = (Vec3)(Vec3 {.ind={0.0, 0.0, 1.0}});
     Label orientationsMSGLabel = Label{};
     Vec3 negSpinDir = (Vec3)(Vec3 {.ind={0.0, 0.0, 1.0}});
     bool momentumSpaceInit = (bool)(false);
-    IVec3 wavenumber = (IVec3)(IVec3 {.ind={0, 0, 0}});
+    IVec3 wavenumber = (IVec3)(IVec3 {.ind={16, 0, 0}});
     Vec3 position = (Vec3)(Vec3 {.ind={0.5, 0.5, 0.5}});
-    float absCoeff = (float)(10.0F);
     Button initializeNewWaveFunctionButton = Button{};
     SubSectionEnd initializeWaveFunctionEnd = SubSectionEnd{};
     SubSectionStart initializePotentialStart = SubSectionStart{};
-    SelectionList presetPotentialsDropdown = SelectionList{0, {"0", "abs(a/2)*(x^2 + y^2 + z^2)", "a/sqrt(x^2 + y^2 + z^2)", "10.0*(step(-y^2+(height*0.04*s1)^2)+step(y^2-(height*0.06*s2)^2))*step(-x^2+(width*0.04*w)^2)"}};
+    Label potLabel = Label{};
+    SelectionList presetPotentialsDropdown = SelectionList{0, {"0", "abs(a)*((x/width)^2 + (y/height)^2 + (z/depth)^2)", "abs(a)/sqrt(x^2 + y^2 + z^2)", "10.0*(step(-y^2+(height*0.084*s1)^2)+step(y^2-(height*0.126*s2)^2))*step(-x^2+(width*0.04*w)^2)", "step(sqrt( (x/width)^2 + (y/height)^2 + (z/depth)^2 ) - 0.45)"}};
     KaTeXLabel latexLabel1 = KaTeXLabel{};
     EntryBoxes fourVectorPotential = EntryBoxes{"0", "0", "0", "0"};
     SubSectionEnd initializePotentialEnd = SubSectionEnd{};
+    SubSectionStart boundariesStart = SubSectionStart{};
+    Label periodicLabel = Label{};
+    bool useAbsorbingBoundaries = (bool)(false);
+    float absCoeff = (float)(137.036F);
+    SubSectionEnd boundariesEnd = SubSectionEnd{};
     BMPRecord takeScreenshots = BMPRecord{false, 1440, 1440};
     HoveringCanvasLabel canvasHoverDisplay = HoveringCanvasLabel{};
     int dummyValue = (int)(0);
@@ -146,43 +157,54 @@ struct SimParams {
         SHOW_PSI01_SPIN=31,
         SHOW_PSI23_SPIN=32,
         WAVE_FUNC_VIS_END=33,
-        VOLUME_RENDER_SECTION_START=34,
-        USE_LINEAR=35,
-        ALPHA_BRIGHTNESS=36,
-        COLOR_BRIGHTNESS=37,
-        VOLUME_TEXEL_DIMENSIONS3_D=38,
-        APPLY_BLUR=39,
-        BLUR_SIZE=40,
-        VOLUME_RENDER_SECTION_END=41,
-        PLANAR_SLICES_SECTION_START=42,
-        PLANAR_NORM_COORD_OFFSETS=43,
-        PLANAR_SLICES_SECTION_END=44,
-        ARROWS3_D_LINE_SECTION_START=45,
-        ARROW_DIMENSIONS=46,
-        USE_CONES=47,
-        ARROWS3_D_LINE_SECTION_END=48,
-        VISUALIZATION_CONTROLS_END=49,
-        INITIALIZE_WAVE_FUNCTION_START=50,
-        SIGMA=51,
-        POS_E=52,
-        NEG_E=53,
-        POS_SPIN_DIR=54,
-        ORIENTATIONS_M_S_G_LABEL=55,
-        NEG_SPIN_DIR=56,
-        MOMENTUM_SPACE_INIT=57,
-        WAVENUMBER=58,
-        POSITION=59,
-        ABS_COEFF=60,
-        INITIALIZE_NEW_WAVE_FUNCTION_BUTTON=61,
-        INITIALIZE_WAVE_FUNCTION_END=62,
-        INITIALIZE_POTENTIAL_START=63,
-        PRESET_POTENTIALS_DROPDOWN=64,
-        LATEX_LABEL1=65,
-        FOUR_VECTOR_POTENTIAL=66,
-        INITIALIZE_POTENTIAL_END=67,
-        TAKE_SCREENSHOTS=68,
-        CANVAS_HOVER_DISPLAY=69,
-        DUMMY_VALUE=70,
+        POTENTIAL_VIS_START=34,
+        SHOW_SCALAR_POTENTIAL=35,
+        SHOW_VECTOR_POTENTIAL=36,
+        SHOW_ELECTRIC=37,
+        SHOW_MAGNETIC=38,
+        POTENTIAL_VIS_END=39,
+        VOLUME_RENDER_SECTION_START=40,
+        USE_LINEAR=41,
+        ALPHA_BRIGHTNESS=42,
+        COLOR_BRIGHTNESS=43,
+        VOLUME_TEXEL_DIMENSIONS3_D=44,
+        APPLY_BLUR=45,
+        BLUR_SIZE=46,
+        VOLUME_RENDER_SECTION_END=47,
+        PLANAR_SLICES_SECTION_START=48,
+        PLANAR_NORM_COORD_OFFSETS=49,
+        PLANAR_SLICES_SECTION_END=50,
+        ARROWS3_D_LINE_SECTION_START=51,
+        ARROW_DIMENSIONS=52,
+        USE_CONES=53,
+        ARROWS3_D_LINE_SECTION_END=54,
+        VISUALIZATION_CONTROLS_END=55,
+        INITIALIZE_WAVE_FUNCTION_START=56,
+        SIGMA=57,
+        POS_E=58,
+        NEG_E=59,
+        POS_SPIN_DIR=60,
+        ORIENTATIONS_M_S_G_LABEL=61,
+        NEG_SPIN_DIR=62,
+        MOMENTUM_SPACE_INIT=63,
+        WAVENUMBER=64,
+        POSITION=65,
+        INITIALIZE_NEW_WAVE_FUNCTION_BUTTON=66,
+        INITIALIZE_WAVE_FUNCTION_END=67,
+        INITIALIZE_POTENTIAL_START=68,
+        POT_LABEL=69,
+        PRESET_POTENTIALS_DROPDOWN=70,
+        LATEX_LABEL1=71,
+        FOUR_VECTOR_POTENTIAL=72,
+        INITIALIZE_POTENTIAL_END=73,
+        BOUNDARIES_START=74,
+        PERIODIC_LABEL=75,
+        USE_ABSORBING_BOUNDARIES=76,
+        ABS_COEFF=77,
+        BOUNDARIES_END=78,
+        TAKE_SCREENSHOTS=79,
+        CANVAS_HOVER_DISPLAY=80,
+        DUMMY_VALUE=81,
     };
     void set(int enum_val, Uniform val) {
         switch(enum_val) {
@@ -261,6 +283,18 @@ struct SimParams {
             case SHOW_PSI23_SPIN:
             showPsi23Spin = val.b32;
             break;
+            case SHOW_SCALAR_POTENTIAL:
+            showScalarPotential = val.b32;
+            break;
+            case SHOW_VECTOR_POTENTIAL:
+            showVectorPotential = val.b32;
+            break;
+            case SHOW_ELECTRIC:
+            showElectric = val.b32;
+            break;
+            case SHOW_MAGNETIC:
+            showMagnetic = val.b32;
+            break;
             case USE_LINEAR:
             useLinear = val.b32;
             break;
@@ -308,6 +342,9 @@ struct SimParams {
             break;
             case POSITION:
             position = val.vec3;
+            break;
+            case USE_ABSORBING_BOUNDARIES:
+            useAbsorbingBoundaries = val.b32;
             break;
             case ABS_COEFF:
             absCoeff = val.f32;
@@ -369,6 +406,14 @@ struct SimParams {
             return {(bool)showPsi01Spin};
             case SHOW_PSI23_SPIN:
             return {(bool)showPsi23Spin};
+            case SHOW_SCALAR_POTENTIAL:
+            return {(bool)showScalarPotential};
+            case SHOW_VECTOR_POTENTIAL:
+            return {(bool)showVectorPotential};
+            case SHOW_ELECTRIC:
+            return {(bool)showElectric};
+            case SHOW_MAGNETIC:
+            return {(bool)showMagnetic};
             case USE_LINEAR:
             return {(bool)useLinear};
             case ALPHA_BRIGHTNESS:
@@ -401,6 +446,8 @@ struct SimParams {
             return {(IVec3)wavenumber};
             case POSITION:
             return {(Vec3)position};
+            case USE_ABSORBING_BOUNDARIES:
+            return {(bool)useAbsorbingBoundaries};
             case ABS_COEFF:
             return {(float)absCoeff};
             case DUMMY_VALUE:
@@ -422,8 +469,14 @@ struct SimParams {
             case ORIENTATIONS_M_S_G_LABEL:
             orientationsMSGLabel = val;
             break;
+            case POT_LABEL:
+            potLabel = val;
+            break;
             case FOUR_VECTOR_POTENTIAL:
             fourVectorPotential[index] = val;
+            break;
+            case PERIODIC_LABEL:
+            periodicLabel = val;
             break;
         }
     }

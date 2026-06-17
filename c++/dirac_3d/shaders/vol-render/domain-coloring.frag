@@ -39,6 +39,12 @@ uniform float brightness;
 uniform float phaseAdjust;
 uniform bool useBA;
 
+uniform bool imposeAdditionalGrayScaleTex;
+uniform sampler2D tex2;
+uniform float gsOffset;
+uniform float gsBrightness;
+uniform float gsMaxBrightness;
+
 uniform int brightnessMode;
 const int ABS_VAL = 1;
 const int ABS_VAL_SQUARED = 2;
@@ -77,21 +83,45 @@ vec3 argumentToColor(float argVal) {
     }
 }
 
-void main() {
-    complex z1 = texture2D(tex, UV).xy;
+vec4 getDomainColoringTexel(sampler2D colTex) {
+    complex z1 = texture2D(colTex, UV).xy;
     if (useBA)
-        z1 = texture2D(tex, UV).zw;
+        z1 = texture2D(colTex, UV).zw;
     complex phaseFactor = complex(cos(phaseAdjust), sin(phaseAdjust));
     complex z2 = mul(phaseFactor, z1);
     vec3 color = argumentToColor(atan(z2.y, z2.x));
-    fragColor = vec4(brightness*length(z2)*color, brightness*length(z2));
+    return vec4(gsBrightness*length(z2)*color, gsBrightness*length(z2));
     float brightness2;
     if (brightnessMode == ABS_VAL_SQUARED) {
-        brightness2 = brightness*length(z2)*length(z2);
+        brightness2 = gsBrightness*length(z2)*length(z2);
     } else if (brightnessMode == INV_ABS_VAL) {
-        brightness2 = brightness/(length(z2)) - 1.0;
+        brightness2 = gsBrightness/(length(z2)) - 1.0;
     } else {
-        brightness2 = brightness*length(z2);
+        brightness2 = gsBrightness*length(z2);
     }
-    fragColor = vec4(brightness2*color, brightness2);
+    return vec4(brightness2*color, brightness2);
+}
+
+vec4 getGrayScaleTexel(sampler2D grayTex) {
+    float initVal = texture2D(grayTex, UV)[0];
+    float val;
+    if (brightnessMode == INV_ABS_VAL) {
+        val = 1.0/abs(initVal) + gsOffset - 1.0;
+    } else if (brightnessMode == ABS_VAL_SQUARED) {
+        val = abs(initVal)*abs(initVal) + gsOffset;
+    } else {
+        val = initVal + gsOffset;
+    }
+    vec3 color = vec3(val);
+    return vec4(
+        max(min(brightness*color, gsMaxBrightness), -gsMaxBrightness),
+        max(min(brightness*val, gsMaxBrightness), -gsMaxBrightness));
+}
+
+void main() {
+    vec4 texel1 = getDomainColoringTexel(tex);
+    vec4 texel2 = vec4(0.0);
+    if (imposeAdditionalGrayScaleTex)
+        texel2 = getGrayScaleTexel(tex2);
+    fragColor = texel1 + texel2;
 }

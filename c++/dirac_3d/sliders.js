@@ -33,43 +33,54 @@ const ENUM_CODES = {
     SHOW_PSI01_SPIN: 31,
     SHOW_PSI23_SPIN: 32,
     WAVE_FUNC_VIS_END: 33,
-    VOLUME_RENDER_SECTION_START: 34,
-    USE_LINEAR: 35,
-    ALPHA_BRIGHTNESS: 36,
-    COLOR_BRIGHTNESS: 37,
-    VOLUME_TEXEL_DIMENSIONS3_D: 38,
-    APPLY_BLUR: 39,
-    BLUR_SIZE: 40,
-    VOLUME_RENDER_SECTION_END: 41,
-    PLANAR_SLICES_SECTION_START: 42,
-    PLANAR_NORM_COORD_OFFSETS: 43,
-    PLANAR_SLICES_SECTION_END: 44,
-    ARROWS3_D_LINE_SECTION_START: 45,
-    ARROW_DIMENSIONS: 46,
-    USE_CONES: 47,
-    ARROWS3_D_LINE_SECTION_END: 48,
-    VISUALIZATION_CONTROLS_END: 49,
-    INITIALIZE_WAVE_FUNCTION_START: 50,
-    SIGMA: 51,
-    POS_E: 52,
-    NEG_E: 53,
-    POS_SPIN_DIR: 54,
-    ORIENTATIONS_M_S_G_LABEL: 55,
-    NEG_SPIN_DIR: 56,
-    MOMENTUM_SPACE_INIT: 57,
-    WAVENUMBER: 58,
-    POSITION: 59,
-    ABS_COEFF: 60,
-    INITIALIZE_NEW_WAVE_FUNCTION_BUTTON: 61,
-    INITIALIZE_WAVE_FUNCTION_END: 62,
-    INITIALIZE_POTENTIAL_START: 63,
-    PRESET_POTENTIALS_DROPDOWN: 64,
-    LATEX_LABEL1: 65,
-    FOUR_VECTOR_POTENTIAL: 66,
-    INITIALIZE_POTENTIAL_END: 67,
-    TAKE_SCREENSHOTS: 68,
-    CANVAS_HOVER_DISPLAY: 69,
-    DUMMY_VALUE: 70,
+    POTENTIAL_VIS_START: 34,
+    SHOW_SCALAR_POTENTIAL: 35,
+    SHOW_VECTOR_POTENTIAL: 36,
+    SHOW_ELECTRIC: 37,
+    SHOW_MAGNETIC: 38,
+    POTENTIAL_VIS_END: 39,
+    VOLUME_RENDER_SECTION_START: 40,
+    USE_LINEAR: 41,
+    ALPHA_BRIGHTNESS: 42,
+    COLOR_BRIGHTNESS: 43,
+    VOLUME_TEXEL_DIMENSIONS3_D: 44,
+    APPLY_BLUR: 45,
+    BLUR_SIZE: 46,
+    VOLUME_RENDER_SECTION_END: 47,
+    PLANAR_SLICES_SECTION_START: 48,
+    PLANAR_NORM_COORD_OFFSETS: 49,
+    PLANAR_SLICES_SECTION_END: 50,
+    ARROWS3_D_LINE_SECTION_START: 51,
+    ARROW_DIMENSIONS: 52,
+    USE_CONES: 53,
+    ARROWS3_D_LINE_SECTION_END: 54,
+    VISUALIZATION_CONTROLS_END: 55,
+    INITIALIZE_WAVE_FUNCTION_START: 56,
+    SIGMA: 57,
+    POS_E: 58,
+    NEG_E: 59,
+    POS_SPIN_DIR: 60,
+    ORIENTATIONS_M_S_G_LABEL: 61,
+    NEG_SPIN_DIR: 62,
+    MOMENTUM_SPACE_INIT: 63,
+    WAVENUMBER: 64,
+    POSITION: 65,
+    INITIALIZE_NEW_WAVE_FUNCTION_BUTTON: 66,
+    INITIALIZE_WAVE_FUNCTION_END: 67,
+    INITIALIZE_POTENTIAL_START: 68,
+    POT_LABEL: 69,
+    PRESET_POTENTIALS_DROPDOWN: 70,
+    LATEX_LABEL1: 71,
+    FOUR_VECTOR_POTENTIAL: 72,
+    INITIALIZE_POTENTIAL_END: 73,
+    BOUNDARIES_START: 74,
+    PERIODIC_LABEL: 75,
+    USE_ABSORBING_BOUNDARIES: 76,
+    ABS_COEFF: 77,
+    BOUNDARIES_END: 78,
+    TAKE_SCREENSHOTS: 79,
+    CANVAS_HOVER_DISPLAY: 80,
+    DUMMY_VALUE: 81,
 };
 
 let gVecParams = {};
@@ -584,16 +595,16 @@ function createLinkedLabel(controls, enumCode, labelContent, href) {
 
 let controls = document.getElementById('controls');
 createLinkedLabel(controls, 0, "Source", "https://github.com/marl0ny/split-operator-simulations");
-createScalarParameterSlider(controls, 1, "Steps/frame", "int", {'value': 1, 'min': 0, 'max': 5});
+createScalarParameterSlider(controls, 1, "Steps/frame", "int", {'value': 4, 'min': 0, 'max': 5});
 createSelectionList(controls, 2, 0, "Mouse usage", [ "Rotate only",  "New wave function",  "Sketch modify scalar potential",  "Erase modify scalar potential",  "Sketch modify vector potential",  "Erase modify vector potential"]);
 createSelectionList(controls, 3, 0, "Grid discretization size", [ "64x64x64",  "128x128x128",  "256x256x256"]);
 createLabel(controls, 4, "Time step Δt (a.u.) = 0.000028", "font-weight: normal;");
 createScalarParameterSlider(controls, 5, "c|Δt|/Δx", "float", {'value': 0.99, 'min': 0.0, 'max': 1.0, 'step': 0.01});
-createScalarParameterSlider(controls, 8, "mass (a.u.)", "float", {'value': 1.0, 'min': 0.0, 'max': 10.0, 'step': 0.1});
+createScalarParameterSlider(controls, 8, "mass (a.u.)", "float", {'value': 1.0, 'min': 0.0, 'max': 1.0, 'step': 0.05});
 let subControls0 = createSubDiv(controls, "Visualization Controls", "");
-createSelectionList(subControls0, 16, 0, "Visualization select", [ "Volume render",  "Three orthogonal planar slices",  "Vector field",  "Three orthogonal planar slices,  vector field",  "Volume render,  vector field"]);
+createSelectionList(subControls0, 16, 0, "Visualization select", [ "Volume render",  "Three orthogonal planar slices"]);
 createCheckbox(subControls0, 17, "Use perspective projection", true);
-createScalarParameterSlider(subControls0, 18, "Overall scaling", "float", {'value': 0.5, 'min': 0.0, 'max': 20.0, 'step': 0.01});
+createScalarParameterSlider(subControls0, 18, "Overall scaling", "float", {'value': 0.25, 'min': 0.0, 'max': 2.0, 'step': 0.01});
 let subControls1 = createSubDiv(subControls0, "Wave Function Visualization Options", "");
 createLabel(subControls1, 20, "(Please note: bar(𝜓) = 𝜓†γ⁰)", "font-weight: normal;");
 createCheckbox(subControls1, 21, "Current 0th component (𝜓(r)†𝜓(r))", false, "scalarVis");
@@ -608,32 +619,41 @@ createCheckbox(subControls1, 29, "Spatial current (bar(𝜓(r))γⁱ𝜓(r), i=1
 createCheckbox(subControls1, 30, "Spatial pseudocurrent (bar(𝜓(r))γⁱγ⁵𝜓(r))", false);
 createCheckbox(subControls1, 31, "Spin axis where (𝜓₁(r), 𝜓₂(r)) is spin up", false);
 createCheckbox(subControls1, 32, "Spin axis where (𝜓₃(r), 𝜓₄(r)) is spin up", false);
-let subControls2 = createSubDiv(subControls0, "Volume Render Controls", "");
-createCheckbox(subControls2, 35, "Linear interpolation", false);
-createScalarParameterSlider(subControls2, 36, "Alpha brightness", "float", {'value': 2.0, 'min': 0.0, 'max': 10.0, 'step': 0.01});
-createScalarParameterSlider(subControls2, 37, "Color brightness", "float", {'value': 1.0, 'min': 0.0, 'max': 10.0, 'step': 0.01});
-createVectorParameterSliders(subControls2, 38, "Volume dimensions", "IVec3", {'value': [128, 128, 192], 'min': [16, 16, 16], 'max': [512, 512, 512], 'step': [2, 2, 4]});
-createCheckbox(subControls2, 39, "Enable bloom", true);
-createScalarParameterSlider(subControls2, 40, "Bloominess", "int", {'value': 5, 'min': 0, 'max': 10});
-let subControls3 = createSubDiv(subControls0, "Three Orthogonal Planar Slices Controls", "");
-createVectorParameterSliders(subControls3, 43, "Planar slices offsets (in normalized coordinates) for xy, yz, xz", "Vec3", {'value': [0.5, 0.5, 0.5], 'min': [0.0, 0.0, 0.0], 'max': [1.0, 1.0, 1.0], 'step': [0.001, 0.001, 0.001]});
-let subControls4 = createSubDiv(subControls0, "Arrows Plot", "");
-createVectorParameterSliders(subControls4, 46, "Arrows dimensions", "IVec3", {'value': [8, 8, 8], 'min': [8, 8, 8], 'max': [128, 128, 128]});
-createCheckbox(subControls4, 47, "Use conical arrows", false);
-let subControls5 = createSubDiv(controls, "Initialize New Wave Function Controls", "");
-createScalarParameterSlider(subControls5, 51, "Size", "float", {'value': 0.1, 'min': 0.03, 'max': 0.3, 'step': 0.001});
-createScalarParameterSlider(subControls5, 52, "Positive energy (+E) content", "float", {'value': 1.0, 'min': 0.0, 'max': 1.0, 'step': 0.01});
-createLabel(subControls5, 53, "Negative energy (-E) content = 0", "font-weight: normal;");
-createVectorParameterSliders(subControls5, 54, "Spin up orientation for +E solutions (sx, sy, sz)", "Vec3", {'value': [0.0, 0.0, 1.0], 'min': [-1.0, -1.0, -1.0], 'max': [1.0, 1.0, 1.0], 'step': [0.01, 0.01, 0.01]});
-createLabel(subControls5, 55, "(Orientations get normalized. (0, 0, 0) changed to (0, 0, 1).)", "font-weight: normal;");
-createVectorParameterSliders(subControls5, 56, "Spin up orientation for -E solutions", "Vec3", {'value': [0.0, 0.0, 1.0], 'min': [-1.0, -1.0, -1.0], 'max': [1.0, 1.0, 1.0], 'step': [0.01, 0.01, 0.01]});
-createCheckbox(subControls5, 57, "Apply spinor and +E/-E configuration to each momentum plane wave individually. Plane waves then summed up to form wave packet.", false);
-createVectorParameterSliders(subControls5, 58, "Wave number, w.r.t. simulation domain", "IVec3", {'value': [0, 0, 0], 'min': [-16, -16, -16], 'max': [16, 16, 16], 'step': [1, 1, 1]});
-createVectorParameterSliders(subControls5, 59, "Position (norm. coord.)", "Vec3", {'value': [0.5, 0.5, 0.5], 'min': [0.0, 0.0, 0.0], 'max': [1.0, 1.0, 1.0], 'step': [0.01, 0.01, 0.01]});
-createScalarParameterSlider(subControls5, 60, "Absorbtion", "float", {'value': 10.0, 'min': 0.0, 'max': 10.0, 'step': 0.01});
-createButton(subControls5, 61, "Initialize new wave function");
-let subControls6 = createSubDiv(controls, "Initialize Potential Controls", "");
-createSelectionList(subControls6, 64, 0, "Presets", [ "0",  "abs(a/2)*(x^2 + y^2 + z^2)",  "a/sqrt(x^2 + y^2 + z^2)",  "10.0*(step(-y^2+(height*0.04*s1)^2)+step(y^2-(height*0.06*s2)^2))*step(-x^2+(width*0.04*w)^2)"]);
-createKaTeXLabel(subControls6, 65, "KaTeX Label");
-createEntryBoxes(subControls6, 66, "4-Vector Potential", 4, ['V(x, y, z, t)', 'Ax(x, y, z, t)', 'Ay(x, y, z, t)', 'Az(x, y, z, t)']);
-createHoveringLabelOnCanvas(69, "");
+let subControls2 = createSubDiv(subControls0, "Potential Visualization Options", "");
+createCheckbox(subControls2, 35, "Scalar potential (V(r))", true);
+createCheckbox(subControls2, 36, "3-Vector potential (𝐀(r))", true);
+createCheckbox(subControls2, 37, "-∇V(r) - ∂𝐀(r)/∂t", false);
+createCheckbox(subControls2, 38, "∇×𝐀(r)", false);
+let subControls3 = createSubDiv(subControls0, "Volume Render Controls", "");
+createCheckbox(subControls3, 41, "Linear interpolation", false);
+createScalarParameterSlider(subControls3, 42, "Alpha brightness", "float", {'value': 2.0, 'min': 0.0, 'max': 10.0, 'step': 0.01});
+createScalarParameterSlider(subControls3, 43, "Color brightness", "float", {'value': 1.0, 'min': 0.0, 'max': 10.0, 'step': 0.01});
+createVectorParameterSliders(subControls3, 44, "Volume dimensions", "IVec3", {'value': [128, 128, 192], 'min': [16, 16, 16], 'max': [512, 512, 512], 'step': [2, 2, 4]});
+createCheckbox(subControls3, 45, "Enable bloom", true);
+createScalarParameterSlider(subControls3, 46, "Bloominess", "int", {'value': 5, 'min': 0, 'max': 10});
+let subControls4 = createSubDiv(subControls0, "Three Orthogonal Planar Slices Controls", "");
+createVectorParameterSliders(subControls4, 49, "Planar slices offsets (in normalized coordinates) for xy, yz, xz", "Vec3", {'value': [0.5, 0.5, 0.5], 'min': [0.0, 0.0, 0.0], 'max': [1.0, 1.0, 1.0], 'step': [0.001, 0.001, 0.001]});
+let subControls5 = createSubDiv(subControls0, "Arrows Plot", "");
+createVectorParameterSliders(subControls5, 52, "Arrows dimensions", "IVec3", {'value': [16, 16, 16], 'min': [8, 8, 8], 'max': [128, 128, 128]});
+createCheckbox(subControls5, 53, "Use conical arrows", false);
+let subControls6 = createSubDiv(controls, "Initialize New Wave Function Controls", "");
+createScalarParameterSlider(subControls6, 57, "Size", "float", {'value': 0.04, 'min': 0.03, 'max': 0.3, 'step': 0.001});
+createScalarParameterSlider(subControls6, 58, "Positive energy (+E) content", "float", {'value': 1.0, 'min': 0.0, 'max': 1.0, 'step': 0.01});
+createLabel(subControls6, 59, "Negative energy (-E) content = 0", "font-weight: normal;");
+createVectorParameterSliders(subControls6, 60, "Spin up orientation for +E solutions (sx, sy, sz)", "Vec3", {'value': [0.0, 0.0, 1.0], 'min': [-1.0, -1.0, -1.0], 'max': [1.0, 1.0, 1.0], 'step': [0.01, 0.01, 0.01]});
+createLabel(subControls6, 61, "(Orientations get normalized. (0, 0, 0) changed to (0, 0, 1).)", "font-weight: normal;");
+createVectorParameterSliders(subControls6, 62, "Spin up orientation for -E solutions", "Vec3", {'value': [0.0, 0.0, 1.0], 'min': [-1.0, -1.0, -1.0], 'max': [1.0, 1.0, 1.0], 'step': [0.01, 0.01, 0.01]});
+createCheckbox(subControls6, 63, "Apply spinor and +E/-E configuration to each momentum plane wave individually. Plane waves then summed up to form wave packet.", false);
+createVectorParameterSliders(subControls6, 64, "Wave number, w.r.t. simulation domain", "IVec3", {'value': [16, 0, 0], 'min': [-16, -16, -16], 'max': [16, 16, 16], 'step': [1, 1, 1]});
+createVectorParameterSliders(subControls6, 65, "Position (norm. coord.)", "Vec3", {'value': [0.5, 0.5, 0.5], 'min': [0.0, 0.0, 0.0], 'max': [1.0, 1.0, 1.0], 'step': [0.01, 0.01, 0.01]});
+createButton(subControls6, 66, "Initialize new wave function");
+let subControls7 = createSubDiv(controls, "Initialize Potential Controls", "");
+createLabel(subControls7, 69, "(If volume render of potential is obstructing view, please deselect 'Scalar potential' under 'Visualization Controls -> Potential Visualization Options'.)", "font-weight: normal;");
+createSelectionList(subControls7, 70, 0, "Presets", [ "0",  "abs(a)*((x/width)^2 + (y/height)^2 + (z/depth)^2)",  "abs(a)/sqrt(x^2 + y^2 + z^2)",  "10.0*(step(-y^2+(height*0.084*s1)^2)+step(y^2-(height*0.126*s2)^2))*step(-x^2+(width*0.04*w)^2)",  "step(sqrt( (x/width)^2 + (y/height)^2 + (z/depth)^2 ) - 0.45)"]);
+createKaTeXLabel(subControls7, 71, "KaTeX Label");
+createEntryBoxes(subControls7, 72, "4-Vector Potential", 4, ['V(x, y, z, t)', 'Ax(x, y, z, t)', 'Ay(x, y, z, t)', 'Az(x, y, z, t)']);
+let subControls8 = createSubDiv(controls, "Boundary Controls", "");
+createLabel(subControls8, 75, "Periodic boundary conditions.", "font-weight: normal;");
+createCheckbox(subControls8, 76, "Absorbers at boundaries (currently does not work well enough)", false);
+createScalarParameterSlider(subControls8, 77, "Absorbtion strength", "float", {'value': 137.036, 'min': 0.0, 'max': 500.0, 'step': 0.01});
+createHoveringLabelOnCanvas(80, "");
