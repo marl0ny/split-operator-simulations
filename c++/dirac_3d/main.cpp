@@ -65,7 +65,7 @@ void simulation_ui_interface_handler(
                 IVec2 d = get_2d_from_3d_dimensions(u.ivec3);
                 printf("Dimensions (%d, %d)\n",
                        d[0], d[1]);
-                potential_text_edit.queue_current();
+                // potential_text_edit.queue_current();
             }
             if (c == params.SIMULATION_DIMENSIONS3_D)
                 potential_text_edit.queue_current();
@@ -168,6 +168,9 @@ void simulation_ui_interface_handler(
         it matches the dropdown.*/
         s_selection_set = [&params, &potential_text_edit, &sim]
             (int c, int val) {
+            if (c == params.MOUSE_SELECTOR) {
+                params.mouseSelector.selected = val;
+            }
             if (c == params.PRESET_POTENTIALS_DROPDOWN) {
                 params.presetPotentialsDropdown.selected = val;
                 int program;
@@ -229,8 +232,14 @@ void simulation_ui_interface_handler(
                 params.dataTexelDimensions3D.x = texel_side_length;
                 params.dataTexelDimensions3D.y = texel_side_length;
                 params.dataTexelDimensions3D.z = texel_side_length;
-                params.dt = params.cdtdx
-                * ((params.sideLength/float(params.texelSideLength))/params.c);
+                double e_max = sim.get_max_free_particle_energy(params);
+                params.dt = (3.14159/e_max);
+                float dx = params.sideLength/params.texelSideLength;
+                float cdtdx = params.dt*params.c/dx;
+                params.cdtdx = cdtdx;
+                #ifdef __EMSCRIPTEN__
+                edit_scalar_parameter_slider_display(params.CDTDX, "c|Δt|/Δx", params.cdtdx);
+                #endif
                 std::string string_val = std::to_string(params.dt);
                 std::string text_content
                     = "Time step Δt (a.u.) = ";
@@ -309,8 +318,14 @@ void simulation_ui_interface_handler(
                 //     "A_x(x, y, z, t) = 0": ("A_z(x, y, z, t) = " + latex_out[3]));
         edit_bool_display(params.USE_LINEAR, 
             default_tex_params.min_filter == GL_LINEAR);
-        params.dt = params.cdtdx
-                * ((params.sideLength/float(params.texelSideLength))/params.c);
+        double e_max = sim.get_max_free_particle_energy(params);
+        params.dt = (3.14159/e_max);
+        float dx = params.sideLength/params.texelSideLength;
+        float cdtdx = params.dt*params.c/dx;
+        params.cdtdx = cdtdx;
+        #ifdef __EMSCRIPTEN__
+        edit_scalar_parameter_slider_display(params.CDTDX, "c|Δt|/Δx", params.cdtdx);
+        #endif
         std::string string_val = std::to_string(params.dt);
         std::string text_content
             = "Time step Δt (a.u.) = ";
@@ -318,7 +333,7 @@ void simulation_ui_interface_handler(
         edit_label_display(params.DT_LABEL, text_content);
         sim.init(params,
                 Vec3{.x=0.5, 0.5, 0.5},
-                IVec3{.x=5, 0, 0}, 0.05);
+                IVec3{.x=10, 0, 0}, 0.05);
     }
 
     start_gui(main_render.get_window());
@@ -334,7 +349,63 @@ void simulation_ui_interface_handler(
                 Vec3 axis = cross_product(delta, view_vec);
                 Quaternion rot = Quaternion::rotator(
                     3.0*axis.length(), axis);
-                rotation = rotation*rot;                
+                if (params.mouseSelector.selected == 1 && 
+                    sim.is_inside(params, rotation, 
+                        0.01*Interactor::get_scroll(), cursor_positions[0]) 
+                    ) {
+                    // Vec3 cursor_location = sim.get_cursor_location();
+                    sim.init_from_cursor_positions(
+                        params, rotation,
+                        0.01*Interactor::get_scroll(), 
+                        cursor_positions[0], 
+                        cursor_positions[cursor_positions.size() - 1],
+                        params.sigma);
+                    // sim.init(
+                    //     params, 
+                    //     cursor_location + Vec3{.x=0.5, 0.5, 0.5}, 
+                    //     params.wavenumber, params.sigma);
+                } else if ((params.mouseSelector.selected == 2 
+                    || params.mouseSelector.selected == 3
+                    || params.mouseSelector.selected == 4
+                    || params.mouseSelector.selected == 5)
+                    && sim.is_inside(params, rotation, 
+                        0.01*Interactor::get_scroll(), cursor_positions[0])
+                ) {
+                    float amplitude = 1.0;
+                    if (params.mouseSelector.selected == 2) {
+                        sim.sketch_modify_potential(
+                            params, rotation, 0.01*Interactor::get_scroll(),
+                            cursor_positions[cursor_positions.size() - 1],
+                            amplitude, 0.01);
+                    }
+                    if (params.mouseSelector.selected == 3) {
+                        float amplitude = -1.0;
+                        sim.sketch_modify_potential(
+                            params, rotation, 0.01*Interactor::get_scroll(),
+                            cursor_positions[cursor_positions.size() - 1],
+                            amplitude, 0.01);
+                    }
+                    if (params.mouseSelector.selected == 4) {
+                        amplitude = 100.0;
+                        if (cursor_positions.size() > 1)
+                            sim.sketch_modify_potential(
+                                params, rotation, 
+                                0.01*Interactor::get_scroll(),
+                                cursor_positions[cursor_positions.size() - 2],
+                                cursor_positions[cursor_positions.size() - 1],
+                                amplitude, 0.01);
+                    }
+                    if (params.mouseSelector.selected == 5) {
+                        amplitude = 100.0;
+                        sim.erase_modify_potential(
+                            params, rotation, 
+                            0.01*Interactor::get_scroll(),
+                            cursor_positions[cursor_positions.size() - 1],
+                            amplitude, 0.01);
+                    }
+                } else {
+                    rotation = rotation*rot; 
+                }               
             }
         } else {
         }
@@ -344,16 +415,30 @@ void simulation_ui_interface_handler(
         if (potential_text_edit.program_queued()) {
             UserDefinedProgram user_defined = potential_text_edit.expend_program();
             sim.add_user_defined(
-                params, user_defined.program, user_defined.uniforms);
+                params, user_defined.program, user_defined.uniforms,
+                potential_text_edit.is_time_dependent());
 
         }
         for (int i = 0; i < params.stepsPerFrame; i++) {
+            // if (is_placing_new_wave_function(params, cursor_positions))
+            //     break;
+            if (cursor_positions.size() > 0 && params.mouseSelector.selected == 1
+                && sim.is_inside(params, rotation, 
+                        0.01*Interactor::get_scroll(), cursor_positions[0]))
+                break;
             sim.time_step(params);
             params.t += params.dt;
         }
-        main_render.draw(
-            sim.view(params, hover_position, 
-                rotation, 0.01*Interactor::get_scroll()));
+        if (cursor_positions.size() > 0 && params.mouseSelector.selected == 1
+            && sim.is_inside(params, rotation, 
+                        0.01*Interactor::get_scroll(), cursor_positions[0]))
+            main_render.draw(
+                sim.view(params, cursor_positions[0], 
+                    rotation, 0.01*Interactor::get_scroll()));
+        else
+            main_render.draw(
+                sim.view(params, hover_position, 
+                    rotation, 0.01*Interactor::get_scroll()));
 
         if (hover_position.has_value()) {
             Vec3 loc = sim.get_cursor_location();
@@ -375,7 +460,7 @@ void simulation_ui_interface_handler(
         }
 
         if (params.takeScreenshots.is_recording)
-            download_bmp_image("render-in-3d");
+            download_bmp_image("dirac-3d");
 
         auto poll_events = [&] {
             // Tell GLFW to poll events

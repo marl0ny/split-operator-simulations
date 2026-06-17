@@ -32,6 +32,12 @@ uniform int scalarType;
 
 uniform float brightness;
 
+uniform bool imposeAdditionalGrayScaleTex;
+uniform sampler2D tex2;
+uniform float gsOffset;
+uniform float gsBrightness;
+uniform float gsMaxBrightness;
+
 #define PI 3.141592653589793
 
 complex conj(complex z) {
@@ -90,6 +96,27 @@ vec3 argumentToColor(float argVal) {
     }
 }
 
+uniform int brightnessMode;
+const int ABS_VAL = 1;
+const int ABS_VAL_SQUARED = 2;
+const int INV_ABS_VAL = -1;
+
+vec4 getGrayScaleTexel(sampler2D grayTex) {
+    float initVal = texture2D(grayTex, UV)[0];
+    float val;
+    if (brightnessMode == INV_ABS_VAL) {
+        val = 1.0/abs(initVal) + gsOffset - 1.0;
+    } else if (brightnessMode == ABS_VAL_SQUARED) {
+        val = abs(initVal)*abs(initVal) + gsOffset;
+    } else {
+        val = initVal + gsOffset;
+    }
+    vec3 color = vec3(val);
+    return vec4(
+        max(min(brightness*color, gsMaxBrightness), -gsMaxBrightness),
+        max(min(brightness*val, gsMaxBrightness), -gsMaxBrightness));
+}
+
 void main() {
     float scalarVal = getScalar();
     if (scalarType == PSEUDOSCALAR)
@@ -97,4 +124,6 @@ void main() {
     vec3 color = argumentToColor((scalarVal < 0.0)? PI: 0.0);
     fragColor = vec4(
         brightness*abs(scalarVal)*color, abs(scalarVal)*brightness);
+    if (imposeAdditionalGrayScaleTex)
+        fragColor += getGrayScaleTexel(tex2);
 }

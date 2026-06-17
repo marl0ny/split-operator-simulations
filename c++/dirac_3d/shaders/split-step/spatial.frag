@@ -31,6 +31,8 @@ out vec4 fragColor;
 uniform float dt;
 uniform float c;
 uniform float hbar;
+
+uniform bool useAbsorbingBoundaries;
 uniform float absCoeff;
 
 uniform sampler2D uTex;
@@ -209,8 +211,8 @@ complex2 applyAbsorbingBoundaries(complex2 psi, complex2 psi01, complex2 psi23) 
     dampPot += a*exp(-0.5*(y-1.0)*(y-1.0)/(s*s));
     dampPot += a*exp(-0.5*z*z/(s*s));
     dampPot += a*exp(-0.5*(z-1.0)*(z-1.0)/(s*s));
-    return psi*exp(-c*dt*dampPot/hbar);
-    // return exp(-length(current)*10000.0*dt)*z;
+    float dimScale = float(texelDimensions3D[0])/64.0;
+    return psi*exp(-dt*dimScale*dampPot/hbar);
 }
 
 void main() {
@@ -274,7 +276,10 @@ void main() {
     float arg = -c*scalarPotential*dt/hbar;
     complex expV = complex(cos(arg), sin(arg));
 
-    fragColor = (spinorIndex == TOP)? 
-        c1C2(expV, applyAbsorbingBoundaries(psi01, psi01, psi23)):
-        c1C2(expV, applyAbsorbingBoundaries(psi23, psi01, psi23));
+    if (useAbsorbingBoundaries) {
+        psi01 = applyAbsorbingBoundaries(psi01, psi01, psi23);
+        psi23 = applyAbsorbingBoundaries(psi23, psi01, psi23);
+    }
+
+    fragColor = (spinorIndex == TOP)? c1C2(expV, psi01): c1C2(expV, psi23);
 }
