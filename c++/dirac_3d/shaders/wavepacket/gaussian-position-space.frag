@@ -93,48 +93,25 @@ vec3 to3DTextureCoordinates(vec2 uv) {
     return vec3(u, v, w);
 }
 
-complex scalarWavepacket(vec3 r) {
+#define TWO_PI_POW_3_OVER_4 3.9685778240728022
+
+float gaussian(vec3 r) {
     float sx = sigmaTexCoord.x;
     float sy = sigmaTexCoord.y;
     float sz = sigmaTexCoord.z;
-    float gx = exp(-0.25*pow(r.x/sx, 2.0))/sqrt(sx*sqrt(2.0*PI));
-    float gy = exp(-0.25*pow(r.y/sy, 2.0))/sqrt(sy*sqrt(2.0*PI));
-    float gz = exp(-0.25*pow(r.z/sz, 2.0))/sqrt(sz*sqrt(2.0*PI));
-    float g = gx*gy*gz;
-    complex phase = complex(cos(2.0*PI*dot(waveNumber, r)),
-                            sin(2.0*PI*dot(waveNumber, r)));
-    return amplitude*g*phase;
+    return exp(-0.25*dot(r/sigmaTexCoord, r/sigmaTexCoord))
+        / (sqrt(sx*sy*sz)*TWO_PI_POW_3_OVER_4);
 }
 
 complex scalarWavepacketPeriodic(vec3 r) {
-    return
-        + scalarWavepacket(vec3(r.x + (-1.0), r.y + (-1.0), r.z + (-1.0)))
-        + scalarWavepacket(vec3(r.x + (-1.0), r.y + (-1.0), r.z + (0.0)))
-        + scalarWavepacket(vec3(r.x + (-1.0), r.y + (-1.0), r.z + (1.0)))
-        + scalarWavepacket(vec3(r.x + (-1.0), r.y + (0.0), r.z + (-1.0)))
-        + scalarWavepacket(vec3(r.x + (-1.0), r.y + (0.0), r.z + (0.0)))
-        + scalarWavepacket(vec3(r.x + (-1.0), r.y + (0.0), r.z + (1.0)))
-        + scalarWavepacket(vec3(r.x + (-1.0), r.y + (1.0), r.z + (-1.0)))
-        + scalarWavepacket(vec3(r.x + (-1.0), r.y + (1.0), r.z + (0.0)))
-        + scalarWavepacket(vec3(r.x + (-1.0), r.y + (1.0), r.z + (1.0)))
-        + scalarWavepacket(vec3(r.x + (0.0), r.y + (-1.0), r.z + (-1.0)))
-        + scalarWavepacket(vec3(r.x + (0.0), r.y + (-1.0), r.z + (0.0)))
-        + scalarWavepacket(vec3(r.x + (0.0), r.y + (-1.0), r.z + (1.0)))
-        + scalarWavepacket(vec3(r.x + (0.0), r.y + (0.0), r.z + (-1.0)))
-        + scalarWavepacket(vec3(r.x + (0.0), r.y + (0.0), r.z + (0.0)))
-        + scalarWavepacket(vec3(r.x + (0.0), r.y + (0.0), r.z + (1.0)))
-        + scalarWavepacket(vec3(r.x + (0.0), r.y + (1.0), r.z + (-1.0)))
-        + scalarWavepacket(vec3(r.x + (0.0), r.y + (1.0), r.z + (0.0)))
-        + scalarWavepacket(vec3(r.x + (0.0), r.y + (1.0), r.z + (1.0)))
-        + scalarWavepacket(vec3(r.x + (1.0), r.y + (-1.0), r.z + (-1.0)))
-        + scalarWavepacket(vec3(r.x + (1.0), r.y + (-1.0), r.z + (0.0)))
-        + scalarWavepacket(vec3(r.x + (1.0), r.y + (-1.0), r.z + (1.0)))
-        + scalarWavepacket(vec3(r.x + (1.0), r.y + (0.0), r.z + (-1.0)))
-        + scalarWavepacket(vec3(r.x + (1.0), r.y + (0.0), r.z + (0.0)))
-        + scalarWavepacket(vec3(r.x + (1.0), r.y + (0.0), r.z + (1.0)))
-        + scalarWavepacket(vec3(r.x + (1.0), r.y + (1.0), r.z + (-1.0)))
-        + scalarWavepacket(vec3(r.x + (1.0), r.y + (1.0), r.z + (0.0)))
-        + scalarWavepacket(vec3(r.x + (1.0), r.y + (1.0), r.z + (1.0)));
+    complex phase = complex(cos(2.0*PI*dot(waveNumber, r)),
+                            sin(2.0*PI*dot(waveNumber, r)));
+    float g = 0.0;
+    for (float i = -1.0; i < 2.0; i += 1.0)
+        for (float j = -1.0; j < 2.0; j += 1.0)
+            for (float k = -1.0; k < 2.0; k += 1.0)
+                g += gaussian(r + vec3(i, j, k));
+    return amplitude*g*phase;
 }
 
 //////////////////////////////////////////////////////////////////////////////

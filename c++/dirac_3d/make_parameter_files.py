@@ -494,6 +494,7 @@ function createHoveringLabelOnCanvas(enumCode, labelContent) {
     div.style = `position: absolute; z-index: 10;`;
     div.id = `hovering-canvas-label-${enumCode}`;
     let label = document.createElement("label");
+    label.className = 'hovering-label';
     label.textContent = labelContent;
     div.appendChild(label);
     document.getElementById('inner-div2').prepend(div);

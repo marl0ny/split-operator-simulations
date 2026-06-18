@@ -14,7 +14,7 @@
     "cdtdx": {
         "name": "c|Δt|/Δx", "type": "float", "value": 0.99, "min": 0.0, "max": 1.0, "step": 0.01},
     "c": {
-        "name": "c (a.u.)", "type": "float", "value": 137.06},
+        "name": "c (a.u.)", "type": "float", "value": 137.036},
     "hbar": {
         "name": "hbar (a.u.)", "type": "float", "value": 1.0},
     "m": {
@@ -26,11 +26,19 @@
     "texelSideLength": {
         "name": "Grid Side Length (Cubic)", "type": "int", "value": 64},
     "sideLength": {
-        "name": "Simulation Side Length", "type": "float", "value": 8.0},
+        "name": "Simulation Side Length", "type": "float", "value": 2.0},
     "simulationDimensions3D": {
         "name": "Discretization dimensions", "type": "IVec3", "value": [64, 64, 64]},
     "dataTexelDimensions3D": {
-            "name": "Volume dimensions", "type": "IVec3", "value": [64, 64, 64]},
+        "name": "Volume dimensions", "type": "IVec3", "value": [64, 64, 64]},
+    "potentialSketchHeight": {
+        "name": "Potential sketch height", "type": "float", "value": 70.0},
+    "maxPotentialSketchHeight": {
+        "name": "Maximum potential sketch height", "type": "float", "value": 200.0},
+    "vectorPotentialSketchMag": {
+        "name": "3-vector potential sketch magnitude", "type": "float", "value": 700.0},
+    "maxVectorSketchMag": {
+        "name": "Maximum 3-vector potential sketch magnitude", "type": "float", "value": 100000.0},
 
     "visualizationControlsStart": {"name": "Visualization Controls", "type": "SubSectionStart", "value": {}},
 
@@ -40,6 +48,8 @@
             "name": "Use perspective projection", "type": "bool", "value": true},
         "brightness": {
             "name": "Overall scaling", "type": "float", "value": 0.25, "min": 0.0, "max": 2.0, "step": 0.01},
+        "showMomentumSpace": {
+                "name": "Momentum space view", "type": "bool", "value": false},
         
         "waveFuncVisStart": {"name": "Wave Function Visualization Options", "type": "SubSectionStart", "value": "{}"},
             "adjNoteLabel": {
@@ -144,7 +154,7 @@
             "type": "Label", "value": "{}", "style": "font-weight: normal;"},
         "presetPotentialsDropdown": {
             "name": "Presets", "type": "SelectionList", 
-            "value": "{0, {\"0\", \"abs(a)*((x/width)^2 + (y/height)^2 + (z/depth)^2)\", \"abs(a)/sqrt(x^2 + y^2 + z^2)\", \"10.0*(step(-y^2+(height*0.084*s1)^2)+step(y^2-(height*0.126*s2)^2))*step(-x^2+(width*0.04*w)^2)\", \"step(sqrt( (x/width)^2 + (y/height)^2 + (z/depth)^2 ) - 0.45)\"}}"},
+            "value": "{0, {\"0\", \"abs(15.0*a)*((x/width)^2 + (y/height)^2 + (z/depth)^2)\", \"abs(a)/sqrt(x^2 + y^2 + z^2)\", \"70.0*(step(-y^2+(height*0.084*s1)^2)+step(y^2-(height*0.126*s2)^2))*step(-x^2+(width*0.04*w)^2)\", \"50.0*step(sqrt( (x/width)^2 + (y/height)^2 + (z/depth)^2 ) - 0.45)\"}}"},
         "latexLabel1": {
             "name": "KaTeX Label", "type": "KaTeXLabel", "value": {}},
         "fourVectorPotential": {
@@ -157,7 +167,7 @@
         "useAbsorbingBoundaries": {
             "name": "Absorbers at boundaries (currently does not work well enough)", "type": "bool", "value": false},
         "absCoeff": {
-            "name": "Absorbtion strength", "type": "float", "value": 137.036, "min": 0.0, "max": 500.0, "step": 0.01
+            "name": "Absorbtion strength", "type": "float", "value": 4374.0, "min": 0.0, "max": 20000.0, "step": 1.0
         },
     "boundariesEnd": {"name": "Boundary Controls", "type": "SubSectionEnd", "value": {}},
 

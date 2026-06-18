@@ -78,6 +78,10 @@ void edit_bool_display(int c, bool value) {
     // TODO
 }
 
+void edit_hovering_canvas_label_display(int c, std::string val) {
+    // TODO
+}
+
 void download_bmp_image(std::string postfix_name) {
     unsigned char *image_data = s_bmp_image();
     int image_size = s_bmp_image_size();

@@ -90,14 +90,14 @@ vec4 getDomainColoringTexel(sampler2D colTex) {
     complex phaseFactor = complex(cos(phaseAdjust), sin(phaseAdjust));
     complex z2 = mul(phaseFactor, z1);
     vec3 color = argumentToColor(atan(z2.y, z2.x));
-    return vec4(gsBrightness*length(z2)*color, gsBrightness*length(z2));
+    return vec4(brightness*length(z2)*color, brightness*length(z2));
     float brightness2;
     if (brightnessMode == ABS_VAL_SQUARED) {
-        brightness2 = gsBrightness*length(z2)*length(z2);
+        brightness2 = brightness*length(z2)*length(z2);
     } else if (brightnessMode == INV_ABS_VAL) {
-        brightness2 = gsBrightness/(length(z2)) - 1.0;
+        brightness2 = brightness/(length(z2)) - 1.0;
     } else {
-        brightness2 = gsBrightness*length(z2);
+        brightness2 = brightness*length(z2);
     }
     return vec4(brightness2*color, brightness2);
 }
@@ -114,8 +114,8 @@ vec4 getGrayScaleTexel(sampler2D grayTex) {
     }
     vec3 color = vec3(val);
     return vec4(
-        max(min(brightness*color, gsMaxBrightness), -gsMaxBrightness),
-        max(min(brightness*val, gsMaxBrightness), -gsMaxBrightness));
+        max(min(gsBrightness*color, gsMaxBrightness), -gsMaxBrightness),
+        max(min(gsBrightness*val, gsMaxBrightness), -gsMaxBrightness));
 }
 
 void main() {

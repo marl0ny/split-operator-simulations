@@ -349,63 +349,9 @@ void simulation_ui_interface_handler(
                 Vec3 axis = cross_product(delta, view_vec);
                 Quaternion rot = Quaternion::rotator(
                     3.0*axis.length(), axis);
-                if (params.mouseSelector.selected == 1 && 
-                    sim.is_inside(params, rotation, 
-                        0.01*Interactor::get_scroll(), cursor_positions[0]) 
-                    ) {
-                    // Vec3 cursor_location = sim.get_cursor_location();
-                    sim.init_from_cursor_positions(
-                        params, rotation,
-                        0.01*Interactor::get_scroll(), 
-                        cursor_positions[0], 
-                        cursor_positions[cursor_positions.size() - 1],
-                        params.sigma);
-                    // sim.init(
-                    //     params, 
-                    //     cursor_location + Vec3{.x=0.5, 0.5, 0.5}, 
-                    //     params.wavenumber, params.sigma);
-                } else if ((params.mouseSelector.selected == 2 
-                    || params.mouseSelector.selected == 3
-                    || params.mouseSelector.selected == 4
-                    || params.mouseSelector.selected == 5)
-                    && sim.is_inside(params, rotation, 
-                        0.01*Interactor::get_scroll(), cursor_positions[0])
-                ) {
-                    float amplitude = 1.0;
-                    if (params.mouseSelector.selected == 2) {
-                        sim.sketch_modify_potential(
-                            params, rotation, 0.01*Interactor::get_scroll(),
-                            cursor_positions[cursor_positions.size() - 1],
-                            amplitude, 0.01);
-                    }
-                    if (params.mouseSelector.selected == 3) {
-                        float amplitude = -1.0;
-                        sim.sketch_modify_potential(
-                            params, rotation, 0.01*Interactor::get_scroll(),
-                            cursor_positions[cursor_positions.size() - 1],
-                            amplitude, 0.01);
-                    }
-                    if (params.mouseSelector.selected == 4) {
-                        amplitude = 100.0;
-                        if (cursor_positions.size() > 1)
-                            sim.sketch_modify_potential(
-                                params, rotation, 
-                                0.01*Interactor::get_scroll(),
-                                cursor_positions[cursor_positions.size() - 2],
-                                cursor_positions[cursor_positions.size() - 1],
-                                amplitude, 0.01);
-                    }
-                    if (params.mouseSelector.selected == 5) {
-                        amplitude = 100.0;
-                        sim.erase_modify_potential(
-                            params, rotation, 
-                            0.01*Interactor::get_scroll(),
-                            cursor_positions[cursor_positions.size() - 1],
-                            amplitude, 0.01);
-                    }
-                } else {
-                    rotation = rotation*rot; 
-                }               
+                if (!sim.modify_from_mouse_touch_input(
+                    params, rotation, 0.01*Interactor::get_scroll(), cursor_positions))
+                    rotation = rotation*rot;    
             }
         } else {
         }
@@ -445,14 +391,35 @@ void simulation_ui_interface_handler(
             Vec3 scaled_loc = sim.get_scaled_cursor_location(params);
             if (loc.x >= -1.0 && loc.x < 1.0 && loc.y >= -1.0 && loc.y < 1.0
                 && loc.z >= -1.0 && loc.z < 1.0) {
-                #ifdef __EMSCRIPTEN__
-                edit_hovering_canvas_label_display(
-                    SimParams::CANVAS_HOVER_DISPLAY,
-                    "x: " + std::to_string(scaled_loc.x) + ", "
-                    + "y: " + std::to_string(scaled_loc.y) + ", "
-                    + "z: " + std::to_string(scaled_loc.z)
-                );
-                #endif
+                // #ifdef __EMSCRIPTEN__
+                if (params.showMomentumSpace) {
+                    float x = std::round(scaled_loc.x*100)/100.0F;
+                    float y = std::round(scaled_loc.y*100)/100.0F;
+                    float z = std::round(scaled_loc.z*100)/100.0F;
+                    float m = params.m;
+                    float c = params.c;
+                    float px = 2.0*3.14159*scaled_loc.x/float(params.sideLength);
+                    float py = 2.0*3.14159*scaled_loc.y/float(params.sideLength);
+                    float pz = 2.0*3.14159*scaled_loc.z/float(params.sideLength);
+                    float p2 = px*px + py*py + pz*pz;
+                    float energy = sqrt(m*m*c*c*c*c + c*c*p2);
+                    edit_hovering_canvas_label_display(
+                        SimParams::CANVAS_HOVER_DISPLAY,
+                        "|E(𝐩)|: " + std::to_string(int(energy)) + ", "
+                        + "px: " + std::to_string(x).substr(0, 5) + "(2π)/L, "
+                        + "py: " + std::to_string(y).substr(0, 5) + "(2π)/L, "
+                        + "pz: " + std::to_string(z).substr(0, 5) + "(2π)/L"
+
+                    );
+                } else {
+                    edit_hovering_canvas_label_display(
+                        SimParams::CANVAS_HOVER_DISPLAY,
+                        "x: " + std::to_string(scaled_loc.x) + ", "
+                        + "y: " + std::to_string(scaled_loc.y) + ", "
+                        + "z: " + std::to_string(scaled_loc.z)
+                    );
+                }
+                // #endif
                 /* edit_hovering_canvas_visibility_top_left_offset(
                     SimParams::CANVAS_HOVER_DISPLAY, true, 50, 50
                 );*/

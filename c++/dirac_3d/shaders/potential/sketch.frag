@@ -80,8 +80,12 @@ void main() {
     if (newVal[0] < 0.0)
         newVal[0] = (oldVal[0] > 0.0)? 0.0: oldVal[0];
     // Limit the possible magnitude of the vector potential.
-    if (dot(newVal.bga, newVal.bga) > maxVectorMag)
-        newVal.bga = normalize(newVal.bga)*maxVectorMag; 
+    vec3 threeVec = vec3(newVal[1], newVal[2], newVal[3]);
+    if (dot(threeVec, threeVec) > maxVectorMag)
+        threeVec = normalize(threeVec)*maxVectorMag;
+    newVal[1] = threeVec.x;
+    newVal[2] = threeVec.y;
+    newVal[3] = threeVec.z;
     fragColor = newVal;
 
 }

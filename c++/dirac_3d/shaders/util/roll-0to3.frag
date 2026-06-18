@@ -20,7 +20,7 @@ uniform sampler2D tex;
 
 void main() {
     vec4 texel = texture2D(tex, UV);
-    vec3 xyz = texel.gba;
-    float w = texel.r;
+    vec3 xyz = vec3(texel[1], texel[2], texel[3]);
+    float w = texel[0];
     fragColor = vec4(xyz, w);
 }
