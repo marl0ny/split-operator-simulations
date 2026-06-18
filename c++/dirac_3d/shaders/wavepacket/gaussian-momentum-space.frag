@@ -100,15 +100,17 @@ complex wavepacket(vec3 p, vec3 x0) {
     float sx = sigma.x;
     float sy = sigma.y;
     float sz = sigma.z;
+    // exp(-p^2 s^2 + i p x)
+    // alpha = s^2
+    // exp ((ix)^2/(4 sx^2))
+    float dp3 = float(
+        texelDimensions3D[0]*texelDimensions3D[1]*texelDimensions3D[2]);
     float gx = exp(-pow(p.x*sx/hbar, 2.0))/sqrt(PI*hbar/sx);
     float gy = exp(-pow(p.y*sy/hbar, 2.0))/sqrt(PI*hbar/sy);
     float gz = exp(-pow(p.z*sz/hbar, 2.0))/sqrt(PI*hbar/sz);
     float g = gx*gy*gz;
     complex phase = complex(cos(dot(p, x0)), -sin(dot(p, x0)));
-    return amplitude*g*phase
-        *float(texelDimensions3D[0])
-        *float(texelDimensions3D[1])
-        *float(texelDimensions3D[2]);
+    return amplitude*g*phase*dp3;
 }
 
 

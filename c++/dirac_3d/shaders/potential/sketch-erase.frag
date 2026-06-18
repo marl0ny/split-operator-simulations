@@ -74,10 +74,8 @@ void main() {
     float gy = exp(-0.5*(y - y0)*(y - y0)/(sigmaY*sigmaY));
     float gz = exp(-0.5*(z - z0)*(z - z0)/(sigmaZ*sigmaZ));
     vec4 fourVec = texture2D(tex, UV);
-    vec3 threeVec = fourVec.bga;
-    float threeVecMag = length(threeVec) - amplitude*gx*gy*gz;
-    if (threeVecMag < 0.0)
-        threeVecMag = 0.0;
+    vec3 threeVec = vec3(fourVec[1], fourVec[2], fourVec[3]);
+    float threeVecMag = max(0.0, length(threeVec) - amplitude*gx*gy*gz);
     if (length(threeVec) > 0.0)
         threeVec = normalize(threeVec)*threeVecMag;
     fragColor = vec4(fourVec[0], threeVec);

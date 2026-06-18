@@ -21,12 +21,9 @@ uniform sampler2D tex;
 
 uniform ivec3 texelDimensions3D;
 uniform ivec2 texelDimensions2D;
-uniform int orientation;
 
-const int ORIENTATION_0 = 0;
-const int ORIENTATION_1 = 1;
-const int ORIENTATION_2 = 2;
-
+uniform bool applyScaling;
+uniform float scale;
 
 vec2 to2DTextureCoordinates(vec3 uvw) {
     int width2D = texelDimensions2D[0];
@@ -67,4 +64,6 @@ void main() {
     float w = (w0 < 0.5)? w0 + 0.5: w0 - 0.5;
     vec3 uvw = vec3(u, v, w);
     fragColor = texture2D(tex, to2DTextureCoordinates(uvw));
+    if (applyScaling)
+        fragColor *= scale;
 }

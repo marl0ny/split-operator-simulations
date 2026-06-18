@@ -46,19 +46,24 @@ struct SimParams {
     SelectionList texelSideLengthSelector = SelectionList{0, {"64x64x64", "128x128x128", "256x256x256"}};
     Label dtLabel = Label{};
     float cdtdx = (float)(0.99F);
-    float c = (float)(137.06F);
+    float c = (float)(137.036F);
     float hbar = (float)(1.0F);
     float m = (float)(1.0F);
     float dt = (float)(2.8e-05F);
     float t = (float)(0.0F);
     int texelSideLength = (int)(64);
-    float sideLength = (float)(8.0F);
+    float sideLength = (float)(2.0F);
     IVec3 simulationDimensions3D = (IVec3)(IVec3 {.ind={64, 64, 64}});
     IVec3 dataTexelDimensions3D = (IVec3)(IVec3 {.ind={64, 64, 64}});
+    float potentialSketchHeight = (float)(70.0F);
+    float maxPotentialSketchHeight = (float)(200.0F);
+    float vectorPotentialSketchMag = (float)(700.0F);
+    float maxVectorSketchMag = (float)(100000.0F);
     SubSectionStart visualizationControlsStart = SubSectionStart{};
     SelectionList visualizationSelect = SelectionList{0, {"Volume render", "Three orthogonal planar slices"}};
     bool usePerspectiveProjection = (bool)(true);
     float brightness = (float)(0.25F);
+    bool showMomentumSpace = (bool)(false);
     SubSectionStart waveFuncVisStart = SubSectionStart{};
     Label adjNoteLabel = Label{};
     bool showCurrent0 = (bool)(false);
@@ -110,14 +115,14 @@ struct SimParams {
     SubSectionEnd initializeWaveFunctionEnd = SubSectionEnd{};
     SubSectionStart initializePotentialStart = SubSectionStart{};
     Label potLabel = Label{};
-    SelectionList presetPotentialsDropdown = SelectionList{0, {"0", "abs(a)*((x/width)^2 + (y/height)^2 + (z/depth)^2)", "abs(a)/sqrt(x^2 + y^2 + z^2)", "10.0*(step(-y^2+(height*0.084*s1)^2)+step(y^2-(height*0.126*s2)^2))*step(-x^2+(width*0.04*w)^2)", "step(sqrt( (x/width)^2 + (y/height)^2 + (z/depth)^2 ) - 0.45)"}};
+    SelectionList presetPotentialsDropdown = SelectionList{0, {"0", "abs(15.0*a)*((x/width)^2 + (y/height)^2 + (z/depth)^2)", "abs(a)/sqrt(x^2 + y^2 + z^2)", "70.0*(step(-y^2+(height*0.084*s1)^2)+step(y^2-(height*0.126*s2)^2))*step(-x^2+(width*0.04*w)^2)", "50.0*step(sqrt( (x/width)^2 + (y/height)^2 + (z/depth)^2 ) - 0.45)"}};
     KaTeXLabel latexLabel1 = KaTeXLabel{};
     EntryBoxes fourVectorPotential = EntryBoxes{"0", "0", "0", "0"};
     SubSectionEnd initializePotentialEnd = SubSectionEnd{};
     SubSectionStart boundariesStart = SubSectionStart{};
     Label periodicLabel = Label{};
     bool useAbsorbingBoundaries = (bool)(false);
-    float absCoeff = (float)(137.036F);
+    float absCoeff = (float)(4374.0F);
     SubSectionEnd boundariesEnd = SubSectionEnd{};
     BMPRecord takeScreenshots = BMPRecord{false, 1440, 1440};
     HoveringCanvasLabel canvasHoverDisplay = HoveringCanvasLabel{};
@@ -138,73 +143,78 @@ struct SimParams {
         SIDE_LENGTH=12,
         SIMULATION_DIMENSIONS3_D=13,
         DATA_TEXEL_DIMENSIONS3_D=14,
-        VISUALIZATION_CONTROLS_START=15,
-        VISUALIZATION_SELECT=16,
-        USE_PERSPECTIVE_PROJECTION=17,
-        BRIGHTNESS=18,
-        WAVE_FUNC_VIS_START=19,
-        ADJ_NOTE_LABEL=20,
-        SHOW_CURRENT0=21,
-        SHOW_PSUEDOCURRENT0=22,
-        SHOW_SCALAR=23,
-        SHOW_PSEUDOSCALAR=24,
-        SHOW_PSI0_W_PHASE=25,
-        SHOW_PSI1_W_PHASE=26,
-        SHOW_PSI2_W_PHASE=27,
-        SHOW_PSI3_W_PHASE=28,
-        SHOW_SPATIAL_CURRENT=29,
-        SHOW_PSEUDOSPATIAL_CURRENT=30,
-        SHOW_PSI01_SPIN=31,
-        SHOW_PSI23_SPIN=32,
-        WAVE_FUNC_VIS_END=33,
-        POTENTIAL_VIS_START=34,
-        SHOW_SCALAR_POTENTIAL=35,
-        SHOW_VECTOR_POTENTIAL=36,
-        SHOW_ELECTRIC=37,
-        SHOW_MAGNETIC=38,
-        POTENTIAL_VIS_END=39,
-        VOLUME_RENDER_SECTION_START=40,
-        USE_LINEAR=41,
-        ALPHA_BRIGHTNESS=42,
-        COLOR_BRIGHTNESS=43,
-        VOLUME_TEXEL_DIMENSIONS3_D=44,
-        APPLY_BLUR=45,
-        BLUR_SIZE=46,
-        VOLUME_RENDER_SECTION_END=47,
-        PLANAR_SLICES_SECTION_START=48,
-        PLANAR_NORM_COORD_OFFSETS=49,
-        PLANAR_SLICES_SECTION_END=50,
-        ARROWS3_D_LINE_SECTION_START=51,
-        ARROW_DIMENSIONS=52,
-        USE_CONES=53,
-        ARROWS3_D_LINE_SECTION_END=54,
-        VISUALIZATION_CONTROLS_END=55,
-        INITIALIZE_WAVE_FUNCTION_START=56,
-        SIGMA=57,
-        POS_E=58,
-        NEG_E=59,
-        POS_SPIN_DIR=60,
-        ORIENTATIONS_M_S_G_LABEL=61,
-        NEG_SPIN_DIR=62,
-        MOMENTUM_SPACE_INIT=63,
-        WAVENUMBER=64,
-        POSITION=65,
-        INITIALIZE_NEW_WAVE_FUNCTION_BUTTON=66,
-        INITIALIZE_WAVE_FUNCTION_END=67,
-        INITIALIZE_POTENTIAL_START=68,
-        POT_LABEL=69,
-        PRESET_POTENTIALS_DROPDOWN=70,
-        LATEX_LABEL1=71,
-        FOUR_VECTOR_POTENTIAL=72,
-        INITIALIZE_POTENTIAL_END=73,
-        BOUNDARIES_START=74,
-        PERIODIC_LABEL=75,
-        USE_ABSORBING_BOUNDARIES=76,
-        ABS_COEFF=77,
-        BOUNDARIES_END=78,
-        TAKE_SCREENSHOTS=79,
-        CANVAS_HOVER_DISPLAY=80,
-        DUMMY_VALUE=81,
+        POTENTIAL_SKETCH_HEIGHT=15,
+        MAX_POTENTIAL_SKETCH_HEIGHT=16,
+        VECTOR_POTENTIAL_SKETCH_MAG=17,
+        MAX_VECTOR_SKETCH_MAG=18,
+        VISUALIZATION_CONTROLS_START=19,
+        VISUALIZATION_SELECT=20,
+        USE_PERSPECTIVE_PROJECTION=21,
+        BRIGHTNESS=22,
+        SHOW_MOMENTUM_SPACE=23,
+        WAVE_FUNC_VIS_START=24,
+        ADJ_NOTE_LABEL=25,
+        SHOW_CURRENT0=26,
+        SHOW_PSUEDOCURRENT0=27,
+        SHOW_SCALAR=28,
+        SHOW_PSEUDOSCALAR=29,
+        SHOW_PSI0_W_PHASE=30,
+        SHOW_PSI1_W_PHASE=31,
+        SHOW_PSI2_W_PHASE=32,
+        SHOW_PSI3_W_PHASE=33,
+        SHOW_SPATIAL_CURRENT=34,
+        SHOW_PSEUDOSPATIAL_CURRENT=35,
+        SHOW_PSI01_SPIN=36,
+        SHOW_PSI23_SPIN=37,
+        WAVE_FUNC_VIS_END=38,
+        POTENTIAL_VIS_START=39,
+        SHOW_SCALAR_POTENTIAL=40,
+        SHOW_VECTOR_POTENTIAL=41,
+        SHOW_ELECTRIC=42,
+        SHOW_MAGNETIC=43,
+        POTENTIAL_VIS_END=44,
+        VOLUME_RENDER_SECTION_START=45,
+        USE_LINEAR=46,
+        ALPHA_BRIGHTNESS=47,
+        COLOR_BRIGHTNESS=48,
+        VOLUME_TEXEL_DIMENSIONS3_D=49,
+        APPLY_BLUR=50,
+        BLUR_SIZE=51,
+        VOLUME_RENDER_SECTION_END=52,
+        PLANAR_SLICES_SECTION_START=53,
+        PLANAR_NORM_COORD_OFFSETS=54,
+        PLANAR_SLICES_SECTION_END=55,
+        ARROWS3_D_LINE_SECTION_START=56,
+        ARROW_DIMENSIONS=57,
+        USE_CONES=58,
+        ARROWS3_D_LINE_SECTION_END=59,
+        VISUALIZATION_CONTROLS_END=60,
+        INITIALIZE_WAVE_FUNCTION_START=61,
+        SIGMA=62,
+        POS_E=63,
+        NEG_E=64,
+        POS_SPIN_DIR=65,
+        ORIENTATIONS_M_S_G_LABEL=66,
+        NEG_SPIN_DIR=67,
+        MOMENTUM_SPACE_INIT=68,
+        WAVENUMBER=69,
+        POSITION=70,
+        INITIALIZE_NEW_WAVE_FUNCTION_BUTTON=71,
+        INITIALIZE_WAVE_FUNCTION_END=72,
+        INITIALIZE_POTENTIAL_START=73,
+        POT_LABEL=74,
+        PRESET_POTENTIALS_DROPDOWN=75,
+        LATEX_LABEL1=76,
+        FOUR_VECTOR_POTENTIAL=77,
+        INITIALIZE_POTENTIAL_END=78,
+        BOUNDARIES_START=79,
+        PERIODIC_LABEL=80,
+        USE_ABSORBING_BOUNDARIES=81,
+        ABS_COEFF=82,
+        BOUNDARIES_END=83,
+        TAKE_SCREENSHOTS=84,
+        CANVAS_HOVER_DISPLAY=85,
+        DUMMY_VALUE=86,
     };
     void set(int enum_val, Uniform val) {
         switch(enum_val) {
@@ -241,11 +251,26 @@ struct SimParams {
             case DATA_TEXEL_DIMENSIONS3_D:
             dataTexelDimensions3D = val.ivec3;
             break;
+            case POTENTIAL_SKETCH_HEIGHT:
+            potentialSketchHeight = val.f32;
+            break;
+            case MAX_POTENTIAL_SKETCH_HEIGHT:
+            maxPotentialSketchHeight = val.f32;
+            break;
+            case VECTOR_POTENTIAL_SKETCH_MAG:
+            vectorPotentialSketchMag = val.f32;
+            break;
+            case MAX_VECTOR_SKETCH_MAG:
+            maxVectorSketchMag = val.f32;
+            break;
             case USE_PERSPECTIVE_PROJECTION:
             usePerspectiveProjection = val.b32;
             break;
             case BRIGHTNESS:
             brightness = val.f32;
+            break;
+            case SHOW_MOMENTUM_SPACE:
+            showMomentumSpace = val.b32;
             break;
             case SHOW_CURRENT0:
             showCurrent0 = val.b32;
@@ -378,10 +403,20 @@ struct SimParams {
             return {(IVec3)simulationDimensions3D};
             case DATA_TEXEL_DIMENSIONS3_D:
             return {(IVec3)dataTexelDimensions3D};
+            case POTENTIAL_SKETCH_HEIGHT:
+            return {(float)potentialSketchHeight};
+            case MAX_POTENTIAL_SKETCH_HEIGHT:
+            return {(float)maxPotentialSketchHeight};
+            case VECTOR_POTENTIAL_SKETCH_MAG:
+            return {(float)vectorPotentialSketchMag};
+            case MAX_VECTOR_SKETCH_MAG:
+            return {(float)maxVectorSketchMag};
             case USE_PERSPECTIVE_PROJECTION:
             return {(bool)usePerspectiveProjection};
             case BRIGHTNESS:
             return {(float)brightness};
+            case SHOW_MOMENTUM_SPACE:
+            return {(bool)showMomentumSpace};
             case SHOW_CURRENT0:
             return {(bool)showCurrent0};
             case SHOW_PSUEDOCURRENT0:

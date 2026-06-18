@@ -44,14 +44,14 @@ struct Programs {
         unsigned int scalar;
         unsigned int current;
         unsigned int vector_potential;
+        unsigned int spin;
     } visualization;
     struct {
         unsigned int position;
         unsigned int momentum;
     } wavepacket;
     struct {
-        unsigned int scalar_potential;
-        unsigned int vector_potential;
+        unsigned int potential;
         unsigned int erase_vector_potential;
     } sketch;
     struct {
@@ -80,7 +80,9 @@ class Simulation {
     Frames m_frames;
     std::vector<unsigned char> m_image_rgba_arr;
     std::vector<unsigned char> m_image_data;
+    int next = 1, last = 0;
     bool is_time_dependent_potential = false;
+    enum {VOL_RENDER_VIEW=0, PLANAR_SLICES_VIEW=1};
     const RenderTarget
     &view_volume_render(
         SimParams &params, ::Quaternion rotation, float scale);
@@ -102,11 +104,66 @@ class Simulation {
     void arrows_view(
         const SimParams &params,
         const std::optional<Vec2> &hover,
-        ::Quaternion rotation, float scale);
+        ::Quaternion rotation, float scale, const Vec3 &colour);
     void handle_all_arrow_views(
         const SimParams &params,
         const std::optional<Vec2> &hover,
         ::Quaternion rotation, float scale
+    );
+    void handle_all_volume_render_views(
+        const SimParams &params,
+        const std::optional<Vec2> &hover,
+        ::Quaternion rotation, float scale
+    );
+    void init_from_cursor_positions(
+        const SimParams &sim_params,
+        Quaternion rotate, float scale,
+        const Vec2 &cursor_pos1, const Vec2 &cursor_pos2, float sigma);
+    void init_from_cursor_positions(
+        const SimParams &sim_params,
+        Quaternion rotate, float scale,
+        const Vec3 &cursor_pos1, const Vec3 &cursor_pos2, float sigma);
+    void sketch_modify_potential(
+        const SimParams &sim_params,
+        Quaternion rotate, float scale, const Vec2 cursor_pos,
+        float amplitude, float size
+    );
+    void sketch_modify_potential(
+        const SimParams &sim_params,
+        Quaternion rotate, float scale, 
+        const Vec2 cursor_pos1, const Vec2 cursor_pos2,
+        float amplitude, float size
+    );
+    void sketch_modify_potential(
+        const SimParams &sim_params,
+        Quaternion rotate, float scale, const Vec3 &cursor_pos,
+        float amplitude, float size
+    );
+    void sketch_modify_potential(
+        const SimParams &sim_params,
+        Quaternion rotate, float scale, 
+        const Vec3 &cursor_pos1, const Vec3 &cursor_pos2,
+        float amplitude, float size
+    );
+    void erase_modify_potential(
+        const SimParams &sim_params,
+        Quaternion rotate, float scale, 
+        const Vec2 cursor_pos1,
+        float amplitude, float size
+    );
+    void erase_modify_potential(
+        const SimParams &sim_params,
+        Quaternion rotate, float scale, 
+        const Vec3 &cursor_pos1,
+        float amplitude, float size
+    );
+    bool modify_from_mouse_touch_input_volumetric(
+        const SimParams &params, Quaternion rotation, float scale,
+        const std::vector<Vec2> &cursor_positions
+    );
+    bool modify_from_mouse_touch_input_planar_slices(
+        const SimParams &params, Quaternion rotation, float scale,
+        const std::vector<Vec2> &cursor_positions
     );
 
     public:
@@ -144,42 +201,20 @@ class Simulation {
         const Vec3 &tex_pos, const IVec3 &wave_num, float sigma);
     void init_momentum(const SimParams &params,
         const Vec3 &tex_pos, const IVec3 &wave_num, float sigma);
-    void init_from_cursor_position(
-        const SimParams &sim_params,
-        Quaternion rotate, float scale,
-        int offset_xy, int offset_yz, int offset_xz,
-        const Vec2 &cursor_pos, const IVec3 &wave_num, float sigma);
-    void init_from_cursor_positions(
-        const SimParams &sim_params,
-        Quaternion rotate, float scale,
-        int offset_xy, int offset_yz, int offset_xz,
-        const Vec2 &cursor_pos1, const Vec2 &cursor_pos2, float sigma);
-    void init_from_cursor_positions(
-        const SimParams &sim_params,
-        Quaternion rotate, float scale,
-        const Vec2 &cursor_pos1, const Vec2 &cursor_pos2, float sigma);
-    void sketch_modify_potential(
-        const SimParams &sim_params,
-        Quaternion rotate, float scale, const Vec2 cursor_pos,
-        float amplitude, float size
-    );
-    void sketch_modify_potential(
-        const SimParams &sim_params,
-        Quaternion rotate, float scale, 
-        const Vec2 cursor_pos1, const Vec2 cursor_pos2,
-        float amplitude, float size
-    );
-    void erase_modify_potential(
-        const SimParams &sim_params,
-        Quaternion rotate, float scale, 
-        const Vec2 cursor_pos1,
-        float amplitude, float size
-    );
+    
     float get_max_free_particle_energy(const SimParams &sim_params) const;
+    bool modify_from_mouse_touch_input(
+        const SimParams &params, Quaternion rotation, float scale,
+        const std::vector<Vec2> &cursor_positions
+    );
     bool is_inside(
         const SimParams &params,
         Quaternion rotate, float scale,
         const Vec2 &cursor_pos) const;
+    bool is_inside(
+        const SimParams &params,
+        Quaternion rotate, float scale,
+        const Vec3 &cursor_pos) const;
 };
 
 #endif

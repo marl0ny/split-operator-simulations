@@ -21,6 +21,9 @@ uniform float scale;
 
 void main() {
     vec4 fourVectorPotential = texture2D(tex, UV);
-    vec3 vectorPotential = fourVectorPotential.gba;
+    vec3 vectorPotential = vec3(
+        fourVectorPotential[1],
+        fourVectorPotential[2], 
+        fourVectorPotential[3]);
     fragColor = vec4(scale*vectorPotential, 1.0);
 }
