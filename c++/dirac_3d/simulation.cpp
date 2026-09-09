@@ -1,10 +1,12 @@
 #include "simulation.hpp"
 #include "cube_outline.hpp"
 #include "cursor_outline3d.hpp"
+#include "simple_line_arrow3d.hpp"
 #include "axes3d.hpp"
 #include "bmp.hpp"
 #include "spinors.hpp"
 
+#include <cstdint>
 #include <iostream>
 
 using namespace sim_3d;
@@ -1178,13 +1180,103 @@ void Simulation::handle_all_volume_render_views(
 
 }
 
-
 const RenderTarget &Simulation
-::view(
-    const SimParams &params,
-    const std::optional<Vec2> &hover,
-    ::Quaternion rotation, float scale) {
+::view(const SimParams &params, const std::optional<Vec2> &hover,
+       ::Quaternion rotation, float scale) {
+    return this->view(
+        params,
+        Vec2{.x=-100.0, .y=-100.0}, hover, rotation, scale);
+}
+
+class MomentumArrowTracker {
+    std::optional<Vec3> m_avg_p_arrow {};
+    std::optional<Vec3> m_avg_p_arrow_base_loc {};
+    bool m_show;
+    public:
+    MomentumArrowTracker(
+        bool show,
+        const RenderTarget &render,
+        const Vec2 &prev, 
+        const std::optional<Vec2> &hover,
+        ::Quaternion rotation, float scale) {
+        this->m_show = show;
+        IVec2 tex_dims = render.texture_dimensions();
+        Vec3 r = Vec3{
+            .x=prev.x,
+            .y=prev.y*(float(tex_dims[1])/float(tex_dims[0]))
+                + 0.5F*(1.0F - float(tex_dims[1])/float(tex_dims[0])),
+            .z=0.0};
+        r = 2.0*scale_rotate(r, scale, rotation);
+        Vec3 r2 = Vec3{
+            .x=hover->x,
+            .y=hover->y*(float(tex_dims[1])/float(tex_dims[0]))
+                + 0.5F*(1.0F - float(tex_dims[1])/float(tex_dims[0])),
+            .z=0.0};
+        r2 = 2.0*scale_rotate(r2, scale, rotation);
+        if (r.x >= -1.0 && r.x < 1.0 && 
+            r.y >= -1.0 && r.y < 1.0 &&
+            r.z >= -1.0 && r.z < 1.0) {
+            this->m_avg_p_arrow = (r2 - r);
+            this->m_avg_p_arrow_base_loc = r;
+        }  
+    }
+
+    void show(
+        RenderTarget &render,
+        uint32_t program,
+        const Vec2 &prev, 
+        const std::optional<Vec2> &hover,
+        ::Quaternion rotation, float scale,
+        bool use_perspective_projection
+
+    ) {
+        if (m_show && 
+            m_avg_p_arrow.has_value() && 
+            m_avg_p_arrow_base_loc.has_value()) {
+            Vec3 arrow = *m_avg_p_arrow;
+            Vec3 base = *m_avg_p_arrow_base_loc;
+            // std::cout << "Sep. distance: " << arrow.length() << std::endl;
+            // std::cout << "x: " << arrow.x << std::endl;
+            // std::cout << "y: " << arrow.y << std::endl;
+            // std::cout << "z: " << arrow.z << std::endl;
+            Quaternion q_view = rotate(
+                ::Quaternion{.real=1.0, .i=0.0, .j=0.0, .k=1.0}, rotation);
+            Vec3 view = Vec3{.x=q_view.i, .y=q_view.j, .z=q_view.k};
+            Vec3 l = ::cross_product(arrow, view.normalized());
+            Vec3 r = ::cross_product(view.normalized(), arrow);
+            WireFrame simple_arrow = simple_line_arrow3d::get_wire_frame(
+                base, base + arrow, 
+                base + (0.9*arrow + 0.1*l),
+                base + (0.9*arrow + 0.1*r));
+            render.draw(
+                program,
+                {
+                    {"rotation", rotation},
+                    {"viewScale", scale},
+                    {"color", Vec4{.ind{0.9, 0.9, 0.9, 0.5}}},
+                    {"usePerspectiveProjection", 
+                            int(use_perspective_projection)},
+                    {"screenDimensions", render.texture_dimensions()}
+                },
+                simple_arrow
+            );
+        }
+    }
+};
+
+
+const RenderTarget &Simulation::
+view(const SimParams &params,
+     const Vec2 &prev, 
+     const std::optional<Vec2> &hover,
+      ::Quaternion rotation, float scale) {
     this->handle_all_volume_render_views(params, hover, rotation, scale);
+    // std::optional<Vec3> avg_p_arrow {};
+    // std::optional<Vec3> avg_p_arrow_base_loc {};
+    MomentumArrowTracker initial_momentum_visual (
+        params.mouseSelector.selected == 1 && !params.showMomentumSpace,
+        m_frames.render, prev, hover, rotation, scale
+    );
     switch(params.visualizationSelect.selected) {
         case PLANAR_SLICES_VIEW: {
             this->m_frames.render.clear();
@@ -1288,6 +1380,12 @@ const RenderTarget &Simulation
                     {"screenDimensions", m_frames.render.texture_dimensions()}
                 },
                 cube_outline
+            );
+            initial_momentum_visual.show(
+                m_frames.render,
+                m_programs.visualization.cube_outline,
+                prev, hover, rotation, scale,
+                params.usePerspectiveProjection
             );
             if (hover.has_value()) {
                 IVec2 tex_dims = m_frames.render.texture_dimensions();

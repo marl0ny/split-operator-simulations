@@ -55,20 +55,20 @@ IMGUI_OBJECTS = ./imgui.o ./imgui_draw.o ./imgui_impl_glfw.o \
 ##############################################################################
 ##############################################################################
 
-TARGET = ${PWD}/program
-FLAGS = -O2 -g
-FLAGS2 = 
-CPP_COMPILE = clang++ -std=c++17
+# TARGET = ${PWD}/program
+# FLAGS = -O2 -g
+# FLAGS2 = 
+# CPP_COMPILE = clang++ -std=c++17
 
-# TARGET = main.js
-# FLAGS = -std=c++17 -Os -O2
-# FLAGS2 = -v -s WASM=2 -s USE_GLFW=3 -s MAX_WEBGL_VERSION=2 \
-# 	-s ALLOW_MEMORY_GROWTH=1 -s LLD_REPORT_UNDEFINED \
-# 	-lembind --embed-file shaders
-# CPP_COMPILE = emcc
-# LIBS = 
-# IMGUI_SOURCES =
-# IMGUI_OBJECTS = 
+TARGET = main.js
+FLAGS = -std=c++17 -Os -O2
+FLAGS2 = -v -s WASM=2 -s USE_GLFW=3 -s MAX_WEBGL_VERSION=2 \
+	-s ALLOW_MEMORY_GROWTH=1 -s LLD_REPORT_UNDEFINED \
+	-lembind --embed-file shaders
+CPP_COMPILE = emcc
+LIBS = 
+IMGUI_SOURCES =
+IMGUI_OBJECTS = 
 
 ##############################################################################
 ##############################################################################
@@ -85,7 +85,8 @@ TOP_LEVEL_SOURCES = main.cpp simulation.cpp
 VISUALIZATION_3D_SOURCES = ./visualization_3d/volume_render.cpp \
 	./visualization_3d/planar_slice.cpp ./visualization_3d/line_arrows3d.cpp \
 	./visualization_3d/conical_arrow3d.cpp ./visualization_3d/cube_outline.cpp \
-	./visualization_3d/cursor_outline3d.cpp ./visualization_3d/axes3d.cpp
+	./visualization_3d/cursor_outline3d.cpp ./visualization_3d/axes3d.cpp \
+	./visualization_3d/simple_line_arrow3d.cpp
 GL_WRAPPER_SOURCES = ./gl_wrappers/gl_wrappers.cpp
 GLFW_WRAPPER_SOURCES = ./glfw_wrappers/glfw_window.cpp ./glfw_wrappers/interactor.cpp
 MATRIX_SOURCES = ./matrix/matrix.cpp
@@ -98,7 +99,7 @@ TOP_LEVEL_OBJECTS = main.o simulation.o
 VISUALIZATION_3D_OBJECTS = ./volume_render.o \
 	./planar_slice.o ./line_arrows3d.o \
 	./conical_arrow3d.o ./cube_outline.o \
-	./cursor_outline3d.o axes3d.o
+	./cursor_outline3d.o axes3d.o simple_line_arrow3d.o
 GL_WRAPPER_OBJECTS = ./gl_wrappers.o
 GLFW_WRAPPER_OBJECTS = ./glfw_window.o ./interactor.o
 MATRIX_OBJECTS = ./matrix.o

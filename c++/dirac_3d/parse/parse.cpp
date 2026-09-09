@@ -17,11 +17,11 @@ static const string NUMERICAL_CHARS = "0123456789e-+.";
 static vector<string> FUNCTIONS_LIST = {
     "abs", "exp", "sin", 
     "cos", "tan", "sinh", "cosh",
-    "tanh", "log", "sqrt", "step"
+    "tanh", "log", "sqrt", "step", "sstep"
 };
 
 static set<string> NON_LATEX_FUNCS = {
-    "abs", "step"
+    "abs", "step", "sstep"
 };
 static set<string> GREEK_LETTER_NAME_LIST = {
     "alpha", "beta", "delta", "epsilon", "phi", "gamma", "eta",

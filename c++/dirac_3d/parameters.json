@@ -2,7 +2,7 @@
 
     "link": {
         "name": "Source", "type": "LinkedLabel", 
-        "value": "https://github.com/marl0ny/split-operator-simulations"},
+        "value": "https://github.com/marl0ny/split-operator-simulations/tree/new-compiled-version/c++/dirac_3d"},
     "stepsPerFrame": {
         "name": "Steps/frame", "type": "int", "value": 4, "min": 0, "max": 5},
     "mouseSelector": {
@@ -150,11 +150,14 @@
     "initializePotentialStart": {"name": "Initialize Potential Controls", "type": "SubSectionStart", "value": {}},
         "potLabel": {
             "name": 
-            "(If volume render of potential is obstructing view, please deselect 'Scalar potential' under 'Visualization Controls -> Potential Visualization Options'.)",
+            "(If volume render of potential is obstructing view, please press 'Show/hide potential' below.)",
             "type": "Label", "value": "{}", "style": "font-weight: normal;"},
+        "potButtonToggleShow": {
+            "name": "Show/hide potential",
+            "type": "Button", "value": "{}"},
         "presetPotentialsDropdown": {
             "name": "Presets", "type": "SelectionList", 
-            "value": "{0, {\"0\", \"abs(15.0*a)*((x/width)^2 + (y/height)^2 + (z/depth)^2)\", \"abs(a)/sqrt(x^2 + y^2 + z^2)\", \"70.0*(step(-y^2+(height*0.084*s1)^2)+step(y^2-(height*0.126*s2)^2))*step(-x^2+(width*0.04*w)^2)\", \"50.0*step(sqrt( (x/width)^2 + (y/height)^2 + (z/depth)^2 ) - 0.45)\"}}"},
+            "value": "{0, {\"0\", \"abs(15.0*a)*((x/width)^2 + (y/height)^2 + (z/depth)^2)\", \"abs(a)/sqrt(x^2 + y^2 + z^2)\", \"70.0*(step(-y^2+(height*0.084*s1)^2)+step(y^2-(height*0.126*s2)^2))*sstep(-x^2+(width*0.04*w)^2)\", \"25.0*(tanh(100.0*(sqrt((x/width)^2 + (y/height)^2 + (z/depth)^2) - 0.45)) + 1.0)\"}}"},
         "latexLabel1": {
             "name": "KaTeX Label", "type": "KaTeXLabel", "value": {}},
         "fourVectorPotential": {

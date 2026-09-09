@@ -74,18 +74,19 @@ const ENUM_CODES = {
     INITIALIZE_WAVE_FUNCTION_END: 72,
     INITIALIZE_POTENTIAL_START: 73,
     POT_LABEL: 74,
-    PRESET_POTENTIALS_DROPDOWN: 75,
-    LATEX_LABEL1: 76,
-    FOUR_VECTOR_POTENTIAL: 77,
-    INITIALIZE_POTENTIAL_END: 78,
-    BOUNDARIES_START: 79,
-    PERIODIC_LABEL: 80,
-    USE_ABSORBING_BOUNDARIES: 81,
-    ABS_COEFF: 82,
-    BOUNDARIES_END: 83,
-    TAKE_SCREENSHOTS: 84,
-    CANVAS_HOVER_DISPLAY: 85,
-    DUMMY_VALUE: 86,
+    POT_BUTTON_TOGGLE_SHOW: 75,
+    PRESET_POTENTIALS_DROPDOWN: 76,
+    LATEX_LABEL1: 77,
+    FOUR_VECTOR_POTENTIAL: 78,
+    INITIALIZE_POTENTIAL_END: 79,
+    BOUNDARIES_START: 80,
+    PERIODIC_LABEL: 81,
+    USE_ABSORBING_BOUNDARIES: 82,
+    ABS_COEFF: 83,
+    BOUNDARIES_END: 84,
+    TAKE_SCREENSHOTS: 85,
+    CANVAS_HOVER_DISPLAY: 86,
+    DUMMY_VALUE: 87,
 };
 
 let gVecParams = {};
@@ -600,7 +601,7 @@ function createLinkedLabel(controls, enumCode, labelContent, href) {
 }
 
 let controls = document.getElementById('controls');
-createLinkedLabel(controls, 0, "Source", "https://github.com/marl0ny/split-operator-simulations");
+createLinkedLabel(controls, 0, "Source", "https://github.com/marl0ny/split-operator-simulations/tree/new-compiled-version/c++/dirac_3d");
 createScalarParameterSlider(controls, 1, "Steps/frame", "int", {'value': 4, 'min': 0, 'max': 5});
 createSelectionList(controls, 2, 0, "Mouse usage", [ "Rotate only",  "New wave function",  "Sketch modify scalar potential",  "Erase modify scalar potential",  "Sketch modify vector potential",  "Erase modify vector potential"]);
 createSelectionList(controls, 3, 0, "Grid discretization size", [ "64x64x64",  "128x128x128",  "256x256x256"]);
@@ -655,12 +656,13 @@ createVectorParameterSliders(subControls6, 69, "Wave number, w.r.t. simulation d
 createVectorParameterSliders(subControls6, 70, "Position (norm. coord.)", "Vec3", {'value': [0.5, 0.5, 0.5], 'min': [0.0, 0.0, 0.0], 'max': [1.0, 1.0, 1.0], 'step': [0.01, 0.01, 0.01]});
 createButton(subControls6, 71, "Initialize new wave function");
 let subControls7 = createSubDiv(controls, "Initialize Potential Controls", "");
-createLabel(subControls7, 74, "(If volume render of potential is obstructing view, please deselect 'Scalar potential' under 'Visualization Controls -> Potential Visualization Options'.)", "font-weight: normal;");
-createSelectionList(subControls7, 75, 0, "Presets", [ "0",  "abs(15.0*a)*((x/width)^2 + (y/height)^2 + (z/depth)^2)",  "abs(a)/sqrt(x^2 + y^2 + z^2)",  "70.0*(step(-y^2+(height*0.084*s1)^2)+step(y^2-(height*0.126*s2)^2))*step(-x^2+(width*0.04*w)^2)",  "50.0*step(sqrt( (x/width)^2 + (y/height)^2 + (z/depth)^2 ) - 0.45)"]);
-createKaTeXLabel(subControls7, 76, "KaTeX Label");
-createEntryBoxes(subControls7, 77, "4-Vector Potential", 4, ['V(x, y, z, t)', 'Ax(x, y, z, t)', 'Ay(x, y, z, t)', 'Az(x, y, z, t)']);
+createLabel(subControls7, 74, "(If volume render of potential is obstructing view, please press 'Show/hide potential' below.)", "font-weight: normal;");
+createButton(subControls7, 75, "Show/hide potential");
+createSelectionList(subControls7, 76, 0, "Presets", [ "0",  "abs(15.0*a)*((x/width)^2 + (y/height)^2 + (z/depth)^2)",  "abs(a)/sqrt(x^2 + y^2 + z^2)",  "70.0*(step(-y^2+(height*0.084*s1)^2)+step(y^2-(height*0.126*s2)^2))*sstep(-x^2+(width*0.04*w)^2)",  "25.0*(tanh(100.0*(sqrt((x/width)^2 + (y/height)^2 + (z/depth)^2) - 0.45)) + 1.0)"]);
+createKaTeXLabel(subControls7, 77, "KaTeX Label");
+createEntryBoxes(subControls7, 78, "4-Vector Potential", 4, ['V(x, y, z, t)', 'Ax(x, y, z, t)', 'Ay(x, y, z, t)', 'Az(x, y, z, t)']);
 let subControls8 = createSubDiv(controls, "Boundary Controls", "");
-createLabel(subControls8, 80, "Periodic boundary conditions.", "font-weight: normal;");
-createCheckbox(subControls8, 81, "Absorbers at boundaries (currently does not work well enough)", false);
-createScalarParameterSlider(subControls8, 82, "Absorbtion strength", "float", {'value': 4374.0, 'min': 0.0, 'max': 20000.0, 'step': 1.0});
-createHoveringLabelOnCanvas(85, "");
+createLabel(subControls8, 81, "Periodic boundary conditions.", "font-weight: normal;");
+createCheckbox(subControls8, 82, "Absorbers at boundaries (currently does not work well enough)", false);
+createScalarParameterSlider(subControls8, 83, "Absorbtion strength", "float", {'value': 4374.0, 'min': 0.0, 'max': 20000.0, 'step': 1.0});
+createHoveringLabelOnCanvas(86, "");

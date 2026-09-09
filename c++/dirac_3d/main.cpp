@@ -153,6 +153,12 @@ void simulation_ui_interface_handler(
                     params, params.position,
                     params.wavenumber, params.sigma);
             }
+            if (param_code == params.POT_BUTTON_TOGGLE_SHOW) {
+                params.showScalarPotential = !params.showScalarPotential;
+                edit_bool_display(
+                    params.SHOW_SCALAR_POTENTIAL,
+                     params.showScalarPotential);
+            }
         };
         /* Floating-point value parameters and their associated sliders
         can be created by the user. This notifies and keeps track of any
@@ -166,6 +172,9 @@ void simulation_ui_interface_handler(
         /* Upon a change of a dropdown or selection menu, change its
         corresponding selection parameter in the Parameters struct so that
         it matches the dropdown.*/
+        // float x = 0.0, y = 0.0, z = 0.0;
+        // int width, height, depth;
+        // 25.0*(tanh(100.0*(sqrt((x/width)-2 + (y/height)-2 + (z/depth)-2) - 0.45)) + 1.0)
         s_selection_set = [&params, &potential_text_edit, &sim]
             (int c, int val) {
             if (c == params.MOUSE_SELECTOR) {
@@ -339,6 +348,15 @@ void simulation_ui_interface_handler(
     start_gui(main_render.get_window());
     s_loop = [&] {
 
+        enum MouseSelector {
+            ROTATE_ONLY=0,
+            NEW_WAVE_FUNCTION=1,
+            SKETCH_MODIFY_SCALAR_POTENTIAL=2,
+            ERASE_MODIFY_SCALAR_POTENTIAL=3,
+            SKETCH_MODIFY_VECTOR_POTENTIAL=4,
+            ERASE_MODIFY_VECTOR_POTENTIAL=5
+        } mouse_selector;
+
         if (start_position.has_value()) {
             if (cursor_positions.size() > 1) {
                 Vec2 delta_2d = interactor.get_mouse_delta();
@@ -366,20 +384,24 @@ void simulation_ui_interface_handler(
 
         }
         for (int i = 0; i < params.stepsPerFrame; i++) {
-            // if (is_placing_new_wave_function(params, cursor_positions))
-            //     break;
-            if (cursor_positions.size() > 0 && params.mouseSelector.selected == 1
+            if (cursor_positions.size() > 0 
+                && params.mouseSelector.selected 
+                    == MouseSelector::NEW_WAVE_FUNCTION
                 && sim.is_inside(params, rotation, 
                         0.01*Interactor::get_scroll(), cursor_positions[0]))
                 break;
             sim.time_step(params);
             params.t += params.dt;
         }
-        if (cursor_positions.size() > 0 && params.mouseSelector.selected == 1
+        if (cursor_positions.size() > 0 
+            && params.mouseSelector.selected
+                == MouseSelector::NEW_WAVE_FUNCTION
             && sim.is_inside(params, rotation, 
                         0.01*Interactor::get_scroll(), cursor_positions[0]))
             main_render.draw(
-                sim.view(params, cursor_positions[0], 
+                sim.view(params, 
+                    cursor_positions[0],
+                    cursor_positions[cursor_positions.size() -1],
                     rotation, 0.01*Interactor::get_scroll()));
         else
             main_render.draw(

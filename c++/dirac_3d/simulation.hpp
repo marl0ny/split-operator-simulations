@@ -174,6 +174,11 @@ class Simulation {
     &view(const SimParams &params,
         const std::optional<Vec2> &hover,
         ::Quaternion rotation, float scale);
+    const RenderTarget
+    &view(const SimParams &params,
+        const Vec2 &prev, 
+        const std::optional<Vec2> &hover,
+        ::Quaternion rotation, float scale);
 
     const RenderTarget &view_data_texture(
         SimParams &params, ::Quaternion rotation, float scale

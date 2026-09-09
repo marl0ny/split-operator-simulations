@@ -66,6 +66,10 @@ complex stepC(complex z) {
     return complex((z.x > 0.0)? 1.0: 0.0, 0.0);
 }
 
+complex sstepC(complex z) {
+    return complex(smoothstep(-0.01, 0.01, z.x), 0.0);
+}
+
 complex conj(complex z) {
     return complex(z[0], -z[1]);
 }

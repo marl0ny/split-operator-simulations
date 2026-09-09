@@ -40,7 +40,7 @@ struct KaTeXLabel {};
 struct NotUsed {};
 
 struct SimParams {
-    LinkedLabel link = {"https://github.com/marl0ny/split-operator-simulations"};
+    LinkedLabel link = {"https://github.com/marl0ny/split-operator-simulations/tree/new-compiled-version/c++/dirac_3d"};
     int stepsPerFrame = (int)(4);
     SelectionList mouseSelector = SelectionList{0, {"Rotate only", "New wave function", "Sketch modify scalar potential", "Erase modify scalar potential", "Sketch modify vector potential", "Erase modify vector potential"}};
     SelectionList texelSideLengthSelector = SelectionList{0, {"64x64x64", "128x128x128", "256x256x256"}};
@@ -115,7 +115,8 @@ struct SimParams {
     SubSectionEnd initializeWaveFunctionEnd = SubSectionEnd{};
     SubSectionStart initializePotentialStart = SubSectionStart{};
     Label potLabel = Label{};
-    SelectionList presetPotentialsDropdown = SelectionList{0, {"0", "abs(15.0*a)*((x/width)^2 + (y/height)^2 + (z/depth)^2)", "abs(a)/sqrt(x^2 + y^2 + z^2)", "70.0*(step(-y^2+(height*0.084*s1)^2)+step(y^2-(height*0.126*s2)^2))*step(-x^2+(width*0.04*w)^2)", "50.0*step(sqrt( (x/width)^2 + (y/height)^2 + (z/depth)^2 ) - 0.45)"}};
+    Button potButtonToggleShow = Button{};
+    SelectionList presetPotentialsDropdown = SelectionList{0, {"0", "abs(15.0*a)*((x/width)^2 + (y/height)^2 + (z/depth)^2)", "abs(a)/sqrt(x^2 + y^2 + z^2)", "70.0*(step(-y^2+(height*0.084*s1)^2)+step(y^2-(height*0.126*s2)^2))*sstep(-x^2+(width*0.04*w)^2)", "25.0*(tanh(100.0*(sqrt((x/width)^2 + (y/height)^2 + (z/depth)^2) - 0.45)) + 1.0)"}};
     KaTeXLabel latexLabel1 = KaTeXLabel{};
     EntryBoxes fourVectorPotential = EntryBoxes{"0", "0", "0", "0"};
     SubSectionEnd initializePotentialEnd = SubSectionEnd{};
@@ -203,18 +204,19 @@ struct SimParams {
         INITIALIZE_WAVE_FUNCTION_END=72,
         INITIALIZE_POTENTIAL_START=73,
         POT_LABEL=74,
-        PRESET_POTENTIALS_DROPDOWN=75,
-        LATEX_LABEL1=76,
-        FOUR_VECTOR_POTENTIAL=77,
-        INITIALIZE_POTENTIAL_END=78,
-        BOUNDARIES_START=79,
-        PERIODIC_LABEL=80,
-        USE_ABSORBING_BOUNDARIES=81,
-        ABS_COEFF=82,
-        BOUNDARIES_END=83,
-        TAKE_SCREENSHOTS=84,
-        CANVAS_HOVER_DISPLAY=85,
-        DUMMY_VALUE=86,
+        POT_BUTTON_TOGGLE_SHOW=75,
+        PRESET_POTENTIALS_DROPDOWN=76,
+        LATEX_LABEL1=77,
+        FOUR_VECTOR_POTENTIAL=78,
+        INITIALIZE_POTENTIAL_END=79,
+        BOUNDARIES_START=80,
+        PERIODIC_LABEL=81,
+        USE_ABSORBING_BOUNDARIES=82,
+        ABS_COEFF=83,
+        BOUNDARIES_END=84,
+        TAKE_SCREENSHOTS=85,
+        CANVAS_HOVER_DISPLAY=86,
+        DUMMY_VALUE=87,
     };
     void set(int enum_val, Uniform val) {
         switch(enum_val) {
